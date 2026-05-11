@@ -79,11 +79,14 @@ echo
 echo "✓ Deploy complete."
 echo
 if [ -n "$worker_url" ]; then
-  echo "Deployed endpoint:"
+  echo "Workers.dev endpoint:"
   echo "  $worker_url/sign"
   echo
-  echo "Paste this into notloom-opus/Upload/Config.swift:"
-  echo "  static let workerEndpoint = URL(string: \"$worker_url/sign\")!"
+  echo "Once screencast.to is wired up as a custom domain, the canonical endpoint is:"
+  echo "  https://screencast.to/sign"
+  echo
+  echo "Paste whichever you're using into notloom-opus/Upload/Config.swift:"
+  echo "  static let workerEndpoint = URL(string: \"https://screencast.to/sign\")!"
 else
   echo "Could not auto-detect the Worker URL from output."
   echo "Look for the 'https://*.workers.dev' line above and paste it"
@@ -91,5 +94,5 @@ else
 fi
 echo
 echo "If you haven't yet, enable Public Development URL on the bucket:"
-echo "  Dashboard → R2 → notloom-recordings → Settings → Public Development URL → Enable"
+echo "  Dashboard → R2 → $R2_BUCKET → Settings → Public Development URL → Enable"
 echo "Then make sure R2_PUB_HOST in .env matches the pub-XXX.r2.dev host shown there."

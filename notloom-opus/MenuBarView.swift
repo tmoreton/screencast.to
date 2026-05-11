@@ -52,7 +52,7 @@ struct MenuBarView: View {
             Circle()
                 .fill(state.isRecording ? Color.red : Color.secondary.opacity(0.4))
                 .frame(width: 8, height: 8)
-            Text("notloom")
+            Text("screencast")
                 .font(.system(size: 13, weight: .semibold))
             Spacer()
             statusText
@@ -256,7 +256,7 @@ struct MenuBarView: View {
     private var footer: some View {
         HStack {
             Button { state.quit() } label: {
-                Text("Quit notloom")
+                Text("Quit screencast")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }

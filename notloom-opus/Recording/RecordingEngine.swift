@@ -22,8 +22,8 @@ final class RecordingEngine: NSObject {
     private var pendingOutputURL: URL?
     private var stopContinuation: CheckedContinuation<URL, Error>?
 
-    private let log = Logger(subsystem: "com.tmoreton.notloom-opus", category: "RecordingEngine")
-    private let outputQueue = DispatchQueue(label: "com.tmoreton.notloom-opus.stream-output")
+    private let log = Logger(subsystem: "to.screencast.app", category: "RecordingEngine")
+    private let outputQueue = DispatchQueue(label: "to.screencast.app.stream-output")
 
     func start(options: RecordingOptions) async throws {
         guard case .idle = state else { return }
@@ -123,7 +123,7 @@ final class RecordingEngine: NSObject {
     private func makeOutputURL() throws -> URL {
         let fm = FileManager.default
         let caches = try fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dir = caches.appendingPathComponent("notloom", isDirectory: true)
+        let dir = caches.appendingPathComponent("screencast", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }

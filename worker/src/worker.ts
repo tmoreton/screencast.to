@@ -17,8 +17,10 @@ interface SignRequestBody {
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, X-Screencast-Auth",
 };
+
+const BRAND = "screencast";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -46,7 +48,7 @@ export default {
 
 async function handleSign(request: Request, env: Env): Promise<Response> {
   // Shared-secret auth.
-  const provided = request.headers.get("X-Notloom-Auth") ?? "";
+  const provided = request.headers.get("X-Screencast-Auth") ?? "";
   if (!env.APP_SECRET || !timingSafeEqual(provided, env.APP_SECRET)) {
     return new Response("Unauthorized", { status: 401, headers: CORS });
   }
@@ -65,8 +67,8 @@ async function handleSign(request: Request, env: Env): Promise<Response> {
     // empty body OK
   }
   const ext = sanitizeExt(body.ext ?? "mov");
-  const uuid = crypto.randomUUID();
-  const key = `recordings/${uuid}.${ext}`;
+  const id = generateShortId();
+  const key = `recordings/${id}.${ext}`;
 
   const r2 = new AwsClient({
     accessKeyId: env.R2_ACCESS_KEY_ID,
@@ -82,7 +84,7 @@ async function handleSign(request: Request, env: Env): Promise<Response> {
   );
 
   const origin = new URL(request.url).origin;
-  const publicUrl = `${origin}/v/${uuid}.${ext}`;
+  const publicUrl = `${origin}/v/${id}.${ext}`;
 
   return new Response(
     JSON.stringify({ uploadUrl: signed.url, publicUrl }),
@@ -92,7 +94,7 @@ async function handleSign(request: Request, env: Env): Promise<Response> {
 
 function handleViewer(url: URL, env: Env): Response {
   const filename = url.pathname.slice("/v/".length);
-  if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
+  if (!/^[a-zA-Z0-9]{6,16}\.[a-zA-Z0-9]+$/.test(filename)) {
     return new Response("Not found", { status: 404, headers: CORS });
   }
   const videoUrl = `https://${normalizeHost(env.R2_PUB_HOST)}/recordings/${filename}`;
@@ -108,6 +110,17 @@ function normalizeHost(host: string): string {
 
 function sanitizeExt(ext: string): string {
   return ext.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "mov";
+}
+
+// 10-char URL-safe random ID. 62^10 ≈ 8.4 × 10^17 combinations — collision
+// risk is negligible for 24h-lifetime recordings.
+function generateShortId(): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (const b of bytes) out += alphabet[b % 62];
+  return out;
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -138,7 +151,7 @@ function renderViewer(videoUrl: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
-<title>notloom</title>
+<title>${BRAND}</title>
 <style>
   :root { --accent: #ef4444; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -197,7 +210,7 @@ function renderViewer(videoUrl: string): string {
 <div class="stage" id="stage">
   <video id="player" src="${safe}" controls preload="metadata" playsinline></video>
   <div class="overlay top">
-    <div class="brand"><span class="dot"></span><h1>notloom</h1></div>
+    <div class="brand"><span class="dot"></span><h1>${BRAND}</h1></div>
     <div class="actions">
       <button class="chip" id="copyBtn" type="button" aria-label="Copy link">
         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
@@ -243,7 +256,7 @@ function renderViewer(videoUrl: string): string {
 
 function renderHome(): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>notloom</title>
-<style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;background:#0b0d10;color:#e8eaed;display:grid;place-items:center;height:100vh;margin:0;text-align:center}h1{font-size:32px;margin-bottom:8px}p{color:#8b909a}</style>
-</head><body><div><h1>notloom</h1><p>Screen recordings, shared via Cloudflare R2.</p></div></body></html>`;
+<html lang="en"><head><meta charset="utf-8"><title>${BRAND}</title>
+<style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;background:#0b0d10;color:#e8eaed;display:grid;place-items:center;height:100vh;margin:0;text-align:center}h1{font-size:32px;margin-bottom:8px;letter-spacing:-0.01em}p{color:#8b909a}</style>
+</head><body><div><h1>${BRAND}</h1><p>Quick screen recordings, shared by link.</p></div></body></html>`;
 }

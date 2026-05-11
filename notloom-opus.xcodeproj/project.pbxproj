@@ -260,16 +260,17 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "screencast";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "notloom records your camera for the floating bubble overlay.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "notloom records your microphone alongside the screen.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "screencast records your microphone alongside the screen.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.tmoreton.notloom-opus";
+				PRODUCT_BUNDLE_IDENTIFIER = "to.screencast.app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -296,16 +297,17 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "screencast";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "notloom records your camera for the floating bubble overlay.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "notloom records your microphone alongside the screen.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "screencast records your microphone alongside the screen.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.tmoreton.notloom-opus";
+				PRODUCT_BUNDLE_IDENTIFIER = "to.screencast.app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

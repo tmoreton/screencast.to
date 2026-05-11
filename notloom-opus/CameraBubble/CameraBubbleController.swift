@@ -7,7 +7,7 @@ final class CameraBubbleController {
     private var window: NSPanel?
     private var session: AVCaptureSession?
     private var currentDeviceID: String?
-    private let log = Logger(subsystem: "com.tmoreton.notloom-opus", category: "CameraBubble")
+    private let log = Logger(subsystem: "to.screencast.app", category: "CameraBubble")
     private let diameter: CGFloat = 160
 
     func show(deviceID: String? = nil) {
