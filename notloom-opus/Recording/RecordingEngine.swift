@@ -16,7 +16,6 @@ enum RecordingState: Equatable {
 @Observable
 final class RecordingEngine: NSObject {
     private(set) var state: RecordingState = .idle
-    private(set) var lastOutputURL: URL?
 
     private var stream: SCStream?
     private var recordingOutput: SCRecordingOutput?
@@ -117,7 +116,6 @@ final class RecordingEngine: NSObject {
         self.stream = nil
         self.recordingOutput = nil
         self.pendingOutputURL = nil
-        self.lastOutputURL = finalURL
         self.state = .idle
         return finalURL
     }

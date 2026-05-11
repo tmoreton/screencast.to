@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 struct SignResponse: Decodable {
     let uploadUrl: String
@@ -27,7 +26,6 @@ enum UploadError: LocalizedError {
 
 @MainActor
 final class UploadClient {
-    private let log = Logger(subsystem: "com.tmoreton.notloom-opus", category: "Upload")
     private var progressObservation: NSKeyValueObservation?
 
     func upload(fileURL: URL, progress: @escaping (Double) -> Void) async throws -> URL {
@@ -59,6 +57,11 @@ final class UploadClient {
         var req = URLRequest(url: uploadURL)
         req.httpMethod = "PUT"
         // Intentionally do NOT set Content-Type — the Worker signs only host.
+
+        defer {
+            self.progressObservation?.invalidate()
+            self.progressObservation = nil
+        }
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let task = URLSession.shared.uploadTask(with: req, fromFile: fileURL) { _, response, error in

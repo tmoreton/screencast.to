@@ -77,6 +77,7 @@ final class AppState {
                 let publicURL = try await self.uploader.upload(fileURL: fileURL) { [weak self] p in
                     self?.phase = .uploading(progress: p)
                 }
+                try? FileManager.default.removeItem(at: fileURL)
                 self.lastSharedURL = publicURL
                 self.phase = .done(publicURL)
             } catch {

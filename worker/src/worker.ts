@@ -12,7 +12,6 @@ interface Env {
 
 interface SignRequestBody {
   ext?: string;
-  contentType?: string;
 }
 
 const CORS: Record<string, string> = {
@@ -84,10 +83,9 @@ async function handleSign(request: Request, env: Env): Promise<Response> {
 
   const origin = new URL(request.url).origin;
   const publicUrl = `${origin}/v/${uuid}.${ext}`;
-  const directUrl = `https://${normalizeHost(env.R2_PUB_HOST)}/${key}`;
 
   return new Response(
-    JSON.stringify({ uploadUrl: signed.url, publicUrl, directUrl, key }),
+    JSON.stringify({ uploadUrl: signed.url, publicUrl }),
     { status: 200, headers: { "Content-Type": "application/json", ...CORS } }
   );
 }

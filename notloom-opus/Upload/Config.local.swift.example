@@ -1,0 +1,11 @@
+// Copy this file to `Config.local.swift` and replace REPLACE_ME with the
+// real secret. `Config.local.swift` is gitignored — never commit secrets.
+
+import Foundation
+
+extension UploadConfig {
+    /// Shared secret sent in the `X-Notloom-Auth` header on every /sign call.
+    /// Must match `APP_SECRET` in `worker/.env`.
+    /// Generate one with: `openssl rand -hex 32`
+    static let appSecret = "REPLACE_ME"
+}
