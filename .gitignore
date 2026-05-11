@@ -16,5 +16,12 @@ Packages/
 
 # Local-only Swift source (anything named *.local.swift in any folder).
 # Used for files that contain secrets / per-developer config and must never
-# be committed (e.g. notloom-opus/Upload/Config.local.swift).
+# be committed (e.g. screencast/Upload/Config.local.swift).
 **/*.local.swift
+
+# Environment / secret files anywhere in the tree.
+# Catches scripts/.env, worker/.env, and anything similar added later.
+**/.env
+**/.env.local
+**/.env.*.local
+**/.dev.vars

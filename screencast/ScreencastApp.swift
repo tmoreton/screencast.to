@@ -1,7 +1,8 @@
 import SwiftUI
 
 @main
-struct notloom_opusApp: App {
+struct ScreencastApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var state = AppState()
 
     var body: some Scene {

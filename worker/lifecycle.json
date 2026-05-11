@@ -1,13 +1,16 @@
 {
-  "Rules": [
+  "rules": [
     {
-      "ID": "auto-delete-24h",
-      "Status": "Enabled",
-      "Filter": {
-        "Prefix": "recordings/"
+      "id": "auto-delete-24h",
+      "enabled": true,
+      "conditions": {
+        "prefix": "recordings/"
       },
-      "Expiration": {
-        "Days": 1
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
       }
     }
   ]

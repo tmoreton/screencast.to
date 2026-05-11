@@ -27,7 +27,7 @@ Backs the screencast.to share viewer and mints presigned PUT URLs for the Mac ap
    ```sh
    openssl rand -hex 32
    ```
-   You'll paste this into both `worker/.env` (`APP_SECRET=...`) and `notloom-opus/Upload/Config.local.swift`.
+   You'll paste this into both `worker/.env` (`APP_SECRET=...`) and `screencast/Upload/Config.local.swift`.
 
 6. **Fill in `worker/.env`** — copy `worker/.env.example` and replace the empty values.
 

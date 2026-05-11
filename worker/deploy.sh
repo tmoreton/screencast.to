@@ -85,12 +85,12 @@ if [ -n "$worker_url" ]; then
   echo "Once screencast.to is wired up as a custom domain, the canonical endpoint is:"
   echo "  https://screencast.to/sign"
   echo
-  echo "Paste whichever you're using into notloom-opus/Upload/Config.swift:"
+  echo "Paste whichever you're using into screencast/Upload/Config.swift:"
   echo "  static let workerEndpoint = URL(string: \"https://screencast.to/sign\")!"
 else
   echo "Could not auto-detect the Worker URL from output."
   echo "Look for the 'https://*.workers.dev' line above and paste it"
-  echo "(with /sign appended) into notloom-opus/Upload/Config.swift."
+  echo "(with /sign appended) into screencast/Upload/Config.swift."
 fi
 echo
 echo "If you haven't yet, enable Public Development URL on the bucket:"
