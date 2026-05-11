@@ -1,0 +1,14 @@
+{
+  "Rules": [
+    {
+      "ID": "auto-delete-24h",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "recordings/"
+      },
+      "Expiration": {
+        "Days": 1
+      }
+    }
+  ]
+}

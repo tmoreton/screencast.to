@@ -6,6 +6,8 @@ interface Env {
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
   R2_PUB_HOST: string;
+  APP_SECRET: string;
+  SIGN_LIMITER: { limit: (opts: { key: string }) => Promise<{ success: boolean }> };
 }
 
 interface SignRequestBody {
@@ -44,6 +46,19 @@ export default {
 };
 
 async function handleSign(request: Request, env: Env): Promise<Response> {
+  // Shared-secret auth.
+  const provided = request.headers.get("X-Notloom-Auth") ?? "";
+  if (!env.APP_SECRET || !timingSafeEqual(provided, env.APP_SECRET)) {
+    return new Response("Unauthorized", { status: 401, headers: CORS });
+  }
+
+  // Per-IP rate limit.
+  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const { success } = await env.SIGN_LIMITER.limit({ key: ip });
+  if (!success) {
+    return new Response("Too many requests", { status: 429, headers: CORS });
+  }
+
   let body: SignRequestBody = {};
   try {
     body = (await request.json()) as SignRequestBody;
@@ -95,6 +110,15 @@ function normalizeHost(host: string): string {
 
 function sanitizeExt(ext: string): string {
   return ext.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "mov";
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 function escapeHtml(s: string): string {

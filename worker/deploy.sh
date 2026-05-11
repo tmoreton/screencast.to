@@ -15,7 +15,7 @@ set -a
 . ./.env
 set +a
 
-required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST)
+required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_SECRET)
 missing=()
 for v in "${required[@]}"; do
   if [ -z "${!v:-}" ]; then
@@ -42,6 +42,20 @@ if [ $bucket_status -ne 0 ]; then
   fi
 fi
 
+echo "▶ Applying R2 lifecycle rule (auto-delete after 24h)..."
+if [ -f lifecycle.json ]; then
+  set +e
+  lifecycle_output="$(npx wrangler r2 bucket lifecycle set "$R2_BUCKET" --file lifecycle.json 2>&1)"
+  lifecycle_status=$?
+  set -e
+  if [ $lifecycle_status -ne 0 ]; then
+    echo "$lifecycle_output" >&2
+    echo "⚠  Could not apply lifecycle rule (continuing anyway). You can set it manually in the dashboard." >&2
+  fi
+else
+  echo "  (no lifecycle.json — skipping)"
+fi
+
 echo "▶ Pushing secrets to Worker..."
 npx wrangler secret bulk <<EOF
 {
@@ -49,7 +63,8 @@ npx wrangler secret bulk <<EOF
   "R2_BUCKET": "${R2_BUCKET}",
   "R2_ACCESS_KEY_ID": "${R2_ACCESS_KEY_ID}",
   "R2_SECRET_ACCESS_KEY": "${R2_SECRET_ACCESS_KEY}",
-  "R2_PUB_HOST": "${R2_PUB_HOST}"
+  "R2_PUB_HOST": "${R2_PUB_HOST}",
+  "APP_SECRET": "${APP_SECRET}"
 }
 EOF
 

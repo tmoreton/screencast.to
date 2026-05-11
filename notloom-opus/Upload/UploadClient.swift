@@ -44,6 +44,7 @@ final class UploadClient {
         var req = URLRequest(url: UploadConfig.workerEndpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(UploadConfig.appSecret, forHTTPHeaderField: "X-Notloom-Auth")
         req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov", contentType: "video/quicktime"))
 
         let (data, response) = try await URLSession.shared.data(for: req)
