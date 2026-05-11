@@ -15,15 +15,14 @@ struct MenuBarView: View {
 
             Divider()
 
-            section("Capture") {
-                toggleRow("Camera bubble", systemImage: "video.bubble.left", isOn: $state.options.showCameraBubble)
-                toggleRow("Microphone", systemImage: "mic", isOn: $state.options.includeMicrophone)
-                toggleRow("System audio", systemImage: "speaker.wave.2", isOn: $state.options.includeSystemAudio)
+            section("Area") {
+                areaRow
             }
 
             Divider()
 
             section("Devices") {
+                toggleRow("Camera bubble", systemImage: "video.bubble.left", isOn: $state.options.showCameraBubble)
                 devicePicker(
                     label: "Camera",
                     systemImage: "video",
@@ -31,13 +30,7 @@ struct MenuBarView: View {
                     selection: $state.options.cameraDeviceID,
                     enabled: state.options.showCameraBubble
                 )
-                devicePicker(
-                    label: "Microphone",
-                    systemImage: "mic",
-                    devices: state.devices.microphones,
-                    selection: $state.options.microphoneDeviceID,
-                    enabled: state.options.includeMicrophone
-                )
+                microphonePicker
             }
 
             if let url = state.lastSharedURL, !state.isRecording {
@@ -130,6 +123,39 @@ struct MenuBarView: View {
         .padding(.bottom, 10)
     }
 
+    @ViewBuilder
+    private var areaRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: state.options.captureRegion == nil ? "display" : "crop")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            if let r = state.options.captureRegion {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Region")
+                        .font(.system(size: 12))
+                    Text("\(Int(r.width)) × \(Int(r.height))")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Full screen")
+                    .font(.system(size: 12))
+            }
+            Spacer()
+            HStack(spacing: 4) {
+                Button(state.options.captureRegion == nil ? "Select…" : "Change") {
+                    state.selectRegion()
+                }
+                if state.options.captureRegion != nil {
+                    Button("Clear") { state.clearRegion() }
+                }
+            }
+            .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity)
+        .disabled(state.isBusy)
+    }
+
     private func toggleRow(_ title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
@@ -144,6 +170,28 @@ struct MenuBarView: View {
                 .controlSize(.small)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var microphonePicker: some View {
+        HStack(spacing: 6) {
+            Image(systemName: state.options.microphone.isOn ? "mic" : "mic.slash")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            Text("Microphone")
+                .font(.system(size: 12))
+            Spacer()
+            Picker("", selection: $state.options.microphone) {
+                Text("None").tag(MicrophoneSelection.off)
+                Text("System default").tag(MicrophoneSelection.systemDefault)
+                if !state.devices.microphones.isEmpty { Divider() }
+                ForEach(state.devices.microphones, id: \.uniqueID) { device in
+                    Text(device.localizedName).tag(MicrophoneSelection.device(device.uniqueID))
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(maxWidth: 180, alignment: .trailing)
+        }
     }
 
     private func devicePicker(

@@ -42,13 +42,20 @@ final class RecordingEngine: NSObject {
             let filter = SCContentFilter(display: display, excludingWindows: [])
 
             let config = SCStreamConfiguration()
-            config.width = Int(display.width) * 2  // retina
-            config.height = Int(display.height) * 2
+            let scale = NSScreen.main?.backingScaleFactor ?? 2
+            if let region = options.captureRegion {
+                config.sourceRect = region
+                config.width = max(2, Int(region.width * scale))
+                config.height = max(2, Int(region.height * scale))
+            } else {
+                config.width = Int(display.width) * Int(scale)
+                config.height = Int(display.height) * Int(scale)
+            }
             config.pixelFormat = kCVPixelFormatType_32BGRA
             config.showsCursor = true
-            config.capturesAudio = options.includeSystemAudio
-            config.captureMicrophone = options.includeMicrophone
-            if let micID = options.microphoneDeviceID, options.includeMicrophone {
+            config.capturesAudio = true       // system audio: always on
+            config.captureMicrophone = options.microphone.isOn
+            if let micID = options.microphone.deviceID {
                 config.microphoneCaptureDeviceID = micID
             }
 
@@ -70,10 +77,8 @@ final class RecordingEngine: NSObject {
             // Dropping frame" repeatedly even though SCRecordingOutput writes
             // the file via a separate pipeline.
             try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: outputQueue)
-            if config.capturesAudio {
-                try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: outputQueue)
-            }
-            if config.captureMicrophone {
+            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: outputQueue)
+            if options.microphone.isOn {
                 try stream.addStreamOutput(self, type: .microphone, sampleHandlerQueue: outputQueue)
             }
 

@@ -21,7 +21,9 @@ final class AppState {
     private let recorder = RecordingEngine()
     private let bubble = CameraBubbleController()
     private let controls = RecordingControlsController()
+    private let regionOverlay = RecordingRegionOverlay()
     private let uploader = UploadClient()
+    private let regionSelector = RegionSelector()
 
     var isRecording: Bool {
         if case .recording = phase { return true }
@@ -47,6 +49,9 @@ final class AppState {
         if options.showCameraBubble {
             bubble.show(deviceID: options.cameraDeviceID)
         }
+        if let region = options.captureRegion {
+            regionOverlay.show(rect: region)
+        }
         Task {
             do {
                 try await recorder.start(options: options)
@@ -55,12 +60,14 @@ final class AppState {
             } catch {
                 phase = .error(error.localizedDescription)
                 bubble.hide()
+                regionOverlay.hide()
             }
         }
     }
 
     private func stopRecording() {
         controls.hide()
+        regionOverlay.hide()
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -89,6 +96,16 @@ final class AppState {
     func openLastURL() {
         guard let url = lastSharedURL else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    func selectRegion() {
+        regionSelector.select { [weak self] rect in
+            self?.options.captureRegion = rect
+        }
+    }
+
+    func clearRegion() {
+        options.captureRegion = nil
     }
 
     func quit() {
