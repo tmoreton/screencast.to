@@ -1,0 +1,10 @@
+name = "notloom-uploads"
+main = "src/worker.ts"
+compatibility_date = "2025-01-01"
+
+# Required secrets (set via `wrangler secret put <NAME>`):
+#   R2_ACCOUNT_ID         — your Cloudflare account ID
+#   R2_BUCKET             — bucket name, e.g. "notloom-recordings"
+#   R2_ACCESS_KEY_ID      — R2 API token access key
+#   R2_SECRET_ACCESS_KEY  — R2 API token secret
+#   R2_PUB_HOST           — public host, e.g. "pub-abc123.r2.dev"

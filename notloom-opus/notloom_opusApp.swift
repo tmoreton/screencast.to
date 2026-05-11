@@ -1,17 +1,16 @@
-//
-//  notloom_opusApp.swift
-//  notloom-opus
-//
-//  Created by Tim Moreton on 5/11/26.
-//
-
 import SwiftUI
 
 @main
 struct notloom_opusApp: App {
+    @State private var state = AppState()
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra {
+            MenuBarView(state: state)
+        } label: {
+            Image(systemName: state.isRecording ? "record.circle.fill" : "record.circle")
+                .foregroundStyle(state.isRecording ? .red : .primary)
         }
+        .menuBarExtraStyle(.window)
     }
 }
