@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 struct SignResponse: Decodable {
     let uploadUrl: String
@@ -7,7 +8,6 @@ struct SignResponse: Decodable {
 
 private struct SignRequest: Encodable {
     let ext: String
-    let contentType: String
 }
 
 enum UploadError: LocalizedError {
@@ -27,15 +27,73 @@ enum UploadError: LocalizedError {
 @MainActor
 final class UploadClient {
     private var progressObservation: NSKeyValueObservation?
+    private let log = Logger(subsystem: "to.screencast.app", category: "Upload")
+
+    /// Total attempts (initial + retries). Backoff between attempts: 1s, 2s.
+    private let maxAttempts = 3
 
     func upload(fileURL: URL, progress: @escaping (Double) -> Void) async throws -> URL {
-        let sign = try await fetchPresignedURL()
-        guard let uploadURL = URL(string: sign.uploadUrl),
-              let publicURL = URL(string: sign.publicUrl) else {
-            throw UploadError.malformedResponse
+        var lastError: Error?
+
+        for attempt in 1...maxAttempts {
+            do {
+                let sign = try await fetchPresignedURL()
+                guard let uploadURL = URL(string: sign.uploadUrl),
+                      let publicURL = URL(string: sign.publicUrl) else {
+                    throw UploadError.malformedResponse
+                }
+                try await putFile(fileURL: fileURL, to: uploadURL, progress: progress)
+                if attempt > 1 {
+                    log.info("Upload succeeded on attempt \(attempt)")
+                }
+                return publicURL
+            } catch {
+                lastError = error
+                let canRetry = attempt < maxAttempts && Self.isRetryable(error)
+                if !canRetry {
+                    log.error("Upload failed (attempt \(attempt)/\(self.maxAttempts), giving up): \(error.localizedDescription, privacy: .public)")
+                    throw error
+                }
+                // Exponential-ish backoff: 1s after attempt 1, 2s after attempt 2.
+                let delaySeconds = attempt
+                log.notice("Upload attempt \(attempt) failed (\(error.localizedDescription, privacy: .public)); retrying in \(delaySeconds)s")
+                try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
+                progress(0)  // reset progress UI for the next attempt
+            }
         }
-        try await putFile(fileURL: fileURL, to: uploadURL, progress: progress)
-        return publicURL
+
+        throw lastError ?? UploadError.uploadFailed(-1)
+    }
+
+    /// Returns `true` for errors that are likely transient (network blip,
+    /// gateway hiccup, server 5xx). Auth failures, malformed responses, and
+    /// rate-limited responses are NOT retried — re-attempting won't fix them
+    /// within our short backoff window.
+    private static func isRetryable(_ error: Error) -> Bool {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .networkConnectionLost,
+                 .notConnectedToInternet,
+                 .timedOut,
+                 .cannotConnectToHost,
+                 .cannotFindHost,
+                 .dnsLookupFailed,
+                 .dataNotAllowed,
+                 .internationalRoamingOff:
+                return true
+            default:
+                return false
+            }
+        }
+        if let uploadError = error as? UploadError {
+            switch uploadError {
+            case .signFailed(let code), .uploadFailed(let code):
+                return code == -1 || code == 408 || (code >= 500 && code < 600)
+            case .malformedResponse:
+                return false
+            }
+        }
+        return false
     }
 
     private func fetchPresignedURL() async throws -> SignResponse {
@@ -43,7 +101,7 @@ final class UploadClient {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(UploadConfig.appSecret, forHTTPHeaderField: "X-Screencast-Auth")
-        req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov", contentType: "video/quicktime"))
+        req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov"))
 
         let (data, response) = try await URLSession.shared.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {

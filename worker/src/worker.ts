@@ -73,6 +73,12 @@ export default {
         headers: { "Content-Type": "text/html; charset=utf-8", ...CORS },
       });
     }
+    if (url.pathname === "/privacy" && request.method === "GET") {
+      return new Response(renderPrivacy(), {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS },
+      });
+    }
     return new Response("Not found", { status: 404, headers: CORS });
   },
 };
@@ -253,18 +259,75 @@ ${GA_SNIPPET}
   .chip svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;
     stroke-linecap: round; stroke-linejoin: round; }
 
-  /* Compact layout on narrow viewports: drop the chip label, keep the icon. */
+  /* Bottom overlay — watermark CTA + auto-delete chip */
+  .overlay.bottom { bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0));
+    padding-top: 28px;
+  }
+  .watermark {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: rgba(255,255,255,0.75); text-decoration: none;
+    font-size: 12px; font-weight: 500;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    transition: color 140ms ease;
+  }
+  .watermark:hover { color: #fff; }
+  .watermark .dot { width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .watermark .mark { font-weight: 600; }
+
+  .ttl {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px; border-radius: 999px;
+    background: rgba(20, 20, 22, 0.55);
+    border: 1px solid rgba(255,255,255,0.14);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    color: rgba(255,255,255,0.75);
+    font-size: 11px; font-weight: 500;
+  }
+  .ttl svg { width: 11px; height: 11px; stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Expired / 404 state */
+  #expired { display: none; padding: 40px 28px; max-width: 460px; text-align: center; }
+  .stage.expired #expired { display: block; }
+  .stage.expired video,
+  .stage.expired .overlay { display: none; }
+  #expired .icon {
+    width: 64px; height: 64px; border-radius: 16px;
+    margin: 0 auto 22px;
+    background: rgba(239,68,68,0.12); color: var(--accent);
+    display: grid; place-items: center;
+  }
+  #expired .icon svg { width: 28px; height: 28px; stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #expired h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; }
+  #expired p { color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.55; margin-bottom: 24px; }
+  #expired a.btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border-radius: 10px;
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 8px 24px -8px rgba(239,68,68,0.6);
+  }
+  #expired a.btn:hover { background: #f56565; }
+
+  /* Compact layout on narrow viewports */
   @media (max-width: 520px) {
     .overlay { padding: 12px 14px; }
+    .overlay.bottom { padding-top: 24px; }
     .chip { padding: 8px 10px; }
     .chip span { display: none; }
     .brand h1 { font-size: 14px; }
+    .ttl { font-size: 10px; padding: 5px 9px; }
   }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <video id="player" src="${safe}" controls preload="metadata" playsinline></video>
+
   <div class="overlay top">
     <div class="brand"><span class="dot"></span><h1>${BRAND}</h1></div>
     <div class="actions">
@@ -278,12 +341,33 @@ ${GA_SNIPPET}
       </a>
     </div>
   </div>
+
+  <div class="overlay bottom">
+    <a class="watermark" href="https://screencast.to/" target="_blank" rel="noopener">
+      <span class="dot"></span>
+      Made with <span class="mark">${BRAND}</span>
+    </a>
+    <span class="ttl" title="Recordings auto-delete after 24 hours.">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Auto-deletes in 24h
+    </span>
+  </div>
+
+  <div id="expired">
+    <div class="icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    </div>
+    <h2>This recording is gone.</h2>
+    <p>It either expired (recordings auto-delete after 24 hours) or the link is wrong. Recordings on ${BRAND} are temporary by design — share confidently and move on.</p>
+    <a class="btn" href="https://screencast.to/">Make your own →</a>
+  </div>
 </div>
 <script>
   const stage = document.getElementById('stage');
   const player = document.getElementById('player');
   const copyBtn = document.getElementById('copyBtn');
 
+  // Auto-hide overlays after idle while playing.
   let idleTimer;
   function poke() {
     stage.classList.remove('idle');
@@ -297,6 +381,7 @@ ${GA_SNIPPET}
   player.addEventListener('pause', () => { stage.classList.remove('idle'); clearTimeout(idleTimer); });
   poke();
 
+  // Copy-link feedback.
   copyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(location.href).then(() => {
       const label = copyBtn.querySelector('span');
@@ -305,7 +390,143 @@ ${GA_SNIPPET}
       setTimeout(() => { label.textContent = orig; }, 1500);
     });
   });
+
+  // Expired / 404 fallback: the <video> element fires 'error' when the
+  // underlying R2 object is gone (lifecycle-deleted or wrong link).
+  function showExpired() { stage.classList.add('expired'); }
+  player.addEventListener('error', showExpired);
+  // Some browsers fire error on the <source> not the <video>; also handle
+  // the case where metadata never loads in a reasonable time.
+  setTimeout(() => {
+    if (player.readyState === 0 && !player.error && !stage.classList.contains('expired')) {
+      // Still nothing; probe the URL ourselves to distinguish 404 from slow CDN.
+      fetch(player.src, { method: 'HEAD' })
+        .then(r => { if (!r.ok) showExpired(); })
+        .catch(() => {});
+    }
+  }, 6000);
 </script>
+</body>
+</html>`;
+}
+
+function renderPrivacy(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0c10">
+<title>Privacy — ${BRAND}</title>
+<meta name="description" content="Screencast.to's privacy policy. Plain language, no tricks.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://screencast.to/privacy">
+<link rel="icon" href="${FAVICON_HREF}">
+${GA_SNIPPET}
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg-elev: #13161c;
+    --border: #1f232c;
+    --text: #e8eaed;
+    --text-2: #b8bcc6;
+    --muted: #8b909a;
+    --accent: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .brand { display: flex; align-items: center; gap: 9px; color: var(--text);
+    font-weight: 600; letter-spacing: -0.01em; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  main { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
+  h1 { font-size: 36px; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .lede { color: var(--text-2); margin-bottom: 8px; font-size: 17px; }
+  .updated { color: var(--muted); font-size: 12px; margin-bottom: 40px; }
+  h2 { font-size: 18px; letter-spacing: -0.01em; margin-top: 36px; margin-bottom: 10px; }
+  p, li { color: var(--text-2); }
+  p { margin-bottom: 12px; }
+  ul { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 6px; }
+  .tldr {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 24px 0 8px;
+  }
+  .tldr h2 { margin-top: 0; color: var(--text); }
+  code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  footer { border-top: 1px solid var(--border); padding: 24px; color: var(--muted); font-size: 13px; text-align: center; }
+  footer a { color: var(--text-2); }
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="/"><span class="dot"></span><span>${BRAND}</span></a>
+  <a href="/" style="color: var(--text-2); font-size: 14px;">← Home</a>
+</nav>
+<main>
+  <h1>Privacy</h1>
+  <p class="lede">Plain language, no tricks.</p>
+  <p class="updated">Last updated: ${new Date().toISOString().slice(0, 10)}</p>
+
+  <div class="tldr">
+    <h2>TL;DR</h2>
+    <p>${BRAND} records your screen locally on your Mac, uploads the file to our storage, and gives you a shareable link. Anyone with the link can watch. Recordings auto-delete after 24 hours. We don't watch, mine, or sell your recordings. We track basic anonymous website analytics — nothing tied to specific recordings.</p>
+  </div>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Your screen recordings</strong>, only when you press Record. The file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
+    <li><strong>Anonymous website analytics</strong> — page views, country, browser — via Google Analytics. Standard cookie-based tracking. No personal info.</li>
+    <li><strong>IP address</strong> on each recording-upload request, used only for short-window rate limiting (10 uploads / minute / IP). Not persisted.</li>
+  </ul>
+  <p>That's it. We don't collect your name, email, or any account info — there are no accounts.</p>
+
+  <h2>Where your recordings live</h2>
+  <p>Recordings are stored in a Cloudflare R2 bucket controlled by ${BRAND}. They are NOT publicly listed — only someone who has your specific share URL (which contains a random 10-character ID) can access the recording.</p>
+
+  <h2>Auto-deletion</h2>
+  <p>Every recording is deleted automatically <strong>within 24–48 hours</strong> of upload via a Cloudflare R2 lifecycle rule. After that, the share link returns a "Not Found" page. We can't recover deleted recordings.</p>
+
+  <h2>Who can see your recording</h2>
+  <p>Anyone who has the share URL can watch the recording until it auto-deletes. Treat the URL like a password — if it's shared publicly (e.g., on Twitter), the recording is effectively public. The viewer page doesn't require login.</p>
+
+  <h2>Third parties</h2>
+  <ul>
+    <li><strong>Cloudflare</strong> — hosts the worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
+    <li><strong>Google Analytics</strong> — anonymous traffic stats for the website (not the recordings). <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Their privacy policy</a>.</li>
+  </ul>
+  <p>We don't share recordings or data with anyone else.</p>
+
+  <h2>Cookies</h2>
+  <p>The website uses Google Analytics cookies (<code>_ga</code>, <code>_ga_*</code>) for anonymous traffic analytics. Block them in your browser if you prefer — the site works without them. The Mac app itself uses no cookies.</p>
+
+  <h2>Your rights</h2>
+  <p>You can delete a recording immediately by closing its share URL (the lifecycle rule will sweep it within 24h). Since we don't have accounts, there's no profile to delete.</p>
+
+  <h2>Abuse</h2>
+  <p>If you find a recording that should be removed (illegal content, harassment, etc.), email the operator. Recordings can be deleted manually within the bucket — they will be removed within 24 hours regardless.</p>
+
+  <h2>Changes</h2>
+  <p>This policy may be updated as the product evolves. The "Last updated" date at the top reflects the current version.</p>
+</main>
+<footer>
+  <a href="/">${BRAND}</a> · <a href="/privacy">Privacy</a>
+</footer>
 </body>
 </html>`;
 }
@@ -456,36 +677,20 @@ ${GA_SNIPPET}
   .preview .chrome span:nth-child(3) { background: #28c840; }
   .preview .body { position: absolute; inset: 38px 0 0; overflow: hidden; }
 
-  /* Mock app being recorded — sidebar + cards + content rows. */
-  .preview .mock { display: grid; grid-template-columns: 172px 1fr; height: 100%; }
-  .preview .mock-aside {
-    padding: 14px 12px;
-    border-right: 1px solid rgba(255,255,255,0.04);
-    display: flex; flex-direction: column; gap: 4px;
-  }
-  .preview .mock-brand {
-    height: 14px; width: 60%;
-    background: rgba(255,255,255,0.10);
-    border-radius: 4px; margin-bottom: 14px;
-  }
-  .preview .mock-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 9px; border-radius: 6px;
-  }
-  .preview .mock-row--active { background: rgba(239,68,68,0.10); }
-  .preview .mock-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(255,255,255,0.18); flex-shrink: 0;
-  }
-  .preview .mock-row--active .mock-dot { background: var(--accent); }
-  .preview .mock-text { height: 8px; border-radius: 3px; background: rgba(255,255,255,0.10); }
+  /* Mock app being recorded — full-width dashboard. */
+  .preview .mock { height: 100%; width: 100%; }
+  .preview .mock-text { height: 8px; border-radius: 3px; background: rgba(255,255,255,0.10); width: 100%; }
   .preview .w35 { width: 35%; } .preview .w40 { width: 40%; }
-  .preview .w55 { width: 55%; } .preview .w65 { width: 65%; }
-  .preview .w75 { width: 75%; } .preview .w85 { width: 85%; }
+  .preview .w45 { width: 45%; } .preview .w50 { width: 50%; }
+  .preview .w55 { width: 55%; } .preview .w60 { width: 60%; }
+  .preview .w65 { width: 65%; } .preview .w75 { width: 75%; }
+  .preview .w85 { width: 85%; }
   .preview .mock-main {
-    padding: 16px 22px 18px;
-    display: flex; flex-direction: column; gap: 12px;
+    padding: 18px 32px 22px;
+    display: flex; flex-direction: column; gap: 14px;
     min-width: 0;
+    height: 100%;
+    width: 100%;
   }
   /* Toolbar at top of main */
   .preview .mock-toolbar {
@@ -519,30 +724,31 @@ ${GA_SNIPPET}
 
   /* Stat cards */
   .preview .mock-cards {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
   }
   .preview .mock-card {
-    height: 76px;
+    height: 104px;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 10px;
-    display: flex; flex-direction: column; gap: 6px;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
     justify-content: space-between;
   }
-  .preview .mock-card .label { height: 6px; width: 50%; background: rgba(255,255,255,0.10); border-radius: 3px; }
-  .preview .mock-card .num   { height: 16px; width: 35%; background: rgba(255,255,255,0.30); border-radius: 4px; }
-  .preview .mock-card .trend { height: 5px; width: 60%; background: rgba(94,234,123,0.45); border-radius: 3px; }
-  .preview .mock-card.is-down .trend { background: rgba(239,68,68,0.45); }
+  .preview .mock-card .label { height: 8px; width: 55%; background: rgba(255,255,255,0.12); border-radius: 4px; }
+  .preview .mock-card .num   { height: 22px; width: 45%; background: rgba(255,255,255,0.34); border-radius: 5px; }
+  .preview .mock-card .trend { height: 7px; width: 70%; background: rgba(94,234,123,0.50); border-radius: 4px; }
+  .preview .mock-card.is-down .trend { background: rgba(239,68,68,0.50); }
 
-  /* Mini bar chart */
+  /* Mini bar chart — fills remaining vertical space */
   .preview .mock-chart {
-    height: 84px;
-    display: flex; align-items: flex-end; gap: 6px;
-    padding: 10px;
+    flex: 1;
+    min-height: 100px;
+    display: flex; align-items: flex-end; gap: 8px;
+    padding: 14px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 10px;
+    border-radius: 12px;
   }
   .preview .mock-bar {
     flex: 1; border-radius: 3px 3px 0 0;
@@ -554,18 +760,18 @@ ${GA_SNIPPET}
 
   /* Bottom rows */
   .preview .mock-rows {
-    display: flex; flex-direction: column; gap: 8px;
-    margin-top: 4px;
+    display: flex; flex-direction: column; gap: 10px;
   }
   .preview .mock-row-line {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 12px;
   }
   .preview .mock-row-line .pill-tag {
-    width: 30px; height: 12px; border-radius: 999px;
-    background: rgba(239,68,68,0.20);
+    width: 36px; height: 14px; border-radius: 999px;
+    background: rgba(239,68,68,0.22);
     flex-shrink: 0;
   }
-  .preview .mock-row-line .pill-tag.gray { background: rgba(255,255,255,0.10); }
+  .preview .mock-row-line .pill-tag.gray { background: rgba(255,255,255,0.12); }
+  .preview .mock-row-line .mock-text { height: 10px; }
 
   /* Recording overlays */
   .preview .pill {
@@ -679,6 +885,8 @@ ${GA_SNIPPET}
     font-size: 13px;
     display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   }
+  footer a { color: var(--text-2); text-decoration: none; transition: color 140ms ease; }
+  footer a:hover { color: var(--text); text-decoration: underline; }
 
   @media (max-width: 600px) {
     nav { padding: 14px 18px; }
@@ -722,14 +930,6 @@ ${GA_SNIPPET}
       <div class="chrome"><span></span><span></span><span></span></div>
       <div class="body">
         <div class="mock">
-          <aside class="mock-aside">
-            <div class="mock-brand"></div>
-            <div class="mock-row mock-row--active"><div class="mock-dot"></div><div class="mock-text w55"></div></div>
-            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w65"></div></div>
-            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w40"></div></div>
-            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w55"></div></div>
-            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w35"></div></div>
-          </aside>
           <main class="mock-main">
             <div class="mock-toolbar">
               <div class="mock-avatar"></div>
@@ -884,8 +1084,8 @@ ${GA_SNIPPET}
 </main>
 
 <footer>
-  <span>© ${new Date().getFullYear()} ${BRAND}.to</span>
-  <span>Recordings auto-delete after 24 hours · Hosted on Cloudflare R2</span>
+  <span>© ${new Date().getFullYear()} ${BRAND}</span>
+  <span>Recordings auto-delete after 24 hours · <a href="/privacy">Privacy</a></span>
 </footer>
 
 </body>
