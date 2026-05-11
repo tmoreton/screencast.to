@@ -22,6 +22,19 @@ const CORS: Record<string, string> = {
 
 const BRAND = "Screencast.to";
 
+// Google Analytics 4 Measurement ID. Replace G-XXXXXXXXXX with the real one
+// from https://analytics.google.com → Admin → Data Streams → your web stream.
+const GA_MEASUREMENT_ID = "G-XXXXXXXXXX";
+
+const GA_SNIPPET = `
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${GA_MEASUREMENT_ID}');
+</script>`;
+
 // Inline SVG favicon — red squircle + white ring + white record dot.
 // Mirrors the macOS app icon and the onboarding brand mark.
 // All `"` inside the SVG are %22-encoded so the data URI doesn't break out
@@ -179,7 +192,22 @@ function renderViewer(videoUrl: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <title>${BRAND}</title>
+<meta name="description" content="A screencast shared via Screencast.to. Free macOS menu-bar app — record your screen and share a link.">
 <link rel="icon" href="${FAVICON_HREF}">
+
+<!-- Open Graph / Twitter — same brand image for now -->
+<meta property="og:site_name" content="Screencast.to">
+<meta property="og:title" content="Watch this screencast">
+<meta property="og:description" content="Shared via Screencast.to — record your screen, share a link. Always free.">
+<meta property="og:type" content="video.other">
+<meta property="og:image" content="https://screencast.to/download/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Watch this screencast">
+<meta name="twitter:description" content="Shared via Screencast.to.">
+<meta name="twitter:image" content="https://screencast.to/download/og.png">
+${GA_SNIPPET}
 <style>
   :root { --accent: #ef4444; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -290,11 +318,32 @@ function renderHome(): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a0c10">
 <title>${BRAND} — Record your screen, share a link</title>
-<meta name="description" content="A tiny macOS menu-bar app. Hit record, get a shareable link the moment you stop. Free.">
-<meta property="og:title" content="${BRAND}">
-<meta property="og:description" content="Record your screen. Share a link.">
-<meta property="og:type" content="website">
+<meta name="description" content="A tiny macOS menu-bar app. Hit record, get a shareable link the moment you stop. Always free. Recordings auto-delete after 24 hours.">
+<meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, macOS, share screen recording, screencast">
+<meta name="author" content="Screencast.to">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://screencast.to/">
 <link rel="icon" href="${FAVICON_HREF}">
+
+<!-- Open Graph (Facebook, LinkedIn, iMessage, Slack) -->
+<meta property="og:site_name" content="Screencast.to">
+<meta property="og:title" content="Screencast.to — Record your screen, share a link">
+<meta property="og:description" content="A tiny macOS menu-bar app. Hit record, get a shareable link the moment you stop. Always free.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://screencast.to/">
+<meta property="og:image" content="https://screencast.to/download/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Screencast.to — record your screen, share a link">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Screencast.to — Record your screen, share a link">
+<meta name="twitter:description" content="A tiny macOS menu-bar app. Hit record, get a shareable link. Always free.">
+<meta name="twitter:image" content="https://screencast.to/download/og.png">
+
+${GA_SNIPPET}
 <style>
   :root {
     --bg: #0a0c10;
@@ -405,18 +454,123 @@ function renderHome(): string {
   .preview .chrome span:nth-child(1) { background: #ff5f57; }
   .preview .chrome span:nth-child(2) { background: #febc2e; }
   .preview .chrome span:nth-child(3) { background: #28c840; }
-  .preview .body {
-    position: absolute; inset: 38px 0 0;
-    display: grid; place-items: center;
+  .preview .body { position: absolute; inset: 38px 0 0; overflow: hidden; }
+
+  /* Mock app being recorded — sidebar + cards + content rows. */
+  .preview .mock { display: grid; grid-template-columns: 172px 1fr; height: 100%; }
+  .preview .mock-aside {
+    padding: 14px 12px;
+    border-right: 1px solid rgba(255,255,255,0.04);
+    display: flex; flex-direction: column; gap: 4px;
   }
-  .preview .bubble {
-    position: absolute; bottom: 18px; right: 18px;
-    width: 80px; height: 80px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #4a5060, #1a1d24);
-    border: 3px solid rgba(255,255,255,0.85);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  .preview .mock-brand {
+    height: 14px; width: 60%;
+    background: rgba(255,255,255,0.10);
+    border-radius: 4px; margin-bottom: 14px;
   }
+  .preview .mock-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 9px; border-radius: 6px;
+  }
+  .preview .mock-row--active { background: rgba(239,68,68,0.10); }
+  .preview .mock-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.18); flex-shrink: 0;
+  }
+  .preview .mock-row--active .mock-dot { background: var(--accent); }
+  .preview .mock-text { height: 8px; border-radius: 3px; background: rgba(255,255,255,0.10); }
+  .preview .w35 { width: 35%; } .preview .w40 { width: 40%; }
+  .preview .w55 { width: 55%; } .preview .w65 { width: 65%; }
+  .preview .w75 { width: 75%; } .preview .w85 { width: 85%; }
+  .preview .mock-main {
+    padding: 16px 22px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-width: 0;
+  }
+  /* Toolbar at top of main */
+  .preview .mock-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .preview .mock-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, #4a5060, #1a1d24);
+    flex-shrink: 0;
+  }
+  .preview .mock-h {
+    height: 14px; width: 36%;
+    background: rgba(255,255,255,0.18);
+    border-radius: 4px;
+  }
+  .preview .mock-btn {
+    height: 22px; border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .preview .mock-btn.w40px { width: 40px; }
+  .preview .mock-btn.w52px { width: 52px; }
+  .preview .mock-btn--accent {
+    background: rgba(239,68,68,0.22);
+    border-color: rgba(239,68,68,0.28);
+    width: 36px;
+  }
+
+  /* Stat cards */
+  .preview .mock-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .preview .mock-card {
+    height: 76px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 6px;
+    justify-content: space-between;
+  }
+  .preview .mock-card .label { height: 6px; width: 50%; background: rgba(255,255,255,0.10); border-radius: 3px; }
+  .preview .mock-card .num   { height: 16px; width: 35%; background: rgba(255,255,255,0.30); border-radius: 4px; }
+  .preview .mock-card .trend { height: 5px; width: 60%; background: rgba(94,234,123,0.45); border-radius: 3px; }
+  .preview .mock-card.is-down .trend { background: rgba(239,68,68,0.45); }
+
+  /* Mini bar chart */
+  .preview .mock-chart {
+    height: 84px;
+    display: flex; align-items: flex-end; gap: 6px;
+    padding: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+  }
+  .preview .mock-bar {
+    flex: 1; border-radius: 3px 3px 0 0;
+    background: linear-gradient(to top, rgba(239,68,68,0.55), rgba(239,68,68,0.18));
+  }
+  .preview .mock-bar.muted {
+    background: linear-gradient(to top, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+  }
+
+  /* Bottom rows */
+  .preview .mock-rows {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 4px;
+  }
+  .preview .mock-row-line {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .preview .mock-row-line .pill-tag {
+    width: 30px; height: 12px; border-radius: 999px;
+    background: rgba(239,68,68,0.20);
+    flex-shrink: 0;
+  }
+  .preview .mock-row-line .pill-tag.gray { background: rgba(255,255,255,0.10); }
+
+  /* Recording overlays */
   .preview .pill {
+    position: absolute;
+    top: 16px; left: 50%; transform: translateX(-50%);
     background: rgba(20,20,22,0.85);
     backdrop-filter: blur(14px);
     border: 1px solid rgba(255,255,255,0.14);
@@ -432,6 +586,17 @@ function renderHome(): string {
     animation: pulse 1s infinite alternate;
   }
   @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
+
+  .preview .bubble {
+    position: absolute; bottom: 18px; right: 18px;
+    width: 84px; height: 84px; border-radius: 50%;
+    background: linear-gradient(135deg, #5e6478 0%, #1f2229 100%);
+    border: 3px solid rgba(255,255,255,0.92);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: grid; place-items: center;
+  }
+  .preview .bubble svg { width: 100%; height: 100%; }
 
   /* Sections */
   section.block { padding: 80px 0; }
@@ -556,8 +721,60 @@ function renderHome(): string {
     <div class="preview" aria-hidden="true">
       <div class="chrome"><span></span><span></span><span></span></div>
       <div class="body">
+        <div class="mock">
+          <aside class="mock-aside">
+            <div class="mock-brand"></div>
+            <div class="mock-row mock-row--active"><div class="mock-dot"></div><div class="mock-text w55"></div></div>
+            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w65"></div></div>
+            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w40"></div></div>
+            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w55"></div></div>
+            <div class="mock-row"><div class="mock-dot"></div><div class="mock-text w35"></div></div>
+          </aside>
+          <main class="mock-main">
+            <div class="mock-toolbar">
+              <div class="mock-avatar"></div>
+              <div class="mock-h"></div>
+              <div style="flex:1"></div>
+              <div class="mock-btn w40px"></div>
+              <div class="mock-btn w52px"></div>
+              <div class="mock-btn mock-btn--accent"></div>
+            </div>
+
+            <div class="mock-cards">
+              <div class="mock-card"><div class="label"></div><div class="num"></div><div class="trend"></div></div>
+              <div class="mock-card"><div class="label"></div><div class="num"></div><div class="trend"></div></div>
+              <div class="mock-card is-down"><div class="label"></div><div class="num"></div><div class="trend"></div></div>
+            </div>
+
+            <div class="mock-chart">
+              <div class="mock-bar muted" style="height:32%"></div>
+              <div class="mock-bar muted" style="height:48%"></div>
+              <div class="mock-bar muted" style="height:38%"></div>
+              <div class="mock-bar muted" style="height:62%"></div>
+              <div class="mock-bar"        style="height:74%"></div>
+              <div class="mock-bar"        style="height:56%"></div>
+              <div class="mock-bar"        style="height:88%"></div>
+              <div class="mock-bar"        style="height:70%"></div>
+              <div class="mock-bar muted" style="height:42%"></div>
+              <div class="mock-bar muted" style="height:54%"></div>
+              <div class="mock-bar muted" style="height:36%"></div>
+              <div class="mock-bar muted" style="height:48%"></div>
+            </div>
+
+            <div class="mock-rows">
+              <div class="mock-row-line"><div class="pill-tag"></div><div class="mock-text w85"></div></div>
+              <div class="mock-row-line"><div class="pill-tag gray"></div><div class="mock-text w65"></div></div>
+              <div class="mock-row-line"><div class="pill-tag gray"></div><div class="mock-text w75"></div></div>
+            </div>
+          </main>
+        </div>
         <div class="pill"><span class="reddot"></span>00:14 · recording</div>
-        <div class="bubble"></div>
+        <div class="bubble">
+          <svg viewBox="0 0 80 80">
+            <circle cx="40" cy="30" r="13" fill="rgba(255,255,255,0.34)"/>
+            <path d="M14 72 C14 56 26 50 40 50 C54 50 66 56 66 72 Z" fill="rgba(255,255,255,0.34)"/>
+          </svg>
+        </div>
       </div>
     </div>
   </section>
