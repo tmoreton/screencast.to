@@ -32,6 +32,21 @@ final class UploadClient {
     /// Total attempts (initial + retries). Backoff between attempts: 1s, 2s.
     private let maxAttempts = 3
 
+    /// Dedicated session sized for large recordings. The default
+    /// `session` request timeout is 60s, which a 10-minute screen
+    /// recording can blow through on a slow uplink. `timeoutIntervalForRequest`
+    /// is the inactivity timeout between bytes; `timeoutIntervalForResource`
+    /// caps the whole upload.
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 300           // 5 min of no data before giving up
+        config.timeoutIntervalForResource = 60 * 60      // 1 hour total cap
+        config.waitsForConnectivity = true               // tolerate brief network drops
+        config.allowsExpensiveNetworkAccess = true
+        config.allowsConstrainedNetworkAccess = true
+        return URLSession(configuration: config)
+    }()
+
     func upload(fileURL: URL, progress: @escaping (Double) -> Void) async throws -> URL {
         var lastError: Error?
 
@@ -103,7 +118,7 @@ final class UploadClient {
         req.setValue(UploadConfig.appSecret, forHTTPHeaderField: "X-Screencast-Auth")
         req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov"))
 
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw UploadError.signFailed(code)
@@ -122,7 +137,7 @@ final class UploadClient {
         }
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let task = URLSession.shared.uploadTask(with: req, fromFile: fileURL) { _, response, error in
+            let task = session.uploadTask(with: req, fromFile: fileURL) { _, response, error in
                 if let error = error {
                     cont.resume(throwing: error)
                     return

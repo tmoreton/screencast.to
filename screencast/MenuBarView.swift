@@ -15,27 +15,16 @@ struct MenuBarView: View {
 
             Divider()
 
-            section("Area") {
-                areaRow
-            }
+            captureSection
 
-            Divider()
-
-            section("Devices") {
-                toggleRow("Camera bubble", systemImage: "video.bubble.left", isOn: $state.options.showCameraBubble)
-                devicePicker(
-                    label: "Camera",
-                    systemImage: "video",
-                    devices: state.devices.cameras,
-                    selection: $state.options.cameraDeviceID,
-                    enabled: state.options.showCameraBubble
-                )
-                microphonePicker
-            }
-
-            if let url = state.lastSharedURL, !state.isRecording {
+            if !state.pendingRecordings.isEmpty, !state.isRecording {
                 Divider()
-                lastShare(url: url)
+                pendingUploads
+            }
+
+            if !state.history.isEmpty, !state.isRecording {
+                Divider()
+                recentShares
             }
 
             Divider()
@@ -69,7 +58,7 @@ struct MenuBarView: View {
         switch state.phase {
         case .idle: Text("Idle")
         case .recording: Text("Recording")
-        case .uploading(let p): Text("Uploading \(Int(p * 100))%")
+        case .uploading: Text("Uploading…")
         case .done: Text("Ready")
         case .error: Text("Error")
         }
@@ -87,41 +76,71 @@ struct MenuBarView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        case .error(let message):
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Upload failed")
+                        .fontWeight(.semibold)
+                }
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                HStack(spacing: 6) {
+                    if state.failedUploadURL != nil {
+                        Button { state.retryFailedUpload() } label: {
+                            Label("Retry Upload", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.accentColor)
+                    }
+                    Button { state.toggleRecording() } label: {
+                        Text("New Recording")
+                    }
+                }
+                .controlSize(.small)
+            }
         default:
             Button(action: { state.toggleRecording() }) {
                 HStack(spacing: 6) {
                     Image(systemName: state.isRecording ? "stop.circle.fill" : "record.circle")
                     Text(state.isRecording ? "Stop Recording" : "Start Recording")
                         .fontWeight(.semibold)
+                    Spacer()
+                    Text("⌘⇧R")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.65))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
             .tint(state.isRecording ? .red : .accentColor)
-            .keyboardShortcut("r", modifiers: [.command, .shift])
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Capture
 
-    @ViewBuilder
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .tracking(0.5)
-                .padding(.top, 10)
-            VStack(alignment: .leading, spacing: 6) {
-                content()
-            }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .disabled(state.isBusy)
+    private var captureSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            toggleRow("Camera bubble", systemImage: "video.bubble.left", isOn: $state.options.showCameraBubble)
+            areaRow
+            devicePicker(
+                label: "Camera",
+                systemImage: "video",
+                devices: state.devices.cameras,
+                selection: $state.options.cameraDeviceID,
+                enabled: state.options.showCameraBubble
+            )
+            microphonePicker
         }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .disabled(state.isBusy)
         .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.vertical, 10)
     }
 
     @ViewBuilder
@@ -223,49 +242,135 @@ struct MenuBarView: View {
         .opacity(enabled ? 1.0 : 0.45)
     }
 
-    // MARK: - Last share
+    // MARK: - Pending uploads
 
-    private func lastShare(url: URL) -> some View {
+    private var pendingUploads: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("LAST RECORDING")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .tracking(0.5)
-            Text(url.absoluteString)
-                .font(.system(size: 11, design: .monospaced))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 6) {
-                Button { state.copyLastURL() } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
-                Button { state.openLastURL() } label: {
-                    Label("Open", systemImage: "safari")
-                }
+            HStack {
+                Text("PENDING UPLOADS")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .tracking(0.5)
                 Spacer()
+                Text("\(state.pendingRecordings.count)")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .controlSize(.small)
+            ForEach(state.pendingRecordings.prefix(5), id: \.self) { url in
+                pendingRow(url: url)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
     }
 
+    private func pendingRow(url: URL) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.up.circle")
+                .foregroundStyle(.orange)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(url.deletingPathExtension().lastPathComponent)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(fileSizeString(url: url))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { state.retryUpload(fileURL: url) } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .help("Retry upload")
+            .buttonStyle(.borderless)
+            .disabled(state.isBusy)
+            Button { state.revealInFinder(url) } label: {
+                Image(systemName: "folder")
+            }
+            .help("Reveal in Finder")
+            .buttonStyle(.borderless)
+        }
+    }
+
+    // MARK: - Recent shares
+
+    private var recentShares: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("RECENT SHARES")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .tracking(0.5)
+            ForEach(state.history.prefix(5)) { entry in
+                shareRow(entry: entry)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    private func shareRow(entry: ShareEntry) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "link")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.publicURL.lastPathComponent)
+                    .font(.system(size: 11, design: .monospaced))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                Text(relativeDate(entry.createdAt))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { state.copyURL(entry.publicURL) } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .help("Copy link")
+            .buttonStyle(.borderless)
+            Button { state.openURL(entry.publicURL) } label: {
+                Image(systemName: "safari")
+            }
+            .help("Open")
+            .buttonStyle(.borderless)
+        }
+    }
+
     // MARK: - Footer
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 12) {
+            Button { state.openRecordingsFolder() } label: {
+                Label("Show Recordings", systemImage: "folder")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            Spacer()
             Button { state.quit() } label: {
-                Text("Quit Screencast")
+                Text("⌘Q Quit")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .keyboardShortcut("q", modifiers: [.command])
-            Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Formatters
+
+    private func fileSizeString(url: URL) -> String {
+        let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    private func relativeDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }

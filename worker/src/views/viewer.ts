@@ -16,7 +16,7 @@ export function renderViewer(videoUrl: string): string {
 <!-- Open Graph / Twitter — same brand image for now -->
 <meta property="og:site_name" content="Screencast.to">
 <meta property="og:title" content="Watch this screencast">
-<meta property="og:description" content="Shared via Screencast.to — record your screen, share a link. Always free.">
+<meta property="og:description" content="Shared via Screencast.to — record your screen, share a link. Free.">
 <meta property="og:type" content="video.other">
 <meta property="og:image" content="https://screencast.to/download/og.png">
 <meta property="og:image:width" content="1200">

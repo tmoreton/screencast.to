@@ -376,7 +376,7 @@ ${GA_SNIPPET}
   <div class="links">
     <a href="#features">Features</a>
     <a href="#how">How it works</a>
-    <a class="btn btn-primary" href="/download/screencast.dmg" download>Download</a>
+    <a class="btn btn-primary text-white" href="/download/screencast.dmg" download>Download</a>
   </div>
 </nav>
 
@@ -494,7 +494,7 @@ ${GA_SNIPPET}
 
       <div class="card">
         <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-        <h3>Always free</h3>
+        <h3>Free</h3>
         <p>No accounts, no plans, no upsells. Build a habit instead of a billing relationship.</p>
       </div>
 
@@ -539,7 +539,7 @@ ${GA_SNIPPET}
 
   <section class="install" id="install">
     <h2>Get ${BRAND}</h2>
-    <p>Always free. Recordings live for 24 hours, then delete themselves. macOS 15+.</p>
+    <p>Free. Recordings live for 24 hours, then delete themselves. macOS 15+.</p>
     <div class="row">
       <a class="btn btn-primary btn-lg" href="/download/screencast.dmg">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -548,7 +548,6 @@ ${GA_SNIPPET}
         Download .dmg
       </a>
     </div>
-    <span class="note">First launch will ask to grant Screen Recording, Camera, and Microphone in System Settings.</span>
   </section>
 
 </main>

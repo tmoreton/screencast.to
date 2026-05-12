@@ -59,7 +59,8 @@ struct OnboardingView: View {
             .tint(.red)
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
-            .disabled(step == 1 && !permissions.allGranted)
+            // Finish is never gated — users can skip any permission and grant
+            // it later from System Settings (or be re-prompted on first use).
         }
         .padding(24)
     }
@@ -194,13 +195,18 @@ private struct PermissionsStep: View {
 
             Spacer()
 
-            if !permissions.allGranted {
-                Text("Grant all three to continue.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.5))
-                    .padding(.bottom, 4)
-            }
+            Text(footerHint)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.white.opacity(0.5))
+                .padding(.bottom, 4)
         }
+    }
+
+    private var footerHint: String {
+        if permissions.allGranted {
+            return "You're all set."
+        }
+        return "You can grant any of these later in System Settings."
     }
 
     private var screenRecordingDetail: String {

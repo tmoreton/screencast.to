@@ -121,13 +121,24 @@ final class RecordingEngine: NSObject {
     }
 
     private func makeOutputURL() throws -> URL {
+        let dir = try Self.recordingsDirectory()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd 'at' h.mm.ss a"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        let timestamp = formatter.string(from: Date())
+        return dir.appendingPathComponent("Screencast \(timestamp).mov")
+    }
+
+    /// Persistent on-disk location for recordings. Lives in Application Support
+    /// so macOS will not purge it under disk pressure (unlike `.cachesDirectory`).
+    nonisolated static func recordingsDirectory() throws -> URL {
         let fm = FileManager.default
-        let caches = try fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dir = caches.appendingPathComponent("screencast", isDirectory: true)
+        let appSupport = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let dir = appSupport.appendingPathComponent("Screencast/Recordings", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        return dir.appendingPathComponent("\(UUID().uuidString).mov")
+        return dir
     }
 }
 
