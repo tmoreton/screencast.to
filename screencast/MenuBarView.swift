@@ -42,7 +42,7 @@ struct MenuBarView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 18, height: 18)
-            Text("Screencast")
+            Text("Screencast.to")
                 .font(.system(size: 13, weight: .semibold))
             Spacer()
             statusText

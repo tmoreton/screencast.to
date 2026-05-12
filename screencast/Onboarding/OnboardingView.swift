@@ -74,7 +74,7 @@ private struct WelcomeStep: View {
             Spacer().frame(height: 20)
             BrandMark()
             VStack(spacing: 12) {
-                Text("Welcome to Screencast")
+                Text("Welcome to Screencast.to")
                     .font(.system(size: 30, weight: .bold))
                     .tracking(-0.5)
                 Text("Record your screen. Share a link.\nA tiny menu-bar app for macOS.")

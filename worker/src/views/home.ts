@@ -376,7 +376,7 @@ ${GA_SNIPPET}
   <div class="links">
     <a href="#features">Features</a>
     <a href="#how">How it works</a>
-    <a class="btn btn-primary text-white" href="/download/screencast.dmg" download>Download</a>
+    <a class="btn btn-primary text-white" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg" download>Download</a>
   </div>
 </nav>
 
@@ -387,7 +387,7 @@ ${GA_SNIPPET}
     <h1>Record your screen.<br><span class="accent">Share a link.</span></h1>
     <p>A tiny menu-bar app for macOS. Hit record, capture exactly what you want, and get a shareable link the moment you stop.</p>
     <div class="cta">
-      <a class="btn btn-primary btn-lg" href="/download/screencast.dmg" download>
+      <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg" download>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
         </svg>
@@ -541,7 +541,7 @@ ${GA_SNIPPET}
     <h2>Get ${BRAND}</h2>
     <p>Free. Recordings live for 24 hours, then delete themselves. macOS 15+.</p>
     <div class="row">
-      <a class="btn btn-primary btn-lg" href="/download/screencast.dmg">
+      <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
         </svg>
