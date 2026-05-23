@@ -62,7 +62,7 @@ final class CameraBubbleController {
         )
         panel.level = .floating
         panel.isOpaque = false
-        panel.backgroundColor = .black
+        panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovableByWindowBackground = true
