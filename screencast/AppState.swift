@@ -237,10 +237,12 @@ final class AppState {
             keyCode: UInt32(kVK_ANSI_Z),
             modifiers: UInt32(cmdKey) | UInt32(shiftKey),
             onPressed: { [weak self] in
+                NSLog("Zoom: ⌘⇧Z pressed -> zoom in")
                 self?.zoom.zoomIn()
                 self?.controls.setZoomActive(true)
             },
             onReleased: { [weak self] in
+                NSLog("Zoom: ⌘⇧Z released -> zoom out")
                 self?.zoom.zoomOut()
                 self?.controls.setZoomActive(false)
             }
