@@ -17,7 +17,7 @@ struct MenuBarView: View {
 
             captureSection
 
-            if !state.recordings.isEmpty, !state.isRecording {
+            if !state.recordings.isEmpty, !state.isActive {
                 Divider()
                 recordingsList
             }
@@ -53,6 +53,7 @@ struct MenuBarView: View {
         switch state.phase {
         case .idle: Text("Idle")
         case .recording: Text("Recording")
+        case .paused: Text("Paused")
         case .saving: Text("Saving…")
         case .error: Text("Error")
         }
@@ -89,21 +90,36 @@ struct MenuBarView: View {
                 .controlSize(.small)
             }
         default:
-            Button(action: { state.toggleRecording() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: state.isRecording ? "stop.circle.fill" : "record.circle")
-                    Text(state.isRecording ? "Stop Recording" : "Start Recording")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Text("⌘⇧R")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.65))
+            VStack(spacing: 8) {
+                Button(action: { state.toggleRecording() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: state.isActive ? "stop.circle.fill" : "record.circle")
+                        Text(state.isActive ? "Stop Recording" : "Start Recording")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text("⌘⇧R")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .buttonStyle(.borderedProminent)
+                .tint(state.isActive ? .red : .accentColor)
+
+                if state.isActive {
+                    Button(action: { state.togglePauseResume() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: state.isPaused ? "play.fill" : "pause.fill")
+                            Text(state.isPaused ? "Resume" : "Pause")
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(state.isRecording ? .red : .accentColor)
         }
     }
 

@@ -9,8 +9,8 @@ struct ScreencastApp: App {
         MenuBarExtra {
             MenuBarView(state: state)
         } label: {
-            Image(systemName: state.isRecording ? "record.circle.fill" : "record.circle")
-                .foregroundStyle(state.isRecording ? .red : .primary)
+            Image(systemName: state.isActive ? "record.circle.fill" : "record.circle")
+                .foregroundStyle(state.isPaused ? .orange : (state.isRecording ? .red : .primary))
         }
         .menuBarExtraStyle(.window)
     }

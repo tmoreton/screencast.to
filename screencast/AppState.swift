@@ -6,6 +6,7 @@ import Observation
 enum AppPhase: Equatable {
     case idle
     case recording
+    case paused
     case saving
     case error(String)
 }
@@ -43,9 +44,17 @@ final class AppState {
         return false
     }
 
+    var isPaused: Bool {
+        if case .paused = phase { return true }
+        return false
+    }
+
+    /// A recording is in progress (whether actively capturing or paused).
+    var isActive: Bool { isRecording || isPaused }
+
     var isBusy: Bool {
         switch phase {
-        case .recording, .saving: return true
+        case .recording, .paused, .saving: return true
         default: return false
         }
     }
@@ -53,10 +62,26 @@ final class AppState {
     // MARK: - Recording
 
     func toggleRecording() {
-        if isRecording {
+        if isActive {
             stopRecording()
         } else {
             startRecording()
+        }
+    }
+
+    /// Toggle pause/resume on the active recording (driven by the pill).
+    func togglePauseResume() {
+        switch phase {
+        case .recording:
+            recorder.pause()
+            phase = .paused
+            controls.setPaused(true)
+        case .paused:
+            recorder.resume()
+            phase = .recording
+            controls.setPaused(false)
+        default:
+            break
         }
     }
 
@@ -71,7 +96,10 @@ final class AppState {
             do {
                 try await recorder.start(options: options)
                 phase = .recording
-                controls.show(onStop: { [weak self] in self?.stopRecording() })
+                controls.show(
+                    onStop: { [weak self] in self?.stopRecording() },
+                    onPauseResume: { [weak self] in self?.togglePauseResume() }
+                )
             } catch {
                 phase = .error(error.localizedDescription)
                 bubble.hide()
@@ -82,7 +110,7 @@ final class AppState {
 
     private func stopRecording() {
         // Guard against double-clicks (popover + floating controls both fire).
-        guard !isStopping, case .recording = phase else { return }
+        guard !isStopping, isActive else { return }
         isStopping = true
 
         controls.hide()
