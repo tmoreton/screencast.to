@@ -8,7 +8,8 @@ final class RegionSelector {
     /// Presents a full-screen overlay on the main display and reports back the
     /// selected rect in **display coordinates** (points, top-left origin),
     /// or `nil` if the user cancelled (pressed ESC / clicked without dragging).
-    func select(completion: @escaping (CGRect?) -> Void) {
+    /// When `aspect` has a fixed ratio, the drag is locked to it.
+    func select(aspect: CaptureAspect = .free, completion: @escaping (CGRect?) -> Void) {
         cancel()
         self.completion = completion
 
@@ -33,6 +34,7 @@ final class RegionSelector {
         win.hasShadow = false
 
         let view = RegionSelectionView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        view.aspectRatio = aspect.ratio
         view.onConfirm = { [weak self] viewRect in
             // viewRect is bottom-left origin in view coords. The view fills the
             // screen, so flip Y to get top-left origin display coords.
@@ -75,6 +77,8 @@ final class RegionSelector {
 private final class RegionSelectionView: NSView {
     var onConfirm: ((CGRect) -> Void)?
     var onCancel: (() -> Void)?
+    /// width / height to lock the selection to, or nil for freeform.
+    var aspectRatio: CGFloat?
 
     private var dragStart: NSPoint?
     private var dragEnd: NSPoint?
@@ -84,6 +88,27 @@ private final class RegionSelectionView: NSView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .crosshair)
+    }
+
+    /// Selection rect for the current drag, honoring `aspectRatio`: the largest
+    /// rect of that ratio that fits inside the drag's bounding box, anchored at
+    /// the start point and growing toward the cursor.
+    private func currentRect() -> NSRect {
+        guard let s = dragStart, let e = dragEnd else { return .zero }
+        let dx = e.x - s.x
+        let dy = e.y - s.y
+        var w = abs(dx)
+        var h = abs(dy)
+        if let ratio = aspectRatio, w > 0, h > 0 {
+            if w / h > ratio {
+                w = h * ratio
+            } else {
+                h = w / ratio
+            }
+        }
+        let x = dx >= 0 ? s.x : s.x - w
+        let y = dy >= 0 ? s.y : s.y - h
+        return NSRect(x: x, y: y, width: w, height: h)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -98,14 +123,11 @@ private final class RegionSelectionView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard let s = dragStart, let e = dragEnd else {
+        guard dragStart != nil, dragEnd != nil else {
             onCancel?()
             return
         }
-        let rect = NSRect(
-            x: min(s.x, e.x), y: min(s.y, e.y),
-            width: abs(e.x - s.x), height: abs(e.y - s.y)
-        )
+        let rect = currentRect()
         if rect.width >= 12 && rect.height >= 12 {
             onConfirm?(rect)
         } else {
@@ -126,14 +148,11 @@ private final class RegionSelectionView: NSView {
         NSColor.black.withAlphaComponent(0.32).setFill()
         bounds.fill()
 
-        guard let s = dragStart, let e = dragEnd else {
+        guard dragStart != nil, dragEnd != nil else {
             drawHint()
             return
         }
-        let rect = NSRect(
-            x: min(s.x, e.x), y: min(s.y, e.y),
-            width: abs(e.x - s.x), height: abs(e.y - s.y)
-        )
+        let rect = currentRect()
 
         // Punch the selection rect transparent.
         NSColor.clear.setFill()

@@ -208,14 +208,17 @@ final class AppState {
 
     // MARK: - Region
 
-    func selectRegion() {
-        regionSelector.select { [weak self] rect in
-            self?.options.captureRegion = rect
+    func selectRegion(aspect: CaptureAspect = .free) {
+        regionSelector.select(aspect: aspect) { [weak self] rect in
+            guard let self, let rect else { return }  // keep current on cancel
+            self.options.captureRegion = rect
+            self.options.captureAspect = aspect
         }
     }
 
     func clearRegion() {
         options.captureRegion = nil
+        options.captureAspect = .free
     }
 
     // MARK: - Global hotkey

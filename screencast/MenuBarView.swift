@@ -170,7 +170,9 @@ struct MenuBarView: View {
                 .frame(width: 14)
             if let r = state.options.captureRegion {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Region")
+                    Text(state.options.captureAspect.badge.isEmpty
+                         ? "Region"
+                         : "Region · \(state.options.captureAspect.badge)")
                         .font(.system(size: 12))
                     Text("\(Int(r.width)) × \(Int(r.height))")
                         .font(.system(size: 10, design: .monospaced))
@@ -182,9 +184,13 @@ struct MenuBarView: View {
             }
             Spacer()
             HStack(spacing: 4) {
-                Button(state.options.captureRegion == nil ? "Select…" : "Change") {
-                    state.selectRegion()
+                Menu(state.options.captureRegion == nil ? "Select…" : "Change") {
+                    Button("16:9 — YouTube") { state.selectRegion(aspect: .youtube) }
+                    Button("9:16 — Shorts / Reels") { state.selectRegion(aspect: .shorts) }
+                    Button("Freeform") { state.selectRegion(aspect: .free) }
                 }
+                .menuStyle(.button)
+                .fixedSize()
                 if state.options.captureRegion != nil {
                     Button("Clear") { state.clearRegion() }
                 }
