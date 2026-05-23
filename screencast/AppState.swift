@@ -42,6 +42,10 @@ final class AppState {
     private let hotkey = GlobalHotkey()
     private let zoom = ZoomController()
     private let teleprompter = TeleprompterController()
+    /// The controls host for the current recording: the standalone pill, or the
+    /// teleprompter (with the recording controls embedded in its header) when the
+    /// teleprompter is in use — so they're one unit.
+    private var activeControls: RecordingControlsHost?
     /// Zoom hotkey is registered only while recording so it doesn't hijack
     /// ⌘⇧Z (Redo) system-wide the rest of the time.
     private var zoomHotkeyID: UInt32?
@@ -102,11 +106,11 @@ final class AppState {
         case .recording:
             recorder.pause()
             phase = .paused
-            controls.setPaused(true)
+            activeControls?.setPaused(true)
         case .paused:
             recorder.resume()
             phase = .recording
-            controls.setPaused(false)
+            activeControls?.setPaused(false)
         default:
             break
         }
@@ -125,9 +129,13 @@ final class AppState {
         registerZoomHotkey()
         registerFormatHotkey()
 
-        if teleprompterEnabled, !teleprompterScript.isEmpty {
-            teleprompter.show(script: teleprompterScript)
+        let useTeleprompter = teleprompterEnabled && !teleprompterScript.isEmpty
+        if useTeleprompter {
+            teleprompter.loadScript(teleprompterScript)
             registerTeleprompterHotkey()
+            activeControls = teleprompter
+        } else {
+            activeControls = controls
         }
 
         Task {
@@ -144,12 +152,12 @@ final class AppState {
                 }
                 try await recorder.start(options: options, zoomState: zoom.state)
                 phase = .recording
-                controls.show(
+                activeControls?.showControls(
                     onStop: { [weak self] in self?.stopRecording() },
                     onPauseResume: { [weak self] in self?.togglePauseResume() },
                     onCycleFormat: { [weak self] in self?.cycleFormat() }
                 )
-                controls.setFormat(currentFormat)
+                activeControls?.setFormat(currentFormat)
             } catch {
                 lastError = error.localizedDescription
                 phase = .idle
@@ -168,7 +176,7 @@ final class AppState {
     func cycleFormat() {
         guard isActive else { return }
         currentFormat = currentFormat.next
-        controls.setFormat(currentFormat)
+        activeControls?.setFormat(currentFormat)
         Task {
             await bubble.apply(format: currentFormat,
                                deviceID: options.cameraDeviceID,
@@ -181,7 +189,7 @@ final class AppState {
         guard !isStopping, isActive else { return }
         isStopping = true
 
-        controls.hide()
+        activeControls?.hideControls()
         regionOverlay.hide()
         bubble.hide()
         zoom.stop()
@@ -305,12 +313,12 @@ final class AppState {
             onPressed: { [weak self] in
                 NSLog("Zoom: ⌘⇧Z pressed -> zoom in")
                 self?.zoom.zoomIn()
-                self?.controls.setZoomActive(true)
+                self?.activeControls?.setZoomActive(true)
             },
             onReleased: { [weak self] in
                 NSLog("Zoom: ⌘⇧Z released -> zoom out")
                 self?.zoom.zoomOut()
-                self?.controls.setZoomActive(false)
+                self?.activeControls?.setZoomActive(false)
             }
         )
     }
@@ -359,11 +367,8 @@ final class AppState {
     /// Show/hide the teleprompter outside of recording so the user can position
     /// it and preview the script.
     func toggleTeleprompterPreview() {
-        if teleprompter.isVisible {
-            teleprompter.hide()
-        } else {
-            teleprompter.show(script: teleprompterScript)
-        }
+        teleprompter.loadScript(teleprompterScript)
+        teleprompter.togglePreview()
     }
 
     /// Hide the menu-bar dropdown. When "Start Recording" is clicked the popover

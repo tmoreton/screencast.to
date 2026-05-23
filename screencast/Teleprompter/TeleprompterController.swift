@@ -1,15 +1,18 @@
 import AppKit
 
-/// A floating teleprompter the presenter can read while recording. The window
-/// is excluded from screen capture via `sharingType = .none`, so it never
-/// appears in the recording — the same trick the recording pill uses.
+/// A floating teleprompter the presenter reads while recording. Excluded from
+/// capture via `sharingType = .none`. When recording, the recording controls
+/// are embedded in its header (`RecordingControlsHost`) so the teleprompter and
+/// the controls are one single unit.
 @MainActor
-final class TeleprompterController {
+final class TeleprompterController: RecordingControlsHost {
     private var window: NSPanel?
     private var scrollView: NSScrollView?
     private var textView: NSTextView?
     private weak var playButton: NSButton?
     private weak var speedLabel: NSTextField?
+    private weak var closeButton: NSButton?
+    private var recordingBar: RecordingControlBar?
 
     private var timer: Timer?
     private var isScrolling = false
@@ -20,22 +23,72 @@ final class TeleprompterController {
     private var fontSize: CGFloat = 30
     private let fontRange: ClosedRange<CGFloat> = 18...60
 
+    private let headerHeight: CGFloat = 48
+
     var isVisible: Bool { window?.isVisible ?? false }
 
-    func show(script: String) {
-        self.script = script
+    func loadScript(_ text: String) {
+        script = text
+        if window != nil { applyText() }
+    }
+
+    // MARK: - Preview (no recording)
+
+    /// Show for positioning/previewing when not recording: teleprompter only,
+    /// with a close button and no recording controls.
+    func showPreview() {
+        present(recording: false, onStop: nil, onPauseResume: nil, onCycleFormat: nil)
+    }
+
+    func togglePreview() {
+        if isVisible { hide() } else { showPreview() }
+    }
+
+    // MARK: - RecordingControlsHost (unit with recording controls)
+
+    func showControls(
+        onStop: @escaping () -> Void,
+        onPauseResume: @escaping () -> Void,
+        onCycleFormat: @escaping () -> Void
+    ) {
+        present(recording: true, onStop: onStop, onPauseResume: onPauseResume, onCycleFormat: onCycleFormat)
+    }
+
+    func hideControls() { hide() }
+    func setPaused(_ paused: Bool) { recordingBar?.setPaused(paused) }
+    func setFormat(_ format: CaptureFormat) { recordingBar?.setFormat(format) }
+    func setZoomActive(_ active: Bool) { recordingBar?.setZoomActive(active) }
+
+    private func present(
+        recording: Bool,
+        onStop: (() -> Void)?,
+        onPauseResume: (() -> Void)?,
+        onCycleFormat: (() -> Void)?
+    ) {
         if window == nil { buildWindow() }
         applyText()
         resetToTop()
         isScrolling = false
         stopTimer()
         updatePlayButton()
+
+        recordingBar?.isHidden = !recording
+        closeButton?.isHidden = recording
+        if recording {
+            recordingBar?.onStop = onStop
+            recordingBar?.onPauseResume = onPauseResume
+            recordingBar?.onCycleFormat = onCycleFormat
+            recordingBar?.begin()
+        } else {
+            recordingBar?.end()
+        }
         window?.orderFrontRegardless()
     }
 
     func hide() {
         stopTimer()
         isScrolling = false
+        recordingBar?.end()
         window?.orderOut(nil)
     }
 
@@ -131,7 +184,7 @@ final class TeleprompterController {
     private func buildWindow() {
         let screen = NSScreen.main ?? NSScreen.screens.first
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let size = NSSize(width: min(760, visible.width - 80), height: 200)
+        let size = NSSize(width: min(760, visible.width - 80), height: 220)
         let origin = NSPoint(x: visible.midX - size.width / 2, y: visible.maxY - size.height - 24)
 
         let panel = NonactivatingTeleprompterPanel(
@@ -140,7 +193,6 @@ final class TeleprompterController {
             backing: .buffered,
             defer: false
         )
-        // Above the camera-fill window, and excluded from the recording.
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 2)
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -150,22 +202,21 @@ final class TeleprompterController {
         panel.isMovableByWindowBackground = true
         panel.setFrameAutosaveName("ScreencastTeleprompter")
 
-        let bg = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
+        let bg = NSVisualEffectView(frame: NSRect(origin: .zero, size: panel.frame.size))
         bg.material = .hudWindow
         bg.blendingMode = .behindWindow
         bg.state = .active
         bg.wantsLayer = true
-        bg.layer?.cornerRadius = 12
+        bg.layer?.cornerRadius = 14
         bg.layer?.masksToBounds = true
         bg.autoresizingMask = [.width, .height]
 
-        let barHeight: CGFloat = 34
-        let controls = buildControlBar(width: size.width, height: barHeight)
-        controls.frame = NSRect(x: 0, y: size.height - barHeight, width: size.width, height: barHeight)
-        controls.autoresizingMask = [.width, .minYMargin]
-        bg.addSubview(controls)
+        let header = buildHeader(width: panel.frame.width)
+        header.frame = NSRect(x: 0, y: panel.frame.height - headerHeight, width: panel.frame.width, height: headerHeight)
+        header.autoresizingMask = [.width, .minYMargin]
+        bg.addSubview(header)
 
-        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: size.width, height: size.height - barHeight))
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: panel.frame.width, height: panel.frame.height - headerHeight))
         scroll.autoresizingMask = [.width, .height]
         scroll.hasVerticalScroller = false
         scroll.drawsBackground = false
@@ -192,9 +243,19 @@ final class TeleprompterController {
         updatePlayButton()
     }
 
-    private func buildControlBar(width: CGFloat, height: CGFloat) -> NSView {
-        let bar = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+    private func buildHeader(width: CGFloat) -> NSView {
+        let header = NSView(frame: NSRect(x: 0, y: 0, width: width, height: headerHeight))
 
+        // Recording controls (left), hidden until recording.
+        let bar = RecordingControlBar(frame: NSRect(x: 10, y: (headerHeight - RecordingControlBar.contentSize.height) / 2,
+                                                    width: RecordingControlBar.contentSize.width,
+                                                    height: RecordingControlBar.contentSize.height))
+        bar.autoresizingMask = [.maxXMargin]
+        bar.isHidden = true
+        header.addSubview(bar)
+        self.recordingBar = bar
+
+        // Teleprompter controls (right).
         func button(_ symbol: String, _ action: Selector, tip: String) -> NSButton {
             let b = NSButton()
             b.isBordered = false
@@ -218,35 +279,28 @@ final class TeleprompterController {
         speedField.toolTip = "Scroll speed (points/sec)"
         self.speedLabel = speedField
 
-        let left = NSStackView(views: [
+        let close = button("xmark", #selector(closeTapped), tip: "Hide teleprompter")
+        self.closeButton = close
+
+        let stack = NSStackView(views: [
             play,
             button("minus", #selector(speedDown), tip: "Slower"),
             speedField,
-            button("plus", #selector(speedUp), tip: "Faster")
-        ])
-        left.orientation = .horizontal
-        left.spacing = 8
-        left.translatesAutoresizingMaskIntoConstraints = false
-
-        let right = NSStackView(views: [
+            button("plus", #selector(speedUp), tip: "Faster"),
             button("textformat.size.smaller", #selector(fontDown), tip: "Smaller text"),
             button("textformat.size.larger", #selector(fontUp), tip: "Larger text"),
             button("arrow.counterclockwise", #selector(resetTapped), tip: "Back to top"),
-            button("xmark", #selector(closeTapped), tip: "Hide teleprompter")
+            close
         ])
-        right.orientation = .horizontal
-        right.spacing = 8
-        right.translatesAutoresizingMaskIntoConstraints = false
-
-        bar.addSubview(left)
-        bar.addSubview(right)
+        stack.orientation = .horizontal
+        stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(stack)
         NSLayoutConstraint.activate([
-            left.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 12),
-            left.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
-            right.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -12),
-            right.centerYAnchor.constraint(equalTo: bar.centerYAnchor)
+            stack.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -12),
+            stack.centerYAnchor.constraint(equalTo: header.centerYAnchor)
         ])
-        return bar
+        return header
     }
 }
 
