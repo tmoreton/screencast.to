@@ -21,6 +21,10 @@ final class ZoomState: @unchecked Sendable {
 
     private let lock = OSAllocatedUnfairLock(initialState: Input())
     private let animDuration: CFTimeInterval = 0.6
+    /// Cursor-follow smoothing time constant (seconds). Higher = slower, gentler
+    /// follow so panning isn't dizzying. ~63% of the way to the cursor per this
+    /// interval.
+    private let followTau: CFTimeInterval = 0.45
 
     // Output-queue-only smoothing state.
     private var smoothedCenter: CGPoint?
@@ -84,8 +88,7 @@ final class ZoomState: @unchecked Sendable {
         let dt = lastSampleTime > 0 ? now - lastSampleTime : 0
         lastSampleTime = now
         if let s = smoothedCenter, dt > 0 {
-            let tau = 0.12
-            let a = CGFloat(1 - exp(-dt / tau))
+            let a = CGFloat(1 - exp(-dt / followTau))
             center = CGPoint(x: s.x + (center.x - s.x) * a, y: s.y + (center.y - s.y) * a)
         }
         smoothedCenter = center
