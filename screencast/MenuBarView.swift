@@ -21,6 +21,9 @@ struct MenuBarView: View {
 
             captureSection
 
+            Divider()
+            teleprompterSection
+
             if !state.recordings.isEmpty, !state.isActive {
                 Divider()
                 recordingsList
@@ -269,6 +272,47 @@ struct MenuBarView: View {
             .frame(maxWidth: 180, alignment: .trailing)
         }
         .opacity(enabled ? 1.0 : 0.45)
+    }
+
+    // MARK: - Teleprompter
+
+    private var teleprompterSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.alignleft")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
+                Text("Teleprompter")
+                    .font(.system(size: 12))
+                Spacer()
+                Toggle("", isOn: $state.teleprompterEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+            }
+            if state.teleprompterEnabled {
+                TextEditor(text: $state.teleprompterScript)
+                    .font(.system(size: 12))
+                    .frame(height: 88)
+                    .scrollContentBackground(.hidden)
+                    .padding(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.3))
+                    )
+                HStack(spacing: 6) {
+                    Text("Hidden from recording · ⌘⇧Space to scroll")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Preview") { state.toggleTeleprompterPreview() }
+                        .controlSize(.small)
+                        .disabled(state.teleprompterScript.isEmpty)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Recordings

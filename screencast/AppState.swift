@@ -20,6 +20,18 @@ final class AppState {
     /// Sticky error banner: set when a recording fails, cleared only when the
     /// user explicitly dismisses it (survives across phase changes).
     var lastError: String?
+
+    /// Teleprompter script (persisted) and whether to show it while recording.
+    /// The teleprompter window is excluded from the recording.
+    var teleprompterScript: String = "" {
+        didSet { UserDefaults.standard.set(teleprompterScript, forKey: Self.scriptKey) }
+    }
+    var teleprompterEnabled: Bool = false {
+        didSet { UserDefaults.standard.set(teleprompterEnabled, forKey: Self.enabledKey) }
+    }
+    private static let scriptKey = "screencast.teleprompter.script"
+    private static let enabledKey = "screencast.teleprompter.enabled"
+
     let devices = DeviceCatalog()
 
     private let recorder = RecordingEngine()
@@ -29,11 +41,14 @@ final class AppState {
     private let regionSelector = RegionSelector()
     private let hotkey = GlobalHotkey()
     private let zoom = ZoomController()
+    private let teleprompter = TeleprompterController()
     /// Zoom hotkey is registered only while recording so it doesn't hijack
     /// ⌘⇧Z (Redo) system-wide the rest of the time.
     private var zoomHotkeyID: UInt32?
     /// Format-cycle hotkey (⌘⇧C), registered only while recording.
     private var formatHotkeyID: UInt32?
+    /// Teleprompter scroll hotkey (⌘⇧Space), registered only while recording.
+    private var teleprompterHotkeyID: UInt32?
     /// Live filming format during a recording (starts from `options.format`).
     private var currentFormat: CaptureFormat = .screenAndCamera
 
@@ -45,6 +60,8 @@ final class AppState {
     private var isStopping = false
 
     init() {
+        teleprompterScript = UserDefaults.standard.string(forKey: Self.scriptKey) ?? ""
+        teleprompterEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         refreshRecordings()
         registerGlobalHotkey()
     }
@@ -108,6 +125,11 @@ final class AppState {
         registerZoomHotkey()
         registerFormatHotkey()
 
+        if teleprompterEnabled, !teleprompterScript.isEmpty {
+            teleprompter.show(script: teleprompterScript)
+            registerTeleprompterHotkey()
+        }
+
         Task {
             do {
                 if currentFormat.usesCamera {
@@ -134,8 +156,10 @@ final class AppState {
                 bubble.hide()
                 regionOverlay.hide()
                 zoom.stop()
+                teleprompter.hide()
                 unregisterZoomHotkey()
                 unregisterFormatHotkey()
+                unregisterTeleprompterHotkey()
             }
         }
     }
@@ -161,8 +185,10 @@ final class AppState {
         regionOverlay.hide()
         bubble.hide()
         zoom.stop()
+        teleprompter.hide()
         unregisterZoomHotkey()
         unregisterFormatHotkey()
+        unregisterTeleprompterHotkey()
         // Flip out of `.recording` immediately so the menu shows "Saving…"
         // feedback while the writer is still flushing the file.
         phase = .saving
@@ -309,6 +335,34 @@ final class AppState {
         if let id = formatHotkeyID {
             hotkey.unregister(id)
             formatHotkeyID = nil
+        }
+    }
+
+    private func registerTeleprompterHotkey() {
+        guard teleprompterHotkeyID == nil else { return }
+        teleprompterHotkeyID = hotkey.register(
+            keyCode: UInt32(kVK_Space),
+            modifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            onPressed: { [weak self] in self?.teleprompter.toggleScroll() }
+        )
+    }
+
+    private func unregisterTeleprompterHotkey() {
+        if let id = teleprompterHotkeyID {
+            hotkey.unregister(id)
+            teleprompterHotkeyID = nil
+        }
+    }
+
+    // MARK: - Teleprompter
+
+    /// Show/hide the teleprompter outside of recording so the user can position
+    /// it and preview the script.
+    func toggleTeleprompterPreview() {
+        if teleprompter.isVisible {
+            teleprompter.hide()
+        } else {
+            teleprompter.show(script: teleprompterScript)
         }
     }
 
