@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Builds screencast.app, signs + notarizes + staples it, and packages it into a
-# styled DMG under build/. Distribution is local — copy the resulting DMG
-# wherever you want it.
+# Builds screencast.app, signs + notarizes + staples it, packages it into a
+# styled DMG, and uploads it to Cloudflare R2 so screencast.to/download/screencast.dmg
+# serves the latest build.
 #
 # Usage:
-#   scripts/release.sh                                    # build (reads MARKETING_VERSION)
+#   scripts/release.sh                                    # build + upload (reads MARKETING_VERSION)
 #   scripts/release.sh 1.0.0                              # explicit version
-#   SKIP_NOTARIZE=1 scripts/release.sh                    # fastest local test build
+#   SKIP_UPLOAD=1 scripts/release.sh                      # build only, no R2 upload
+#   SKIP_NOTARIZE=1 SKIP_UPLOAD=1 scripts/release.sh      # fastest local test build
 #
 # Credentials are read from scripts/.env (or already-exported env vars).
 # See scripts/.env.example.
@@ -52,6 +53,16 @@ ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
+
+# R2 destination. Bucket comes from worker/.env to match what the Worker reads.
+read_worker_env_var() {
+    local key="$1"
+    [[ -f worker/.env ]] || return 0
+    grep -E "^${key}=" worker/.env | head -1 | sed -E "s/^${key}=//" | tr -d '"'
+}
+R2_BUCKET="${R2_BUCKET:-$(read_worker_env_var R2_BUCKET)}"
+R2_BUCKET="${R2_BUCKET:-notloom-recordings}"
+R2_DOWNLOAD_PREFIX="downloads"
 
 if [[ -f scripts/.env ]]; then
     set -a
@@ -253,6 +264,41 @@ if [[ "$NOTARIZE" == true ]]; then
 fi
 
 echo
-echo "✓ Built $APP_NAME $VERSION"
-echo "==> $DMG_PATH"
+echo "==> Built: $DMG_PATH"
 ls -lh "$DMG_PATH"
+
+# ---- Upload to Cloudflare R2 -------------------------------------------------
+
+if [[ "${SKIP_UPLOAD:-0}" == "1" ]]; then
+    echo
+    echo "==> SKIP_UPLOAD=1 set; not uploading to R2."
+    exit 0
+fi
+
+if [[ -z "$R2_BUCKET" ]]; then
+    echo "error: R2_BUCKET not set (looked in worker/.env and env vars)" >&2
+    exit 1
+fi
+
+DOWNLOAD_KEY_LATEST="$R2_DOWNLOAD_PREFIX/screencast.dmg"
+DOWNLOAD_KEY_VERSIONED="$R2_DOWNLOAD_PREFIX/screencast-$VERSION.dmg"
+
+echo
+echo "==> Uploading to Cloudflare R2 ($R2_BUCKET)"
+
+upload_to_r2() {
+    local key="$1"
+    echo "    $key"
+    (cd worker && npx wrangler r2 object put "$R2_BUCKET/$key" \
+        --file "../$DMG_PATH" \
+        --content-type "application/x-apple-diskimage" >/dev/null)
+}
+
+upload_to_r2 "$DOWNLOAD_KEY_LATEST"
+upload_to_r2 "$DOWNLOAD_KEY_VERSIONED"
+
+echo
+echo "✓ Released $APP_NAME $VERSION"
+echo
+echo "  Download URL:  https://screencast.to/download/screencast.dmg"
+echo "  Versioned URL: https://screencast.to/download/screencast-$VERSION.dmg"
