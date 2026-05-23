@@ -96,21 +96,23 @@ final class AppState {
         dismissMenuPopover()
 
         let captureRect = captureRectGlobal()
-        // Show the region overlay before the camera bubble so the bubble stays
-        // on top of the dimmed surround.
         if let region = options.captureRegion {
             regionOverlay.show(rect: region)
-        }
-        if options.showCameraBubble {
-            bubble.show(deviceID: options.cameraDeviceID, region: options.captureRegion)
         }
         zoom.start(captureRectGlobal: captureRect)
         registerZoomHotkey()
 
         Task {
             do {
-                // Give the popover a beat to disappear before capture begins.
-                try? await Task.sleep(for: .milliseconds(250))
+                if options.showCameraBubble {
+                    // Warm up the camera and wait for a live frame before
+                    // capturing, so the bubble isn't an empty circle at the
+                    // start. This also covers the popover-dismiss delay.
+                    await bubble.show(deviceID: options.cameraDeviceID, region: options.captureRegion)
+                } else {
+                    // Give the dismissed popover a beat to disappear.
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
                 try await recorder.start(options: options, zoomState: zoom.state)
                 phase = .recording
                 controls.show(

@@ -13,13 +13,14 @@ final class CameraBubbleController {
     /// `region` is the captured area in display points, top-left origin (same as
     /// `SCStreamConfiguration.sourceRect`), or `nil` for full screen. The bubble
     /// is placed in the bottom-right corner of that area so it lands inside the
-    /// recording.
-    func show(deviceID: String? = nil, region: CGRect? = nil) {
+    /// recording. Returns once the camera is running and showing a frame so the
+    /// caller can begin recording without capturing an empty circle.
+    func show(deviceID: String? = nil, region: CGRect? = nil) async {
         if window == nil {
             buildWindow()
         }
         positionBubble(region: region)
-        startSession(deviceID: deviceID)
+        await startSession(deviceID: deviceID)
         window?.orderFrontRegardless()
     }
 
@@ -84,7 +85,7 @@ final class CameraBubbleController {
         self.window = panel
     }
 
-    private func startSession(deviceID: String?) {
+    private func startSession(deviceID: String?) async {
         guard let host = window?.contentView as? CameraBubbleView else { return }
 
         let resolved: AVCaptureDevice?
@@ -98,7 +99,7 @@ final class CameraBubbleController {
         // If we already have a session running on the requested device, no-op.
         if let existing = session, currentDeviceID == resolved?.uniqueID {
             if !existing.isRunning {
-                Task.detached { [existing] in existing.startRunning() }
+                await Self.start(existing)
             }
             return
         }
@@ -133,7 +134,19 @@ final class CameraBubbleController {
 
         self.session = session
         self.currentDeviceID = device.uniqueID
-        Task.detached { [session] in session.startRunning() }
+        await Self.start(session)
+    }
+
+    /// Start the capture session off the main thread and return once it is
+    /// running, plus a short buffer so the preview layer has a frame to show.
+    private static func start(_ session: AVCaptureSession) async {
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            Task.detached {
+                session.startRunning()
+                cont.resume()
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(200))
     }
 }
 
