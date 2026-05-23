@@ -1,0 +1,29 @@
+name = "screencast"
+main = "src/worker.ts"
+compatibility_date = "2025-01-01"
+
+# Bind the Worker to screencast.to as a custom domain.
+# Prerequisites:
+#   1. screencast.to is added as a zone in your Cloudflare account
+#   2. Cloudflare is set as the authoritative nameservers for it
+# Until both are true, comment this block out and the Worker stays reachable
+# at https://screencast.<your-subdomain>.workers.dev.
+routes = [
+  { pattern = "screencast.to", custom_domain = true },
+]
+
+# Per-IP rate limit on /sign (10 requests / 60s).
+# `namespace_id` is an arbitrary unique integer per limiter in your account.
+[[unsafe.bindings]]
+name = "SIGN_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+# Required secrets (set via `./deploy.sh`):
+#   R2_ACCOUNT_ID         — your Cloudflare account ID
+#   R2_BUCKET             — bucket name
+#   R2_ACCESS_KEY_ID      — R2 API token access key
+#   R2_SECRET_ACCESS_KEY  — R2 API token secret
+#   R2_PUB_HOST           — public host, e.g. "pub-abc123.r2.dev"
+#   APP_SECRET            — shared secret; Mac app sends it in X-Screencast-Auth

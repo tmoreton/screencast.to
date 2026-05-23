@@ -10,6 +10,14 @@ enum AppPhase: Equatable {
     case saving
 }
 
+/// On-demand upload state for a single recording.
+enum UploadState: Equatable {
+    case idle
+    case uploading(Double)
+    case done(url: URL, at: Date)
+    case failed(String)
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -31,6 +39,12 @@ final class AppState {
     }
     private static let scriptKey = "screencast.teleprompter.script"
     private static let enabledKey = "screencast.teleprompter.enabled"
+
+    /// Per-recording upload state, keyed by local file path. Links live 24h.
+    var uploads: [String: UploadState] = [:]
+    private static let uploadsKey = "screencast.uploads.v1"
+    /// Uploaded links expire server-side after this (R2 lifecycle rule).
+    static let linkLifetime: TimeInterval = 24 * 60 * 60
 
     let devices = DeviceCatalog()
 
@@ -66,6 +80,7 @@ final class AppState {
     init() {
         teleprompterScript = UserDefaults.standard.string(forKey: Self.scriptKey) ?? ""
         teleprompterEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
+        loadUploads()
         refreshRecordings()
         registerGlobalHotkey()
     }
@@ -259,6 +274,81 @@ final class AppState {
     /// Clear the sticky error banner (user-initiated only).
     func dismissError() {
         lastError = nil
+    }
+
+    // MARK: - Upload (on-demand, background)
+
+    /// Current upload state for a recording, treating links older than 24h as
+    /// expired (they're gone server-side).
+    func uploadState(for url: URL) -> UploadState {
+        let state = uploads[url.path] ?? .idle
+        if case .done(_, let at) = state, Date().timeIntervalSince(at) > Self.linkLifetime {
+            return .idle
+        }
+        return state
+    }
+
+    /// Upload a recording to R2 in the background and produce a 24h link.
+    /// Non-blocking: runs on its own URLSession so it never interferes with
+    /// recording. The link is copied to the clipboard on success.
+    func uploadRecording(_ url: URL) {
+        let path = url.path
+        if case .uploading = uploads[path] { return }  // already in flight
+        uploads[path] = .uploading(0)
+        Task { [weak self] in
+            let client = UploadClient()
+            do {
+                let publicURL = try await client.upload(fileURL: url) { progress in
+                    self?.uploads[path] = .uploading(progress)
+                }
+                guard let self else { return }
+                let now = Date()
+                self.uploads[path] = .done(url: publicURL, at: now)
+                self.persistUploads()
+                self.copyLink(publicURL)
+            } catch {
+                self?.uploads[path] = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    func copyLink(_ url: URL) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+    }
+
+    func openLink(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
+
+    private struct PersistedUpload: Codable {
+        let url: URL
+        let at: Date
+    }
+
+    private func persistUploads() {
+        var store: [String: PersistedUpload] = [:]
+        for (path, state) in uploads {
+            if case .done(let url, let at) = state,
+               Date().timeIntervalSince(at) <= Self.linkLifetime {
+                store[path] = PersistedUpload(url: url, at: at)
+            }
+        }
+        if let data = try? JSONEncoder().encode(store) {
+            UserDefaults.standard.set(data, forKey: Self.uploadsKey)
+        }
+    }
+
+    private func loadUploads() {
+        guard let data = UserDefaults.standard.data(forKey: Self.uploadsKey),
+              let store = try? JSONDecoder().decode([String: PersistedUpload].self, from: data) else {
+            return
+        }
+        let now = Date()
+        for (path, item) in store where now.timeIntervalSince(item.at) <= Self.linkLifetime {
+            uploads[path] = .done(url: item.url, at: item.at)
+        }
     }
 
     /// Reveal the local recordings folder in Finder.

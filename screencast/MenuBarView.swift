@@ -368,6 +368,7 @@ struct MenuBarView: View {
                 .foregroundStyle(.secondary)
             }
             Spacer()
+            uploadControl(url: url)
             Button { state.revealInFinder(url) } label: {
                 Image(systemName: "folder")
             }
@@ -379,6 +380,46 @@ struct MenuBarView: View {
             .help("Move to Trash")
             .buttonStyle(.borderless)
         }
+    }
+
+    @ViewBuilder
+    private func uploadControl(url: URL) -> some View {
+        switch state.uploadState(for: url) {
+        case .idle:
+            Button { state.uploadRecording(url) } label: {
+                Image(systemName: "icloud.and.arrow.up")
+            }
+            .help("Upload & copy a 24-hour link")
+            .buttonStyle(.borderless)
+        case .uploading(let progress):
+            ProgressView(value: progress)
+                .progressViewStyle(.circular)
+                .controlSize(.small)
+                .frame(width: 16, height: 16)
+                .help("Uploading \(Int(progress * 100))%")
+        case .done(let link, let at):
+            Button { state.copyLink(link) } label: {
+                Image(systemName: "checkmark.icloud")
+                    .foregroundStyle(.green)
+            }
+            .help("Copy link · expires in \(expiryText(at))")
+            .buttonStyle(.borderless)
+        case .failed(let message):
+            Button { state.uploadRecording(url) } label: {
+                Image(systemName: "exclamationmark.icloud")
+                    .foregroundStyle(.orange)
+            }
+            .help("Upload failed: \(message) — click to retry")
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func expiryText(_ at: Date) -> String {
+        let remaining = AppState.linkLifetime - Date().timeIntervalSince(at)
+        guard remaining > 0 else { return "0m" }
+        let hours = Int(remaining / 3600)
+        if hours > 0 { return "\(hours)h" }
+        return "\(max(1, Int(remaining / 60)))m"
     }
 
     // MARK: - Footer
