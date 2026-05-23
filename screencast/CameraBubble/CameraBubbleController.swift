@@ -10,12 +10,38 @@ final class CameraBubbleController {
     private let log = Logger(subsystem: "to.screencast.app", category: "CameraBubble")
     private let diameter: CGFloat = 160
 
-    func show(deviceID: String? = nil) {
+    /// `region` is the captured area in display points, top-left origin (same as
+    /// `SCStreamConfiguration.sourceRect`), or `nil` for full screen. The bubble
+    /// is placed in the bottom-right corner of that area so it lands inside the
+    /// recording.
+    func show(deviceID: String? = nil, region: CGRect? = nil) {
         if window == nil {
             buildWindow()
         }
+        positionBubble(region: region)
         startSession(deviceID: deviceID)
         window?.orderFrontRegardless()
+    }
+
+    private func positionBubble(region: CGRect?) {
+        guard let window else { return }
+        let screen = NSScreen.main ?? NSScreen.screens.first
+        let size = window.frame.size
+        let origin: NSPoint
+        if let region, let screen {
+            // Convert the region (top-left display coords) to AppKit bottom-left
+            // and anchor the bubble in the region's bottom-right corner.
+            let inset: CGFloat = 24
+            let f = screen.frame
+            origin = NSPoint(
+                x: f.minX + region.maxX - size.width - inset,
+                y: f.maxY - region.maxY + inset
+            )
+        } else {
+            let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            origin = NSPoint(x: visible.maxX - size.width - 32, y: visible.minY + 32)
+        }
+        window.setFrameOrigin(origin)
     }
 
     func hide() {

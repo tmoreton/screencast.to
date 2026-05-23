@@ -43,9 +43,10 @@ final class GlobalHotkey {
         let status = RegisterEventHotKey(keyCode, modifiers, hotID, GetApplicationEventTarget(), 0, &ref)
         if status == noErr, let ref {
             refs[id] = ref
+            NSLog("GlobalHotkey: registered id=\(id) keyCode=\(keyCode) modifiers=\(modifiers)")
         } else {
             Self.handlers[id] = nil
-            NSLog("GlobalHotkey: RegisterEventHotKey failed with status \(status)")
+            NSLog("GlobalHotkey: RegisterEventHotKey FAILED status=\(status) keyCode=\(keyCode) modifiers=\(modifiers)")
         }
         return id
     }
@@ -61,29 +62,31 @@ final class GlobalHotkey {
     private static func installHandlerIfNeeded() {
         guard !handlerInstalled else { return }
         handlerInstalled = true
-        var specs = [
+        let specs = [
             EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
             EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
         ]
-        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
-            guard let event else { return noErr }
-            var hkID = EventHotKeyID()
-            let err = GetEventParameter(
-                event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
-                nil, MemoryLayout<EventHotKeyID>.size, nil, &hkID
-            )
-            if err != noErr { return noErr }
-            let kind = GetEventKind(event)
-            let id = hkID.id
-            DispatchQueue.main.async {
-                guard let handlers = GlobalHotkey.handlers[id] else { return }
-                if kind == UInt32(kEventHotKeyPressed) {
-                    handlers.pressed()
-                } else if kind == UInt32(kEventHotKeyReleased) {
-                    handlers.released?()
+        _ = specs.withUnsafeBufferPointer { buffer in
+            InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
+                guard let event else { return noErr }
+                var hkID = EventHotKeyID()
+                let err = GetEventParameter(
+                    event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                    nil, MemoryLayout<EventHotKeyID>.size, nil, &hkID
+                )
+                if err != noErr { return noErr }
+                let kind = GetEventKind(event)
+                let id = hkID.id
+                DispatchQueue.main.async {
+                    guard let handlers = GlobalHotkey.handlers[id] else { return }
+                    if kind == UInt32(kEventHotKeyPressed) {
+                        handlers.pressed()
+                    } else if kind == UInt32(kEventHotKeyReleased) {
+                        handlers.released?()
+                    }
                 }
-            }
-            return noErr
-        }, 2, &specs, nil, nil)
+                return noErr
+            }, buffer.count, buffer.baseAddress, nil, nil)
+        }
     }
 }

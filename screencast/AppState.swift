@@ -8,7 +8,6 @@ enum AppPhase: Equatable {
     case recording
     case paused
     case saving
-    case error(String)
 }
 
 @MainActor
@@ -18,6 +17,9 @@ final class AppState {
     var phase: AppPhase = .idle
     /// Local recordings on disk, newest first. Replaces the old upload history.
     var recordings: [URL] = []
+    /// Sticky error banner: set when a recording fails, cleared only when the
+    /// user explicitly dismisses it (survives across phase changes).
+    var lastError: String?
     let devices = DeviceCatalog()
 
     private let recorder = RecordingEngine()
@@ -100,7 +102,7 @@ final class AppState {
             regionOverlay.show(rect: region)
         }
         if options.showCameraBubble {
-            bubble.show(deviceID: options.cameraDeviceID)
+            bubble.show(deviceID: options.cameraDeviceID, region: options.captureRegion)
         }
         zoom.start(captureRectGlobal: captureRect)
         registerZoomHotkey()
@@ -116,7 +118,8 @@ final class AppState {
                     onPauseResume: { [weak self] in self?.togglePauseResume() }
                 )
             } catch {
-                phase = .error(error.localizedDescription)
+                lastError = error.localizedDescription
+                phase = .idle
                 bubble.hide()
                 regionOverlay.hide()
                 zoom.stop()
@@ -148,7 +151,8 @@ final class AppState {
                 self.refreshRecordings()
             } catch {
                 self.isStopping = false
-                self.phase = .error(error.localizedDescription)
+                self.lastError = error.localizedDescription
+                self.phase = .idle
                 self.refreshRecordings()
             }
         }
@@ -189,6 +193,11 @@ final class AppState {
     func deleteRecording(_ url: URL) {
         try? FileManager.default.trashItem(at: url, resultingItemURL: nil)
         refreshRecordings()
+    }
+
+    /// Clear the sticky error banner (user-initiated only).
+    func dismissError() {
+        lastError = nil
     }
 
     /// Reveal the local recordings folder in Finder.

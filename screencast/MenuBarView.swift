@@ -9,6 +9,10 @@ struct MenuBarView: View {
             header
             Divider()
 
+            if state.lastError != nil {
+                errorBanner
+            }
+
             primary
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
@@ -55,8 +59,38 @@ struct MenuBarView: View {
         case .recording: Text("Recording")
         case .paused: Text("Paused")
         case .saving: Text("Saving…")
-        case .error: Text("Error")
         }
+    }
+
+    // MARK: - Error banner
+
+    private var errorBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Recording failed")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(state.lastError ?? "")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+            Spacer()
+            Button { state.dismissError() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Dismiss")
+        }
+        .padding(10)
+        .background(Color.gray.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Primary
@@ -71,23 +105,6 @@ struct MenuBarView: View {
                 Text("Saving recording…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-        case .error(let message):
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text("Recording failed")
-                        .fontWeight(.semibold)
-                }
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                Button { state.toggleRecording() } label: {
-                    Text("New Recording")
-                }
-                .controlSize(.small)
             }
         default:
             VStack(spacing: 8) {
