@@ -260,8 +260,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Screencast.to";
-				INFOPLIST_KEY_CFBundleName = "Screencast.to";
+				INFOPLIST_KEY_CFBundleDisplayName = Screencast.to;
+				INFOPLIST_KEY_CFBundleName = Screencast.to;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -298,8 +298,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Screencast.to";
-				INFOPLIST_KEY_CFBundleName = "Screencast.to";
+				INFOPLIST_KEY_CFBundleDisplayName = Screencast.to;
+				INFOPLIST_KEY_CFBundleName = Screencast.to;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

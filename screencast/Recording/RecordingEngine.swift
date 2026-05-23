@@ -3,7 +3,9 @@ import AppKit
 import ScreenCaptureKit
 import AVFoundation
 import CoreMedia
+import CoreImage
 import Accelerate
+import Metal
 import OSLog
 
 enum RecordingState: Equatable {
@@ -27,11 +29,11 @@ final class RecordingEngine: NSObject {
 
     private let log = Logger(subsystem: "to.screencast.app", category: "RecordingEngine")
 
-    func start(options: RecordingOptions) async throws {
+    func start(options: RecordingOptions, zoomState: ZoomState) async throws {
         guard case .idle = state else { return }
         state = .preparing
         do {
-            let session = try await RecordingSession.makeAndStart(options: options)
+            let session = try await RecordingSession.makeAndStart(options: options, zoomState: zoomState)
             self.session = session
             state = .recording
             log.info("Recording started -> \(session.outputURL.path, privacy: .public)")
@@ -104,6 +106,19 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     private let pixelAdaptor: AVAssetWriterInputPixelBufferAdaptor
     private let audioInput: AVAssetWriterInput
 
+    // Zoom (live, recording-only). When zoomed, video frames are re-rendered
+    // via Core Image; otherwise the raw pixel buffer is appended unchanged.
+    private let videoWidth: Int
+    private let videoHeight: Int
+    private let zoomState: ZoomState?
+    private lazy var ciContext: CIContext = {
+        if let device = MTLCreateSystemDefaultDevice() {
+            return CIContext(mtlDevice: device)
+        }
+        return CIContext()
+    }()
+    private let renderColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+
     // Timeline state (outputQueue only).
     private var sessionStarted = false
     private var sessionStartPTS: CMTime = .zero
@@ -125,8 +140,11 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     private var micQueue: [Float] = []
     private let maxMicQueueFloats = 48_000 * 2 * 2  // ~2s of stereo backlog
 
-    private init(options: RecordingOptions, width: Int, height: Int) throws {
+    private init(options: RecordingOptions, width: Int, height: Int, zoomState: ZoomState?) throws {
         self.micEnabled = options.microphone.isOn
+        self.videoWidth = width
+        self.videoHeight = height
+        self.zoomState = zoomState
 
         let dir = try RecordingEngine.recordingsDirectory()
         let formatter = DateFormatter()
@@ -168,7 +186,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     }
 
     /// Build + start the capture stream and the asset writer.
-    static func makeAndStart(options: RecordingOptions) async throws -> RecordingSession {
+    static func makeAndStart(options: RecordingOptions, zoomState: ZoomState?) async throws -> RecordingSession {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first else {
             throw RecordingError.noDisplay
@@ -190,6 +208,8 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
         config.height = height
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.showsCursor = true
+        // Steady cadence so live zoom pans/animates smoothly.
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         config.capturesAudio = true            // system audio: always on
         config.sampleRate = 48_000
         config.channelCount = 2
@@ -198,7 +218,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
             config.microphoneCaptureDeviceID = micID
         }
 
-        let session = try RecordingSession(options: options, width: width, height: height)
+        let session = try RecordingSession(options: options, width: width, height: height, zoomState: zoomState)
 
         // Capture everything on the main display, including the floating camera
         // bubble. The caller hides the main control window before start().
@@ -303,7 +323,33 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
         }
         guard videoInput.isReadyForMoreMediaData,
               let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        pixelAdaptor.append(pixelBuffer, withPresentationTime: pts)
+
+        if let zoom = zoomState?.sample(pixelWidth: videoWidth, pixelHeight: videoHeight, at: CACurrentMediaTime()),
+           let zoomed = renderZoomed(pixelBuffer, factor: zoom.factor, center: zoom.center) {
+            pixelAdaptor.append(zoomed, withPresentationTime: pts)
+        } else {
+            pixelAdaptor.append(pixelBuffer, withPresentationTime: pts)
+        }
+    }
+
+    /// Scale `source` about `center` by `factor` into a fresh pool buffer.
+    /// Returns nil on any failure so the caller falls back to the raw frame.
+    private func renderZoomed(_ source: CVPixelBuffer, factor: CGFloat, center: CGPoint) -> CVPixelBuffer? {
+        guard let pool = pixelAdaptor.pixelBufferPool else { return nil }
+        var output: CVPixelBuffer?
+        guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &output) == kCVReturnSuccess,
+              let output else { return nil }
+
+        let transform = CGAffineTransform(translationX: center.x, y: center.y)
+            .scaledBy(x: factor, y: factor)
+            .translatedBy(x: -center.x, y: -center.y)
+        let bounds = CGRect(x: 0, y: 0, width: videoWidth, height: videoHeight)
+        let image = CIImage(cvPixelBuffer: source)
+            .transformed(by: transform)
+            .clampedToExtent()
+            .cropped(to: bounds)
+        ciContext.render(image, to: output, bounds: bounds, colorSpace: renderColorSpace)
+        return output
     }
 
     // MARK: Audio mix (system audio is the master clock)

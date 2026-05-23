@@ -17,6 +17,7 @@ final class RecordingControlsController {
     private weak var timeLabel: NSTextField?
     private weak var pauseButton: NSButton?
     private weak var recDot: NSView?
+    private weak var zoomBadge: NSImageView?
 
     func show(onStop: @escaping () -> Void, onPauseResume: @escaping () -> Void) {
         self.onStop = onStop
@@ -27,6 +28,7 @@ final class RecordingControlsController {
         accumulated = 0
         segmentStart = Date()
         isPaused = false
+        zoomBadge?.isHidden = true
         applyPausedAppearance()
         startTimer()
         updateTime()
@@ -39,6 +41,12 @@ final class RecordingControlsController {
         window?.orderOut(nil)
         segmentStart = nil
         accumulated = 0
+        zoomBadge?.isHidden = true
+    }
+
+    /// Show/hide the zoom indicator while the recording is magnified.
+    func setZoomActive(_ active: Bool) {
+        zoomBadge?.isHidden = !active
     }
 
     /// Reflect the recording's paused state: freeze the timer and update visuals.
@@ -167,6 +175,15 @@ final class RecordingControlsController {
         label.frame = NSRect(x: 78, y: (size.height - 18) / 2, width: 70, height: 18)
         bg.addSubview(label)
         self.timeLabel = label
+
+        let zoom = NSImageView(frame: NSRect(x: 150, y: (size.height - 18) / 2, width: 22, height: 18))
+        zoom.image = NSImage(systemSymbolName: "plus.magnifyingglass", accessibilityDescription: "Zoomed in")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold))
+        zoom.contentTintColor = .systemYellow
+        zoom.isHidden = true
+        zoom.toolTip = "Zoomed in (hold ⌘⇧Z)"
+        bg.addSubview(zoom)
+        self.zoomBadge = zoom
 
         let dot = NSView(frame: NSRect(x: size.width - 24, y: (size.height - 10) / 2, width: 10, height: 10))
         dot.wantsLayer = true

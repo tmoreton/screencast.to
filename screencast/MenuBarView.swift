@@ -249,7 +249,7 @@ struct MenuBarView: View {
     private var recordingsList: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("RECORDINGS")
+                Text("RECENT RECORDINGS")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                     .tracking(0.5)
@@ -258,8 +258,17 @@ struct MenuBarView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
-            ForEach(state.recordings.prefix(6), id: \.self) { url in
+            ForEach(state.recordings.prefix(3), id: \.self) { url in
                 recordingRow(url: url)
+            }
+            if state.recordings.count > 3 {
+                Button { state.openRecordingsFolder() } label: {
+                    Text("Show all \(state.recordings.count) recordings…")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
             }
         }
         .padding(.horizontal, 12)

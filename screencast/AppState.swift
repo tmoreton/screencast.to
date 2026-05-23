@@ -26,6 +26,10 @@ final class AppState {
     private let regionOverlay = RecordingRegionOverlay()
     private let regionSelector = RegionSelector()
     private let hotkey = GlobalHotkey()
+    private let zoom = ZoomController()
+    /// Zoom hotkey is registered only while recording so it doesn't hijack
+    /// ⌘⇧Z (Redo) system-wide the rest of the time.
+    private var zoomHotkeyID: UInt32?
 
     /// Re-entry guard for `stopRecording()`. The popover and the floating
     /// controls window each have a Stop button, and on long recordings
@@ -86,15 +90,26 @@ final class AppState {
     }
 
     private func startRecording() {
-        if options.showCameraBubble {
-            bubble.show(deviceID: options.cameraDeviceID)
-        }
+        // Dismiss the menu popover so it isn't caught in the first frames.
+        dismissMenuPopover()
+
+        let captureRect = captureRectGlobal()
+        // Show the region overlay before the camera bubble so the bubble stays
+        // on top of the dimmed surround.
         if let region = options.captureRegion {
             regionOverlay.show(rect: region)
         }
+        if options.showCameraBubble {
+            bubble.show(deviceID: options.cameraDeviceID)
+        }
+        zoom.start(captureRectGlobal: captureRect)
+        registerZoomHotkey()
+
         Task {
             do {
-                try await recorder.start(options: options)
+                // Give the popover a beat to disappear before capture begins.
+                try? await Task.sleep(for: .milliseconds(250))
+                try await recorder.start(options: options, zoomState: zoom.state)
                 phase = .recording
                 controls.show(
                     onStop: { [weak self] in self?.stopRecording() },
@@ -104,6 +119,8 @@ final class AppState {
                 phase = .error(error.localizedDescription)
                 bubble.hide()
                 regionOverlay.hide()
+                zoom.stop()
+                unregisterZoomHotkey()
             }
         }
     }
@@ -116,8 +133,10 @@ final class AppState {
         controls.hide()
         regionOverlay.hide()
         bubble.hide()
+        zoom.stop()
+        unregisterZoomHotkey()
         // Flip out of `.recording` immediately so the menu shows "Saving…"
-        // feedback while SCRecordingOutput is still flushing the file.
+        // feedback while the writer is still flushing the file.
         phase = .saving
 
         Task { [weak self] in
@@ -195,10 +214,54 @@ final class AppState {
     private func registerGlobalHotkey() {
         hotkey.register(
             keyCode: UInt32(kVK_ANSI_R),
-            modifiers: UInt32(cmdKey) | UInt32(shiftKey)
-        ) { [weak self] in
-            self?.toggleRecording()
+            modifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            onPressed: { [weak self] in self?.toggleRecording() }
+        )
+    }
+
+    private func registerZoomHotkey() {
+        guard zoomHotkeyID == nil else { return }
+        zoomHotkeyID = hotkey.register(
+            keyCode: UInt32(kVK_ANSI_Z),
+            modifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            onPressed: { [weak self] in
+                self?.zoom.zoomIn()
+                self?.controls.setZoomActive(true)
+            },
+            onReleased: { [weak self] in
+                self?.zoom.zoomOut()
+                self?.controls.setZoomActive(false)
+            }
+        )
+    }
+
+    private func unregisterZoomHotkey() {
+        if let id = zoomHotkeyID {
+            hotkey.unregister(id)
+            zoomHotkeyID = nil
         }
+    }
+
+    /// Hide the menu-bar dropdown. When "Start Recording" is clicked the popover
+    /// is the key window; we also match it by class as a cross-version fallback.
+    private func dismissMenuPopover() {
+        NSApp.keyWindow?.orderOut(nil)
+        for window in NSApp.windows where window.isVisible {
+            let cls = String(describing: type(of: window))
+            if cls.contains("MenuBarExtra") || cls.contains("Popover") || cls.contains("StatusBar") {
+                window.orderOut(nil)
+            }
+        }
+    }
+
+    /// The captured area in global, y-up screen points (for zoom cursor mapping).
+    private func captureRectGlobal() -> CGRect {
+        guard let screen = NSScreen.main else { return .zero }
+        let f = screen.frame
+        if let r = options.captureRegion {
+            return CGRect(x: f.minX + r.minX, y: f.maxY - r.maxY, width: r.width, height: r.height)
+        }
+        return f
     }
 
     func quit() {
