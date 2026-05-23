@@ -6,8 +6,10 @@ final class RecordingRegionOverlay {
     private var window: NSPanel?
 
     /// `rect` is in display points, top-left origin (same convention as
-    /// `SCStreamConfiguration.sourceRect`).
-    func show(rect: CGRect) {
+    /// `SCStreamConfiguration.sourceRect`). When `recording` is true the
+    /// surround is dimmed and a REC badge is shown; otherwise it's a calm
+    /// outline marking the selected area.
+    func show(rect: CGRect, recording: Bool) {
         hide()
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
 
@@ -35,7 +37,7 @@ final class RecordingRegionOverlay {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
 
         let view = RegionOutlineView(frame: NSRect(origin: .zero, size: screen.frame.size))
-        view.setTargetRect(appkitRect)
+        view.configure(rect: appkitRect, recording: recording)
         panel.contentView = view
 
         self.window = panel
@@ -64,26 +66,16 @@ private final class RegionOutlineView: NSView {
         dimLayer.fillRule = .evenOdd
         layer?.addSublayer(dimLayer)
 
-        // Soft white halo behind the red line so it's visible on any background.
+        // Soft white halo behind the line so it's visible on any background.
         outerHalo.strokeColor = NSColor.white.withAlphaComponent(0.35).cgColor
         outerHalo.fillColor = nil
         outerHalo.lineWidth = 4
         layer?.addSublayer(outerHalo)
 
-        border.strokeColor = NSColor.systemRed.cgColor
         border.fillColor = nil
         border.lineWidth = 2
         layer?.addSublayer(border)
 
-        let pulse = CABasicAnimation(keyPath: "opacity")
-        pulse.fromValue = 1.0
-        pulse.toValue = 0.45
-        pulse.duration = 1.1
-        pulse.autoreverses = true
-        pulse.repeatCount = .infinity
-        border.add(pulse, forKey: "pulse")
-
-        badge.attributedStringValue = Self.badgeText()
         badge.drawsBackground = true
         badge.backgroundColor = NSColor.black.withAlphaComponent(0.7)
         badge.isBezeled = false
@@ -97,19 +89,28 @@ private final class RegionOutlineView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-    func setTargetRect(_ rect: NSRect) {
+    func configure(rect: NSRect, recording: Bool) {
         let outline = rect.insetBy(dx: -1, dy: -1)
         let path = CGPath(rect: outline, transform: nil)
         border.path = path
         outerHalo.path = path
 
-        // Even-odd path of (whole screen) + (region) fills only the surround.
-        let mask = CGMutablePath()
-        mask.addRect(bounds)
-        mask.addRect(rect)
-        dimLayer.path = mask
+        if recording {
+            // Even-odd path of (whole screen) + (region) fills only the surround.
+            let mask = CGMutablePath()
+            mask.addRect(bounds)
+            mask.addRect(rect)
+            dimLayer.path = mask
+            border.strokeColor = NSColor.systemRed.cgColor
+            addPulse()
+        } else {
+            // Idle: just an outline marking the selected area, no dimming.
+            dimLayer.path = nil
+            border.strokeColor = NSColor.systemBlue.cgColor
+            border.removeAnimation(forKey: "pulse")
+        }
 
-        // Badge sits just above the region (or just inside if near the top).
+        badge.attributedStringValue = Self.badgeText(recording: recording)
         badge.sizeToFit()
         let bw = badge.frame.width + 14
         let bh = badge.frame.height + 6
@@ -118,13 +119,23 @@ private final class RegionOutlineView: NSView {
         badge.frame = NSRect(x: rect.minX, y: by, width: bw, height: bh)
     }
 
-    private static func badgeText() -> NSAttributedString {
+    private func addPulse() {
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 1.0
+        pulse.toValue = 0.45
+        pulse.duration = 1.1
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        border.add(pulse, forKey: "pulse")
+    }
+
+    private static func badgeText(recording: Bool) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let dot = NSAttributedString(string: "● ", attributes: [
-            .foregroundColor: NSColor.systemRed,
+            .foregroundColor: recording ? NSColor.systemRed : NSColor.systemBlue,
             .font: NSFont.systemFont(ofSize: 11, weight: .bold)
         ])
-        let label = NSAttributedString(string: "REC · recording this area", attributes: [
+        let label = NSAttributedString(string: recording ? "REC · recording this area" : "Recording area", attributes: [
             .foregroundColor: NSColor.white,
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold)
         ])

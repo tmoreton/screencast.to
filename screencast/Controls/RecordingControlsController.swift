@@ -6,6 +6,7 @@ final class RecordingControlsController {
     private var window: NSPanel?
     private var onStop: (() -> Void)?
     private var onPauseResume: (() -> Void)?
+    private var onCycleFormat: (() -> Void)?
 
     // Pause-aware elapsed timer. `accumulated` holds completed active spans;
     // `segmentStart` is non-nil only while actively recording.
@@ -16,12 +17,18 @@ final class RecordingControlsController {
 
     private weak var timeLabel: NSTextField?
     private weak var pauseButton: NSButton?
+    private weak var formatButton: NSButton?
     private weak var recDot: NSView?
     private weak var zoomBadge: NSImageView?
 
-    func show(onStop: @escaping () -> Void, onPauseResume: @escaping () -> Void) {
+    func show(
+        onStop: @escaping () -> Void,
+        onPauseResume: @escaping () -> Void,
+        onCycleFormat: @escaping () -> Void
+    ) {
         self.onStop = onStop
         self.onPauseResume = onPauseResume
+        self.onCycleFormat = onCycleFormat
         if window == nil {
             buildWindow()
         }
@@ -47,6 +54,17 @@ final class RecordingControlsController {
     /// Show/hide the zoom indicator while the recording is magnified.
     func setZoomActive(_ active: Bool) {
         zoomBadge?.isHidden = !active
+    }
+
+    /// Update the format button's icon to reflect the current filming format.
+    func setFormat(_ format: CaptureFormat) {
+        formatButton?.image = NSImage(systemSymbolName: format.symbol, accessibilityDescription: format.menuLabel)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold))
+        formatButton?.toolTip = "\(format.menuLabel) — ⌘⇧C to switch"
+    }
+
+    @objc private func formatTapped() {
+        onCycleFormat?()
     }
 
     /// Reflect the recording's paused state: freeze the timer and update visuals.
@@ -120,7 +138,7 @@ final class RecordingControlsController {
     private func buildWindow() {
         let screen = NSScreen.main ?? NSScreen.screens.first
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let size = NSSize(width: 210, height: 44)
+        let size = NSSize(width: 250, height: 44)
         let origin = NSPoint(x: visible.midX - size.width / 2,
                              y: visible.maxY - size.height - 16)
         let frame = NSRect(origin: origin, size: size)
@@ -131,7 +149,9 @@ final class RecordingControlsController {
             backing: .buffered,
             defer: false
         )
-        panel.level = .floating
+        // Above the camera-fill window so the controls stay clickable in
+        // camera-only mode.
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 2)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
@@ -157,7 +177,7 @@ final class RecordingControlsController {
         stop.toolTip = "Stop recording"
         bg.addSubview(stop)
 
-        let pause = NSButton(frame: NSRect(x: 42, y: (size.height - 28) / 2, width: 28, height: 28))
+        let pause = NSButton(frame: NSRect(x: 40, y: (size.height - 28) / 2, width: 28, height: 28))
         pause.isBordered = false
         pause.bezelStyle = .regularSquare
         pause.wantsLayer = true
@@ -169,14 +189,29 @@ final class RecordingControlsController {
         bg.addSubview(pause)
         self.pauseButton = pause
 
+        let format = NSButton(frame: NSRect(x: 70, y: (size.height - 28) / 2, width: 28, height: 28))
+        format.isBordered = false
+        format.bezelStyle = .regularSquare
+        format.wantsLayer = true
+        format.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
+        format.layer?.cornerRadius = 14
+        format.contentTintColor = .labelColor
+        format.image = NSImage(systemSymbolName: "display", accessibilityDescription: "Format")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold))
+        format.target = self
+        format.action = #selector(formatTapped)
+        format.toolTip = "Switch format — ⌘⇧C"
+        bg.addSubview(format)
+        self.formatButton = format
+
         let label = NSTextField(labelWithString: "00:00")
         label.font = NSFont.monospacedDigitSystemFont(ofSize: 14, weight: .semibold)
         label.textColor = .labelColor
-        label.frame = NSRect(x: 78, y: (size.height - 18) / 2, width: 70, height: 18)
+        label.frame = NSRect(x: 104, y: (size.height - 18) / 2, width: 64, height: 18)
         bg.addSubview(label)
         self.timeLabel = label
 
-        let zoom = NSImageView(frame: NSRect(x: 150, y: (size.height - 18) / 2, width: 22, height: 18))
+        let zoom = NSImageView(frame: NSRect(x: 172, y: (size.height - 18) / 2, width: 22, height: 18))
         zoom.image = NSImage(systemSymbolName: "plus.magnifyingglass", accessibilityDescription: "Zoomed in")?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold))
         zoom.contentTintColor = .systemYellow

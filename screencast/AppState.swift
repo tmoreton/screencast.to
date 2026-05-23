@@ -32,6 +32,10 @@ final class AppState {
     /// Zoom hotkey is registered only while recording so it doesn't hijack
     /// ⌘⇧Z (Redo) system-wide the rest of the time.
     private var zoomHotkeyID: UInt32?
+    /// Format-cycle hotkey (⌘⇧C), registered only while recording.
+    private var formatHotkeyID: UInt32?
+    /// Live filming format during a recording (starts from `options.format`).
+    private var currentFormat: CaptureFormat = .screenAndCamera
 
     /// Re-entry guard for `stopRecording()`. The popover and the floating
     /// controls window each have a Stop button, and on long recordings
@@ -95,21 +99,24 @@ final class AppState {
         // Dismiss the menu popover so it isn't caught in the first frames.
         dismissMenuPopover()
 
+        currentFormat = options.format
         let captureRect = captureRectGlobal()
         if let region = options.captureRegion {
-            regionOverlay.show(rect: region)
+            regionOverlay.show(rect: region, recording: true)
         }
         zoom.start(captureRectGlobal: captureRect)
         registerZoomHotkey()
+        registerFormatHotkey()
 
         Task {
             do {
-                if options.showCameraBubble {
+                if currentFormat.usesCamera {
                     // Warm up the camera and wait for a live frame before
                     // capturing, so the bubble isn't an empty circle at the
                     // start. This also covers the popover-dismiss delay.
-                    await bubble.show(deviceID: options.cameraDeviceID, region: options.captureRegion)
+                    await bubble.apply(format: currentFormat, deviceID: options.cameraDeviceID, region: options.captureRegion)
                 } else {
+                    bubble.hide()
                     // Give the dismissed popover a beat to disappear.
                     try? await Task.sleep(for: .milliseconds(250))
                 }
@@ -117,8 +124,10 @@ final class AppState {
                 phase = .recording
                 controls.show(
                     onStop: { [weak self] in self?.stopRecording() },
-                    onPauseResume: { [weak self] in self?.togglePauseResume() }
+                    onPauseResume: { [weak self] in self?.togglePauseResume() },
+                    onCycleFormat: { [weak self] in self?.cycleFormat() }
                 )
+                controls.setFormat(currentFormat)
             } catch {
                 lastError = error.localizedDescription
                 phase = .idle
@@ -126,7 +135,20 @@ final class AppState {
                 regionOverlay.hide()
                 zoom.stop()
                 unregisterZoomHotkey()
+                unregisterFormatHotkey()
             }
+        }
+    }
+
+    /// Cycle Screen → Screen+Camera → Camera, applied live during recording.
+    func cycleFormat() {
+        guard isActive else { return }
+        currentFormat = currentFormat.next
+        controls.setFormat(currentFormat)
+        Task {
+            await bubble.apply(format: currentFormat,
+                               deviceID: options.cameraDeviceID,
+                               region: options.captureRegion)
         }
     }
 
@@ -140,6 +162,7 @@ final class AppState {
         bubble.hide()
         zoom.stop()
         unregisterZoomHotkey()
+        unregisterFormatHotkey()
         // Flip out of `.recording` immediately so the menu shows "Saving…"
         // feedback while the writer is still flushing the file.
         phase = .saving
@@ -151,11 +174,13 @@ final class AppState {
                 self.isStopping = false
                 self.phase = .idle
                 self.refreshRecordings()
+                self.showIdleRegionOverlayIfNeeded()
             } catch {
                 self.isStopping = false
                 self.lastError = error.localizedDescription
                 self.phase = .idle
                 self.refreshRecordings()
+                self.showIdleRegionOverlayIfNeeded()
             }
         }
     }
@@ -215,12 +240,25 @@ final class AppState {
             guard let self, let rect else { return }  // keep current on cancel
             self.options.captureRegion = rect
             self.options.captureAspect = aspect
+            // Keep the selected area marked on screen until cleared.
+            if !self.isActive {
+                self.regionOverlay.show(rect: rect, recording: false)
+            }
         }
     }
 
     func clearRegion() {
         options.captureRegion = nil
         options.captureAspect = .free
+        regionOverlay.hide()
+    }
+
+    /// Re-show the calm region outline after a recording ends (if a region is
+    /// still selected), so the marked area persists until cleared.
+    private func showIdleRegionOverlayIfNeeded() {
+        if let region = options.captureRegion {
+            regionOverlay.show(rect: region, recording: false)
+        }
     }
 
     // MARK: - Global hotkey
@@ -255,6 +293,22 @@ final class AppState {
         if let id = zoomHotkeyID {
             hotkey.unregister(id)
             zoomHotkeyID = nil
+        }
+    }
+
+    private func registerFormatHotkey() {
+        guard formatHotkeyID == nil else { return }
+        formatHotkeyID = hotkey.register(
+            keyCode: UInt32(kVK_ANSI_C),
+            modifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            onPressed: { [weak self] in self?.cycleFormat() }
+        )
+    }
+
+    private func unregisterFormatHotkey() {
+        if let id = formatHotkeyID {
+            hotkey.unregister(id)
+            formatHotkeyID = nil
         }
     }
 

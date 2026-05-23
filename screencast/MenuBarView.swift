@@ -144,14 +144,14 @@ struct MenuBarView: View {
 
     private var captureSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            toggleRow("Camera bubble", systemImage: "video.bubble.left", isOn: $state.options.showCameraBubble)
+            formatRow
             areaRow
             devicePicker(
                 label: "Camera",
                 systemImage: "video",
                 devices: state.devices.cameras,
                 selection: $state.options.cameraDeviceID,
-                enabled: state.options.showCameraBubble
+                enabled: state.options.format.usesCamera
             )
             microphonePicker
         }
@@ -201,18 +201,22 @@ struct MenuBarView: View {
         .disabled(state.isBusy)
     }
 
-    private func toggleRow(_ title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+    private var formatRow: some View {
         HStack(spacing: 6) {
-            Image(systemName: systemImage)
+            Image(systemName: "rectangle.on.rectangle")
                 .foregroundStyle(.secondary)
                 .frame(width: 14)
-            Text(title)
+            Text("Format")
                 .font(.system(size: 12))
             Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
+            Picker("", selection: $state.options.format) {
+                Text("Screen only").tag(CaptureFormat.screenOnly)
+                Text("Screen + Camera").tag(CaptureFormat.screenAndCamera)
+                Text("Camera only").tag(CaptureFormat.cameraOnly)
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(maxWidth: 180, alignment: .trailing)
         }
         .frame(maxWidth: .infinity)
     }

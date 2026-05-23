@@ -1,7 +1,8 @@
 import Foundation
 
 struct RecordingOptions: Sendable {
-    var showCameraBubble: Bool = true
+    /// What the recording shows. Switchable live while recording.
+    var format: CaptureFormat = .screenAndCamera
 
     /// `uniqueID` of the camera device for the bubble. `nil` = system default.
     var cameraDeviceID: String? = nil
@@ -47,6 +48,40 @@ enum CaptureAspect: String, CaseIterable, Sendable {
         case .free: return ""
         case .youtube: return "16:9"
         case .shorts: return "9:16"
+        }
+    }
+}
+
+/// The three filming formats, cycled live while recording.
+enum CaptureFormat: String, CaseIterable, Sendable {
+    case screenOnly        // screen, no camera
+    case screenAndCamera   // screen + camera bubble (bottom-right)
+    case cameraOnly        // camera fills the frame
+
+    var usesCamera: Bool { self != .screenOnly }
+
+    var next: CaptureFormat {
+        switch self {
+        case .screenOnly: return .screenAndCamera
+        case .screenAndCamera: return .cameraOnly
+        case .cameraOnly: return .screenOnly
+        }
+    }
+
+    var menuLabel: String {
+        switch self {
+        case .screenOnly: return "Screen only"
+        case .screenAndCamera: return "Screen + Camera"
+        case .cameraOnly: return "Camera only"
+        }
+    }
+
+    /// SF Symbol shown on the pill's format button.
+    var symbol: String {
+        switch self {
+        case .screenOnly: return "display"
+        case .screenAndCamera: return "rectangle.inset.bottomright.filled"
+        case .cameraOnly: return "person.crop.square.fill"
         }
     }
 }
