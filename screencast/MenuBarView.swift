@@ -17,14 +17,9 @@ struct MenuBarView: View {
 
             captureSection
 
-            if !state.pendingRecordings.isEmpty, !state.isRecording {
+            if !state.recordings.isEmpty, !state.isRecording {
                 Divider()
-                pendingUploads
-            }
-
-            if !state.history.isEmpty, !state.isRecording {
-                Divider()
-                recentShares
+                recordingsList
             }
 
             Divider()
@@ -42,7 +37,7 @@ struct MenuBarView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 18, height: 18)
-            Text("Screencast.to")
+            Text("Screencast")
                 .font(.system(size: 13, weight: .semibold))
             Spacer()
             statusText
@@ -58,8 +53,7 @@ struct MenuBarView: View {
         switch state.phase {
         case .idle: Text("Idle")
         case .recording: Text("Recording")
-        case .uploading: Text("Uploading…")
-        case .done: Text("Ready")
+        case .saving: Text("Saving…")
         case .error: Text("Error")
         }
     }
@@ -69,10 +63,11 @@ struct MenuBarView: View {
     @ViewBuilder
     private var primary: some View {
         switch state.phase {
-        case .uploading(let p):
-            VStack(alignment: .leading, spacing: 6) {
-                ProgressView(value: p)
-                Text("Uploading \(Int(p * 100))%")
+        case .saving:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Saving recording…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -81,24 +76,15 @@ struct MenuBarView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
-                    Text("Upload failed")
+                    Text("Recording failed")
                         .fontWeight(.semibold)
                 }
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
-                HStack(spacing: 6) {
-                    if state.failedUploadURL != nil {
-                        Button { state.retryFailedUpload() } label: {
-                            Label("Retry Upload", systemImage: "arrow.clockwise")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.accentColor)
-                    }
-                    Button { state.toggleRecording() } label: {
-                        Text("New Recording")
-                    }
+                Button { state.toggleRecording() } label: {
+                    Text("New Recording")
                 }
                 .controlSize(.small)
             }
@@ -242,98 +228,59 @@ struct MenuBarView: View {
         .opacity(enabled ? 1.0 : 0.45)
     }
 
-    // MARK: - Pending uploads
+    // MARK: - Recordings
 
-    private var pendingUploads: some View {
+    private var recordingsList: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("PENDING UPLOADS")
+                Text("RECORDINGS")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                     .tracking(0.5)
                 Spacer()
-                Text("\(state.pendingRecordings.count)")
+                Text("\(state.recordings.count)")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
-            ForEach(state.pendingRecordings.prefix(5), id: \.self) { url in
-                pendingRow(url: url)
+            ForEach(state.recordings.prefix(6), id: \.self) { url in
+                recordingRow(url: url)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
     }
 
-    private func pendingRow(url: URL) -> some View {
+    private func recordingRow(url: URL) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "arrow.up.circle")
-                .foregroundStyle(.orange)
-                .frame(width: 14)
+            Button { state.playRecording(url) } label: {
+                Image(systemName: "play.circle.fill")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .help("Play")
+            .buttonStyle(.borderless)
             VStack(alignment: .leading, spacing: 1) {
                 Text(url.deletingPathExtension().lastPathComponent)
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(fileSizeString(url: url))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(fileSizeString(url: url))
+                    Text("·")
+                    Text(relativeDate(modificationDate(url)))
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
             }
             Spacer()
-            Button { state.retryUpload(fileURL: url) } label: {
-                Image(systemName: "arrow.clockwise")
-            }
-            .help("Retry upload")
-            .buttonStyle(.borderless)
-            .disabled(state.isBusy)
             Button { state.revealInFinder(url) } label: {
                 Image(systemName: "folder")
             }
             .help("Reveal in Finder")
             .buttonStyle(.borderless)
-        }
-    }
-
-    // MARK: - Recent shares
-
-    private var recentShares: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("RECENT SHARES")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .tracking(0.5)
-            ForEach(state.history.prefix(5)) { entry in
-                shareRow(entry: entry)
+            Button { state.deleteRecording(url) } label: {
+                Image(systemName: "trash")
             }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-    }
-
-    private func shareRow(entry: ShareEntry) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "link")
-                .foregroundStyle(.secondary)
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.publicURL.lastPathComponent)
-                    .font(.system(size: 11, design: .monospaced))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                Text(relativeDate(entry.createdAt))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button { state.copyURL(entry.publicURL) } label: {
-                Image(systemName: "doc.on.doc")
-            }
-            .help("Copy link")
-            .buttonStyle(.borderless)
-            Button { state.openURL(entry.publicURL) } label: {
-                Image(systemName: "safari")
-            }
-            .help("Open")
+            .help("Move to Trash")
             .buttonStyle(.borderless)
         }
     }
@@ -366,6 +313,10 @@ struct MenuBarView: View {
     private func fileSizeString(url: URL) -> String {
         let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    private func modificationDate(_ url: URL) -> Date {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
     }
 
     private func relativeDate(_ date: Date) -> String {

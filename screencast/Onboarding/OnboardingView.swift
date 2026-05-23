@@ -74,10 +74,10 @@ private struct WelcomeStep: View {
             Spacer().frame(height: 20)
             BrandMark()
             VStack(spacing: 12) {
-                Text("Welcome to Screencast.to")
+                Text("Welcome to Screencast")
                     .font(.system(size: 30, weight: .bold))
                     .tracking(-0.5)
-                Text("Record your screen. Share a link.\nA tiny menu-bar app for macOS.")
+                Text("Record your screen. Saved locally.\nA tiny menu-bar app for macOS.")
                     .font(.system(size: 15))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.white.opacity(0.65))
@@ -87,7 +87,7 @@ private struct WelcomeStep: View {
             HStack(spacing: 24) {
                 feature(icon: "rectangle.dashed", text: "Full screen,\nwindow, or region")
                 feature(icon: "video.bubble.left.fill", text: "Camera\nbubble")
-                feature(icon: "link", text: "Instant\nshare link")
+                feature(icon: "pause.circle", text: "Pause &\nresume")
             }
             .padding(.top, 8)
 

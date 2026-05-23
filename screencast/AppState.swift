@@ -6,8 +6,7 @@ import Observation
 enum AppPhase: Equatable {
     case idle
     case recording
-    case uploading(progress: Double)
-    case done(URL)
+    case saving
     case error(String)
 }
 
@@ -16,20 +15,14 @@ enum AppPhase: Equatable {
 final class AppState {
     var options = RecordingOptions()
     var phase: AppPhase = .idle
-    var lastSharedURL: URL?
-    var history: [ShareEntry] = []
-    var pendingRecordings: [URL] = []
+    /// Local recordings on disk, newest first. Replaces the old upload history.
+    var recordings: [URL] = []
     let devices = DeviceCatalog()
-
-    /// Set when the most recent upload attempt failed; used by the Retry
-    /// button in the menu while `phase == .error`.
-    private(set) var failedUploadURL: URL?
 
     private let recorder = RecordingEngine()
     private let bubble = CameraBubbleController()
     private let controls = RecordingControlsController()
     private let regionOverlay = RecordingRegionOverlay()
-    private let uploader = UploadClient()
     private let regionSelector = RegionSelector()
     private let hotkey = GlobalHotkey()
 
@@ -37,13 +30,11 @@ final class AppState {
     /// controls window each have a Stop button, and on long recordings
     /// `recorder.stop()` can take 1–2s to flush the file. Without a guard,
     /// a second click during that window hits `RecordingError.notRecording`
-    /// on the second call and surfaces a spurious "Upload failed" — losing
-    /// the in-flight recording from the user's perspective.
+    /// on the second call and surfaces a spurious error.
     private var isStopping = false
 
     init() {
-        history = ShareHistoryStore.shared.entries
-        refreshPendingRecordings()
+        refreshRecordings()
         registerGlobalHotkey()
     }
 
@@ -54,7 +45,7 @@ final class AppState {
 
     var isBusy: Bool {
         switch phase {
-        case .recording, .uploading: return true
+        case .recording, .saving: return true
         default: return false
         }
     }
@@ -97,73 +88,40 @@ final class AppState {
         controls.hide()
         regionOverlay.hide()
         bubble.hide()
-        // Flip out of `.recording` immediately so the menu swaps the Stop
-        // button for the upload progress view and the user sees feedback even
-        // while the file is still being flushed by SCRecordingOutput.
-        phase = .uploading(progress: 0)
+        // Flip out of `.recording` immediately so the menu shows "Saving…"
+        // feedback while SCRecordingOutput is still flushing the file.
+        phase = .saving
 
         Task { [weak self] in
             guard let self else { return }
             do {
-                let fileURL = try await self.recorder.stop()
+                _ = try await self.recorder.stop()
                 self.isStopping = false
-                await self.performUpload(fileURL: fileURL)
+                self.phase = .idle
+                self.refreshRecordings()
             } catch {
                 self.isStopping = false
                 self.phase = .error(error.localizedDescription)
+                self.refreshRecordings()
             }
         }
     }
 
-    // MARK: - Upload
+    // MARK: - Local recordings
 
-    private func performUpload(fileURL: URL) async {
-        failedUploadURL = nil
-        phase = .uploading(progress: 0)
-        do {
-            let publicURL = try await uploader.upload(fileURL: fileURL) { [weak self] p in
-                self?.phase = .uploading(progress: p)
-            }
-            ShareHistoryStore.shared.record(localURL: fileURL, publicURL: publicURL)
-            history = ShareHistoryStore.shared.entries
-            lastSharedURL = publicURL
-            phase = .done(publicURL)
-            refreshPendingRecordings()
-        } catch {
-            failedUploadURL = fileURL
-            phase = .error(error.localizedDescription)
-            refreshPendingRecordings()
-        }
-    }
-
-    /// Retry the upload that just failed (driven by the Retry button on
-    /// `phase == .error`). Falls through quietly if there is no candidate.
-    func retryFailedUpload() {
-        guard let url = failedUploadURL else { return }
-        Task { await performUpload(fileURL: url) }
-    }
-
-    /// Upload an arbitrary on-disk recording (used by the Pending Uploads list).
-    func retryUpload(fileURL: URL) {
-        Task { await performUpload(fileURL: fileURL) }
-    }
-
-    // MARK: - Pending recordings
-
-    func refreshPendingRecordings() {
+    /// Reload the on-disk recordings list (newest first).
+    func refreshRecordings() {
         guard let dir = try? RecordingEngine.recordingsDirectory() else {
-            pendingRecordings = []
+            recordings = []
             return
         }
         let fm = FileManager.default
-        let uploaded = ShareHistoryStore.shared.uploadedLocalPaths()
         let urls = (try? fm.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.contentModificationDateKey]
         )) ?? []
-        pendingRecordings = urls
+        recordings = urls
             .filter { $0.pathExtension.lowercased() == "mov" }
-            .filter { !uploaded.contains($0.path) }
             .sorted { a, b in
                 let ad = (try? a.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
                 let bd = (try? b.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
@@ -171,34 +129,22 @@ final class AppState {
             }
     }
 
+    /// Open a recording in the default player (QuickTime).
+    func playRecording(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
+
     func revealInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
-    // MARK: - History actions
-
-    func copyLastURL() {
-        guard let url = lastSharedURL else { return }
-        copyURL(url)
+    /// Move a recording to the Trash and refresh the list.
+    func deleteRecording(_ url: URL) {
+        try? FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        refreshRecordings()
     }
 
-    func copyURL(_ url: URL) {
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.setString(url.absoluteString, forType: .string)
-    }
-
-    func openLastURL() {
-        guard let url = lastSharedURL else { return }
-        NSWorkspace.shared.open(url)
-    }
-
-    func openURL(_ url: URL) {
-        NSWorkspace.shared.open(url)
-    }
-
-    /// Reveal the local recordings folder in Finder. Failed uploads stay
-    /// here as a safety net for re-upload / recovery.
+    /// Reveal the local recordings folder in Finder.
     func openRecordingsFolder() {
         guard let url = try? RecordingEngine.recordingsDirectory() else { return }
         NSWorkspace.shared.open(url)

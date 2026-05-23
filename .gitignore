@@ -14,13 +14,15 @@ build/
 .build/
 Packages/
 
+# Node
+node_modules/
+
 # Local-only Swift source (anything named *.local.swift in any folder).
 # Used for files that contain secrets / per-developer config and must never
-# be committed (e.g. screencast/Upload/Config.local.swift).
+# be committed.
 **/*.local.swift
 
-# Environment / secret files anywhere in the tree.
-# Catches scripts/.env, worker/.env, and anything similar added later.
+# Environment / secret files anywhere in the tree (e.g. scripts/.env).
 **/.env
 **/.env.local
 **/.env.*.local
