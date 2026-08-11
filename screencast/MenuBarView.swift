@@ -398,12 +398,20 @@ struct MenuBarView: View {
                 .frame(width: 16, height: 16)
                 .help("Uploading \(Int(progress * 100))%")
         case .done(let link, let at):
-            Button { state.copyLink(link) } label: {
-                Image(systemName: "checkmark.icloud")
-                    .foregroundStyle(.green)
+            HStack(spacing: 2) {
+                Button { state.copyLink(link) } label: {
+                    Image(systemName: "checkmark.icloud")
+                        .foregroundStyle(.green)
+                }
+                .help("Copy link · expires in \(expiryText(at))")
+                .buttonStyle(.borderless)
+
+                Button { state.copyIssueNote(for: url, link: link, sharedAt: at) } label: {
+                    Image(systemName: "doc.text")
+                }
+                .help("Copy issue note")
+                .buttonStyle(.borderless)
             }
-            .help("Copy link · expires in \(expiryText(at))")
-            .buttonStyle(.borderless)
         case .failed(let message):
             Button { state.uploadRecording(url) } label: {
                 Image(systemName: "exclamationmark.icloud")

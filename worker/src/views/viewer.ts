@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, GA_SNIPPET, escapeHtml } from "./shared";
+import { BRAND, FAVICON_HREF, escapeHtml } from "./shared";
 
 /** Share-link viewer at GET /v/<id>.<ext>. `videoUrl` is the canonical R2 URL. */
 export function renderViewer(videoUrl: string): string {
@@ -10,22 +10,21 @@ export function renderViewer(videoUrl: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <title>${BRAND}</title>
-<meta name="description" content="A screencast shared via Screencast.to. Free macOS menu-bar app — record your screen and share a link.">
+<meta name="description" content="A temporary screencast shared via Screencast.to. Free macOS menu-bar app — record locally, share a 24-hour link when you choose.">
 <link rel="icon" href="${FAVICON_HREF}">
 
 <!-- Open Graph / Twitter — same brand image for now -->
 <meta property="og:site_name" content="Screencast.to">
 <meta property="og:title" content="Watch this screencast">
-<meta property="og:description" content="Shared via Screencast.to — record your screen, share a link. Free.">
+<meta property="og:description" content="Shared via Screencast.to — temporary screen recordings for work.">
 <meta property="og:type" content="video.other">
 <meta property="og:image" content="https://screencast.to/download/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Watch this screencast">
-<meta name="twitter:description" content="Shared via Screencast.to.">
+<meta name="twitter:description" content="Temporary screen recordings for work.">
 <meta name="twitter:image" content="https://screencast.to/download/og.png">
-${GA_SNIPPET}
 <style>
   :root { --accent: #ef4444; }
   * { box-sizing: border-box; margin: 0; padding: 0; }

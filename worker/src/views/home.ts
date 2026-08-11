@@ -8,8 +8,8 @@ export function renderHome(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a0c10">
-<title>${BRAND} — Record your screen, share a link</title>
-<meta name="description" content="A tiny macOS menu-bar app. Hit record, get a shareable link the moment you stop. Always free. Recordings auto-delete after 24 hours.">
+<title>${BRAND} — Temporary screen recordings for work</title>
+<meta name="description" content="A tiny macOS menu-bar app. Record locally, then share a 24-hour link when you choose. No accounts, no viewer login, no permanent video library.">
 <meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, macOS, share screen recording, screencast">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
@@ -18,20 +18,20 @@ export function renderHome(): string {
 
 <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack) -->
 <meta property="og:site_name" content="Screencast.to">
-<meta property="og:title" content="Screencast.to — Record your screen, share a link">
-<meta property="og:description" content="A tiny macOS menu-bar app. Hit record, get a shareable link the moment you stop. Always free.">
+<meta property="og:title" content="Screencast.to — Temporary screen recordings for work">
+<meta property="og:description" content="A tiny macOS menu-bar app. Record locally, then share a 24-hour link when you choose.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
 <meta property="og:image" content="https://screencast.to/download/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Screencast.to — record your screen, share a link">
+<meta property="og:image:alt" content="Screencast.to — temporary screen recordings for work">
 <meta property="og:locale" content="en_US">
 
 <!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Screencast.to — Record your screen, share a link">
-<meta name="twitter:description" content="A tiny macOS menu-bar app. Hit record, get a shareable link. Always free.">
+<meta name="twitter:title" content="Screencast.to — Temporary screen recordings for work">
+<meta name="twitter:description" content="Record locally, then share a 24-hour link when you choose.">
 <meta name="twitter:image" content="https://screencast.to/download/og.png">
 
 ${GA_SNIPPET}
@@ -383,9 +383,9 @@ ${GA_SNIPPET}
 <main>
 
   <section class="hero">
-    <span class="eyebrow">macOS · Always free</span>
-    <h1>Record your screen.<br><span class="accent">Share a link.</span></h1>
-    <p>A tiny menu-bar app for macOS. Hit record, capture exactly what you want, and get a shareable link the moment you stop.</p>
+    <span class="eyebrow">macOS · Local by default · 24h links</span>
+    <h1>Screen recordings<br><span class="accent">that don't live forever.</span></h1>
+    <p>A tiny menu-bar app for macOS. Capture locally, then upload only when you choose. Share a 24-hour link anyone can watch without an account.</p>
     <div class="cta">
       <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg" download>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -476,14 +476,14 @@ ${GA_SNIPPET}
 
       <div class="card">
         <div class="icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg></div>
-        <h3>Instant share link</h3>
-        <p>Stop recording and the link is on your clipboard. Recipient watches in their browser — no app, no login.</p>
+        <h3>Share when you choose</h3>
+        <p>Recordings stay local until you upload. One click copies a 24-hour link your recipient can watch in a browser — no app, no login.</p>
       </div>
 
       <div class="card">
         <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-        <h3>Auto-deletes in 24h</h3>
-        <p>Recordings expire automatically. Nothing lingers — share confidently and move on.</p>
+        <h3>Temporary by design</h3>
+        <p>Uploaded links auto-delete after 24 hours. Nothing becomes a permanent video library unless you keep the local file.</p>
       </div>
 
       <div class="card">
@@ -495,7 +495,7 @@ ${GA_SNIPPET}
       <div class="card">
         <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <h3>Free</h3>
-        <p>No accounts, no plans, no upsells. Build a habit instead of a billing relationship.</p>
+        <p>No accounts, no plans, no upsells. Build a habit without building another permanent video library.</p>
       </div>
 
       <div class="card">
@@ -531,15 +531,15 @@ ${GA_SNIPPET}
       </div>
       <div class="step">
         <div class="num">3</div>
-        <h3>Stop, copy, share</h3>
-        <p>The link auto-uploads to your clipboard.</p>
+        <h3>Upload, copy, share</h3>
+        <p>Click upload on a recording to copy a 24-hour link.</p>
       </div>
     </div>
   </section>
 
   <section class="install" id="install">
     <h2>Get ${BRAND}</h2>
-    <p>Free. Recordings live for 24 hours, then delete themselves. macOS 15+.</p>
+    <p>Free. Record locally, share temporary links when you choose. macOS 15+.</p>
     <div class="row">
       <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -554,7 +554,7 @@ ${GA_SNIPPET}
 
 <footer>
   <span>© ${new Date().getFullYear()} ${BRAND}</span>
-  <span>Recordings auto-delete after 24 hours · <a href="/privacy">Privacy</a></span>
+  <span>Uploaded links auto-delete after 24 hours · <a href="/privacy">Privacy</a></span>
 </footer>
 
 </body>

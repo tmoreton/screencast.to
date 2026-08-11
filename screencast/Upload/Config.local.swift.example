@@ -4,7 +4,7 @@
 import Foundation
 
 extension UploadConfig {
-    /// Shared secret sent in the `X-Notloom-Auth` header on every /sign call.
+    /// Shared secret sent in the `X-Screencast-Auth` header on every /sign call.
     /// Must match `APP_SECRET` in `worker/.env`.
     /// Generate one with: `openssl rand -hex 32`
     static let appSecret = "REPLACE_ME"

@@ -124,9 +124,13 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     private var sessionStartPTS: CMTime = .zero
     private var totalPaused: CMTime = .zero
     private var latestPTS: CMTime = .zero
+    private var lastWrittenSourceEndPTS: CMTime?
+    private var lastVideoOutputEndPTS: CMTime?
+    private var lastAudioOutputEndPTS: CMTime?
     private var isPaused = false
     private var pauseAnchor: CMTime = .zero
     private var resuming = false
+    private let videoFrameDuration = CMTime(value: 1, timescale: 60)
 
     // Audio mix state (outputQueue only).
     private let micEnabled: Bool
@@ -242,7 +246,10 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
         outputQueue.async {
             guard !self.isPaused else { return }
             self.isPaused = true
-            self.pauseAnchor = self.latestPTS
+            self.pauseAnchor = self.lastWrittenSourceEndPTS ?? self.latestPTS
+            self.micQueue.removeAll(keepingCapacity: true)
+            self.systemConverter?.reset()
+            self.micConverter?.reset()
         }
     }
 
@@ -251,6 +258,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
             guard self.isPaused else { return }
             self.isPaused = false
             self.resuming = true
+            self.micQueue.removeAll(keepingCapacity: true)
         }
     }
 
@@ -283,7 +291,13 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
 
         if isPaused { return }
         if resuming {
-            totalPaused = CMTimeAdd(totalPaused, CMTimeSubtract(pts, pauseAnchor))
+            // Microphone is mixed into system audio and can be delivered before
+            // screen/audio after a long pause. Let a writer-backed track anchor
+            // the resumed timeline.
+            guard type == .screen || type == .audio else { return }
+            if sessionStarted {
+                totalPaused = CMTimeAdd(totalPaused, CMTimeSubtract(pts, pauseAnchor))
+            }
             resuming = false
         }
         if !sessionStarted {
@@ -297,9 +311,17 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
 
         switch type {
         case .screen:
-            appendVideo(sampleBuffer, at: outPTS)
+            let videoPTS = clampedOutputPTS(outPTS, after: lastVideoOutputEndPTS)
+            if appendVideo(sampleBuffer, at: videoPTS) {
+                lastVideoOutputEndPTS = CMTimeAdd(videoPTS, videoFrameDuration)
+                updateLastWrittenSourceEnd(CMTimeAdd(pts, sourceDuration(sampleBuffer, fallback: videoFrameDuration)))
+            }
         case .audio:
-            appendMixedAudio(systemBuffer: sampleBuffer, at: outPTS)
+            let audioPTS = clampedOutputPTS(outPTS, after: lastAudioOutputEndPTS)
+            if let duration = appendMixedAudio(systemBuffer: sampleBuffer, at: audioPTS) {
+                lastAudioOutputEndPTS = CMTimeAdd(audioPTS, duration)
+                updateLastWrittenSourceEnd(CMTimeAdd(pts, sourceDuration(sampleBuffer, fallback: duration)))
+            }
         case .microphone:
             enqueueMic(sampleBuffer)
         default:
@@ -313,22 +335,22 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
 
     // MARK: Video
 
-    private func appendVideo(_ sampleBuffer: CMSampleBuffer, at pts: CMTime) {
+    private func appendVideo(_ sampleBuffer: CMSampleBuffer, at pts: CMTime) -> Bool {
         // Skip idle / blank frames SCStream emits when the screen is static.
         if let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
            let raw = attachments.first?[.status] as? Int,
            let status = SCFrameStatus(rawValue: raw),
            status != .complete {
-            return
+            return false
         }
         guard videoInput.isReadyForMoreMediaData,
-              let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+              let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return false }
 
         if let zoom = zoomState?.sample(pixelWidth: videoWidth, pixelHeight: videoHeight, at: CACurrentMediaTime()),
            let zoomed = renderZoomed(pixelBuffer, factor: zoom.factor, center: zoom.center) {
-            pixelAdaptor.append(zoomed, withPresentationTime: pts)
+            return pixelAdaptor.append(zoomed, withPresentationTime: pts)
         } else {
-            pixelAdaptor.append(pixelBuffer, withPresentationTime: pts)
+            return pixelAdaptor.append(pixelBuffer, withPresentationTime: pts)
         }
     }
 
@@ -354,14 +376,14 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
 
     // MARK: Audio mix (system audio is the master clock)
 
-    private func appendMixedAudio(systemBuffer: CMSampleBuffer, at pts: CMTime) {
+    private func appendMixedAudio(systemBuffer: CMSampleBuffer, at pts: CMTime) -> CMTime? {
         guard audioInput.isReadyForMoreMediaData,
-              let pcm = normalize(systemBuffer, converter: &systemConverter) else { return }
+              let pcm = normalize(systemBuffer, converter: &systemConverter) else { return nil }
 
         let frames = Int(pcm.frameLength)
         let floats = frames * Int(mixFormat.channelCount)
         let abl = UnsafeMutableAudioBufferListPointer(pcm.mutableAudioBufferList)
-        guard let dst = abl[0].mData?.assumingMemoryBound(to: Float.self) else { return }
+        guard let dst = abl[0].mData?.assumingMemoryBound(to: Float.self) else { return nil }
 
         if micEnabled, !micQueue.isEmpty {
             let take = min(floats, micQueue.count)
@@ -374,8 +396,8 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
             vDSP_vclip(dst, 1, &lo, &hi, dst, 1, vDSP_Length(floats))
         }
 
-        guard let out = makeAudioSampleBuffer(from: pcm, at: pts) else { return }
-        audioInput.append(out)
+        guard let out = makeAudioSampleBuffer(from: pcm, at: pts) else { return nil }
+        return audioInput.append(out) ? audioDuration(frames: frames) : nil
     }
 
     private func enqueueMic(_ micBuffer: CMSampleBuffer) {
@@ -455,6 +477,26 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
             bufferList: pcm.mutableAudioBufferList
         )
         return status == noErr ? sampleBuffer : nil
+    }
+
+    private func clampedOutputPTS(_ pts: CMTime, after previousEnd: CMTime?) -> CMTime {
+        guard let previousEnd, pts < previousEnd else { return pts }
+        return previousEnd
+    }
+
+    private func updateLastWrittenSourceEnd(_ pts: CMTime) {
+        if let lastWrittenSourceEndPTS, pts <= lastWrittenSourceEndPTS { return }
+        lastWrittenSourceEndPTS = pts
+    }
+
+    private func sourceDuration(_ sampleBuffer: CMSampleBuffer, fallback: CMTime) -> CMTime {
+        let duration = CMSampleBufferGetDuration(sampleBuffer)
+        if duration.isValid, duration > .zero { return duration }
+        return fallback
+    }
+
+    private func audioDuration(frames: Int) -> CMTime {
+        CMTime(value: CMTimeValue(frames), timescale: CMTimeScale(mixFormat.sampleRate))
     }
 }
 

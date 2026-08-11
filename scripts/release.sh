@@ -54,22 +54,23 @@ EXPORT_DIR="$BUILD_DIR/export"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
 
-# R2 destination. Bucket comes from worker/.env to match what the Worker reads.
-read_worker_env_var() {
-    local key="$1"
-    [[ -f worker/.env ]] || return 0
-    grep -E "^${key}=" worker/.env | head -1 | sed -E "s/^${key}=//" | tr -d '"'
-}
-R2_BUCKET="${R2_BUCKET:-$(read_worker_env_var R2_BUCKET)}"
-R2_BUCKET="${R2_BUCKET:-notloom-recordings}"
-R2_DOWNLOAD_PREFIX="downloads"
-
+# Local release credentials. See scripts/.env.example.
 if [[ -f scripts/.env ]]; then
     set -a
     # shellcheck disable=SC1091
     source scripts/.env
     set +a
 fi
+
+# R2 destination. Bucket comes from scripts/.env, env vars, or worker/.env to
+# match what the Worker reads.
+read_worker_env_var() {
+    local key="$1"
+    [[ -f worker/.env ]] || return 0
+    grep -E "^${key}=" worker/.env | head -1 | sed -E "s/^${key}=//" | tr -d '"'
+}
+R2_BUCKET="${R2_BUCKET:-$(read_worker_env_var R2_BUCKET)}"
+R2_DOWNLOAD_PREFIX="downloads"
 
 read_marketing_version() {
     xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
@@ -83,6 +84,15 @@ if [[ -z "$VERSION" ]]; then
 fi
 if [[ -z "$VERSION" ]]; then
     echo "error: could not determine version (pass it as the first argument)" >&2
+    exit 1
+fi
+
+if [[ ! -f screencast/Upload/Config.local.swift ]]; then
+    cat >&2 <<EOF
+error: screencast/Upload/Config.local.swift is missing.
+Copy screencast/Upload/Config.local.swift.example to Config.local.swift and set
+UploadConfig.appSecret to the same APP_SECRET used by the Worker.
+EOF
     exit 1
 fi
 

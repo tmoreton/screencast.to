@@ -76,19 +76,19 @@ ${GA_SNIPPET}
 
   <div class="tldr">
     <h2>TL;DR</h2>
-    <p>${BRAND} records your screen locally on your Mac, uploads the file to our storage, and gives you a shareable link. Anyone with the link can watch. Recordings auto-delete after 24 hours. We don't watch, mine, or sell your recordings. We track basic anonymous website analytics — nothing tied to specific recordings.</p>
+    <p>${BRAND} records your screen locally on your Mac. If you choose to upload a recording, we store that file long enough to give you a 24-hour share link. Anyone with the link can watch until it expires. We don't watch, mine, or sell your recordings. Shared recording pages do not load analytics.</p>
   </div>
 
   <h2>What we collect</h2>
   <ul>
-    <li><strong>Your screen recordings</strong>, only when you press Record. The file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
-    <li><strong>Anonymous website analytics</strong> — page views, country, browser — via Google Analytics. Standard cookie-based tracking. No personal info.</li>
+    <li><strong>Your screen recordings</strong>, stored locally on your Mac by default. If you choose to upload one, the file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
+    <li><strong>Anonymous website analytics</strong> — page views, country, browser — via Google Analytics on the marketing and privacy pages only. Shared recording pages do not load analytics.</li>
     <li><strong>IP address</strong> on each recording-upload request, used only for short-window rate limiting (10 uploads / minute / IP). Not persisted.</li>
   </ul>
   <p>That's it. We don't collect your name, email, or any account info — there are no accounts.</p>
 
   <h2>Where your recordings live</h2>
-  <p>Recordings are stored in a Cloudflare R2 bucket controlled by ${BRAND}. They are NOT publicly listed — only someone who has your specific share URL (which contains a random 10-character ID) can access the recording.</p>
+  <p>Local recordings stay on your Mac until you upload them. Uploaded recordings are stored in a Cloudflare R2 bucket controlled by ${BRAND}. They are NOT publicly listed — only someone who has your specific share URL (which contains a random 10-character ID) can access the recording.</p>
 
   <h2>Auto-deletion</h2>
   <p>Every recording is deleted automatically <strong>within 24–48 hours</strong> of upload via a Cloudflare R2 lifecycle rule. After that, the share link returns a "Not Found" page. We can't recover deleted recordings.</p>
@@ -99,15 +99,15 @@ ${GA_SNIPPET}
   <h2>Third parties</h2>
   <ul>
     <li><strong>Cloudflare</strong> — hosts the worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
-    <li><strong>Google Analytics</strong> — anonymous traffic stats for the website (not the recordings). <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Their privacy policy</a>.</li>
+    <li><strong>Google Analytics</strong> — anonymous traffic stats for the marketing and privacy pages, not shared recording pages. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Their privacy policy</a>.</li>
   </ul>
   <p>We don't share recordings or data with anyone else.</p>
 
   <h2>Cookies</h2>
-  <p>The website uses Google Analytics cookies (<code>_ga</code>, <code>_ga_*</code>) for anonymous traffic analytics. Block them in your browser if you prefer — the site works without them. The Mac app itself uses no cookies.</p>
+  <p>The marketing and privacy pages use Google Analytics cookies (<code>_ga</code>, <code>_ga_*</code>) for anonymous traffic analytics. Shared recording pages do not load Google Analytics. Block cookies in your browser if you prefer — the site works without them. The Mac app itself uses no cookies.</p>
 
   <h2>Your rights</h2>
-  <p>You can delete a recording immediately by closing its share URL (the lifecycle rule will sweep it within 24h). Since we don't have accounts, there's no profile to delete.</p>
+  <p>You can delete local recordings from your Mac at any time. Uploaded recordings expire automatically within 24–48 hours of upload. Since we don't have accounts, there's no profile to delete.</p>
 
   <h2>Abuse</h2>
   <p>If you find a recording that should be removed (illegal content, harassment, etc.), email the operator. Recordings can be deleted manually within the bucket — they will be removed within 24 hours regardless.</p>

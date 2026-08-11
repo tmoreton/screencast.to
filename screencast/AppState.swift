@@ -318,6 +318,12 @@ final class AppState {
         pb.setString(url.absoluteString, forType: .string)
     }
 
+    func copyIssueNote(for recording: URL, link: URL, sharedAt: Date) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(issueNote(for: recording, link: link, sharedAt: sharedAt), forType: .string)
+    }
+
     func openLink(_ url: URL) {
         NSWorkspace.shared.open(url)
     }
@@ -349,6 +355,32 @@ final class AppState {
         for (path, item) in store where now.timeIntervalSince(item.at) <= Self.linkLifetime {
             uploads[path] = .done(url: item.url, at: item.at)
         }
+    }
+
+    private func issueNote(for recording: URL, link: URL, sharedAt: Date) -> String {
+        let expiresAt = sharedAt.addingTimeInterval(Self.linkLifetime)
+        let dateFormatter = ISO8601DateFormatter()
+        let createdAt = (try? recording.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
+        let bytes = (try? recording.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        return """
+        ### Temporary screencast
+
+        \(link.absoluteString)
+
+        Expires: \(dateFormatter.string(from: expiresAt))
+        Recording: \(recording.lastPathComponent) (\(size))
+        Created: \(dateFormatter.string(from: createdAt))
+        Environment: \(ProcessInfo.processInfo.operatingSystemVersionString), Screencast \(version) (\(build))
+
+        ### Notes
+
+        - What happened:
+        - Expected:
+        - Steps:
+        """
     }
 
     /// Reveal the local recordings folder in Finder.
