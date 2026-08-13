@@ -3,6 +3,7 @@
 
 export const BRAND = "Screencast.to";
 export const DOWNLOAD_URL = "https://github.com/tmoreton/screencast.to/releases/latest/download/screencast.dmg";
+export const GITHUB_URL = "https://github.com/tmoreton/screencast.to";
 export const OG_IMAGE_URL = "https://screencast.to/assets/website.png";
 export const PRIVACY_UPDATED = "2026-08-13";
 
