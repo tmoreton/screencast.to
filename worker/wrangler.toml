@@ -2,15 +2,19 @@ name = "screencast"
 main = "src/worker.ts"
 compatibility_date = "2025-01-01"
 
-# Bind the upload/share Worker to share.screencast.to as a custom domain.
-# The marketing/privacy site is hosted separately by GitHub Pages on the apex
-# screencast.to domain.
+# Bind the Worker to the current Cloudflare-fronted domains.
+#
+# GitHub Pages is configured for the static marketing/privacy site, but the
+# apex domain still resolves through Cloudflare today. Keep screencast.to here
+# until DNS is moved to GitHub Pages, otherwise a Worker deploy removes the
+# live apex trigger and the public site returns Cloudflare 530.
 # Prerequisites:
 #   1. screencast.to is added as a zone in your Cloudflare account
 #   2. Cloudflare is set as the authoritative nameservers for it
 # Until both are true, comment this block out and the Worker stays reachable
 # at https://screencast.<your-subdomain>.workers.dev.
 routes = [
+  { pattern = "screencast.to", custom_domain = true },
   { pattern = "share.screencast.to", custom_domain = true },
 ]
 
