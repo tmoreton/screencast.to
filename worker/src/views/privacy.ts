@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, GA_SNIPPET } from "./shared";
+import { BRAND, FAVICON_HREF, GA_SNIPPET, PRIVACY_UPDATED } from "./shared";
 
 /** Privacy policy page at GET /privacy. */
 export function renderPrivacy(): string {
@@ -72,7 +72,7 @@ ${GA_SNIPPET}
 <main>
   <h1>Privacy</h1>
   <p class="lede">Plain language, no tricks.</p>
-  <p class="updated">Last updated: ${new Date().toISOString().slice(0, 10)}</p>
+  <p class="updated">Last updated: ${PRIVACY_UPDATED}</p>
 
   <div class="tldr">
     <h2>TL;DR</h2>
@@ -82,7 +82,7 @@ ${GA_SNIPPET}
   <h2>What we collect</h2>
   <ul>
     <li><strong>Your screen recordings</strong>, stored locally on your Mac by default. If you choose to upload one, the file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
-    <li><strong>Anonymous website analytics</strong> — page views, country, browser — via Google Analytics on the marketing and privacy pages only. Shared recording pages do not load analytics.</li>
+    <li><strong>Optional website analytics</strong> — the public build ships with analytics disabled. A hosted deployment may enable anonymous marketing-page analytics, but shared recording pages do not load analytics.</li>
     <li><strong>IP address</strong> on each recording-upload request, used only for short-window rate limiting (10 uploads / minute / IP). Not persisted.</li>
   </ul>
   <p>That's it. We don't collect your name, email, or any account info — there are no accounts.</p>
@@ -98,13 +98,13 @@ ${GA_SNIPPET}
 
   <h2>Third parties</h2>
   <ul>
-    <li><strong>Cloudflare</strong> — hosts the worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
-    <li><strong>Google Analytics</strong> — anonymous traffic stats for the marketing and privacy pages, not shared recording pages. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Their privacy policy</a>.</li>
+    <li><strong>Cloudflare</strong> — hosts the upload/share worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
+    <li><strong>GitHub</strong> — hosts the static marketing pages and downloadable release assets. GitHub may log visitor IP addresses for security. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Their privacy statement</a>.</li>
   </ul>
   <p>We don't share recordings or data with anyone else.</p>
 
   <h2>Cookies</h2>
-  <p>The marketing and privacy pages use Google Analytics cookies (<code>_ga</code>, <code>_ga_*</code>) for anonymous traffic analytics. Shared recording pages do not load Google Analytics. Block cookies in your browser if you prefer — the site works without them. The Mac app itself uses no cookies.</p>
+  <p>The public site ships without analytics cookies. If a hosted deployment enables Google Analytics, only marketing/privacy pages load those cookies; shared recording pages do not. The Mac app itself uses no cookies.</p>
 
   <h2>Your rights</h2>
   <p>You can delete local recordings from your Mac at any time. Uploaded recordings expire automatically within 24–48 hours of upload. Since we don't have accounts, there's no profile to delete.</p>

@@ -4,7 +4,10 @@ import { CORS } from "../views/shared";
 
 interface SignRequestBody {
   ext?: string;
+  sizeBytes?: number;
 }
+
+const DEFAULT_MAX_UPLOAD_BYTES = 1_073_741_824; // 1 GiB
 
 /**
  * POST /sign — mints a 15-minute presigned PUT URL for a new recording.
@@ -31,6 +34,15 @@ export async function handleSign(request: Request, env: Env): Promise<Response> 
   } catch {
     // empty body OK
   }
+  const sizeBytes = Number(body.sizeBytes);
+  const maxUploadBytes = parseMaxUploadBytes(env.MAX_UPLOAD_BYTES);
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return new Response("Missing recording size", { status: 400, headers: CORS });
+  }
+  if (sizeBytes > maxUploadBytes) {
+    return new Response("Recording too large", { status: 413, headers: CORS });
+  }
+
   const ext = sanitizeExt(body.ext ?? "mov");
   const id = generateShortId();
   const key = `recordings/${id}.${ext}`;
@@ -59,6 +71,13 @@ export async function handleSign(request: Request, env: Env): Promise<Response> 
 
 function sanitizeExt(ext: string): string {
   return ext.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "mov";
+}
+
+function parseMaxUploadBytes(value: string | undefined): number {
+  if (!value) return DEFAULT_MAX_UPLOAD_BYTES;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_MAX_UPLOAD_BYTES;
+  return parsed;
 }
 
 // 10-char URL-safe random ID. 62^10 ≈ 8.4 × 10^17 combinations — collision

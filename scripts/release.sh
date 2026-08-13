@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds screencast.app, signs + notarizes + staples it, packages it into a
-# styled DMG, and uploads it to Cloudflare R2 so screencast.to/download/screencast.dmg
-# serves the latest build.
+# styled DMG. By default it also uploads the DMG to Cloudflare R2 for backward
+# compatibility with older R2 mirrors; GitHub Releases are the canonical public
+# download channel.
 #
 # Usage:
 #   scripts/release.sh                                    # build + upload (reads MARKETING_VERSION)
@@ -53,6 +54,7 @@ ARCHIVE_PATH="$BUILD_DIR/$APP_NAME.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
+BUILD_SETTINGS_XCCONFIG="$BUILD_DIR/ReleaseBuildSettings.xcconfig"
 
 # Local release credentials. See scripts/.env.example.
 if [[ -f scripts/.env ]]; then
@@ -62,15 +64,18 @@ if [[ -f scripts/.env ]]; then
     set +a
 fi
 
-# R2 destination. Bucket comes from scripts/.env, env vars, or worker/.env to
-# match what the Worker reads.
+# R2/upload destination. Values come from scripts/.env, exported env vars, or
+# worker/.env to match what the Worker reads.
 read_worker_env_var() {
     local key="$1"
     [[ -f worker/.env ]] || return 0
     grep -E "^${key}=" worker/.env | head -1 | sed -E "s/^${key}=//" | tr -d '"'
 }
+APP_SECRET="${APP_SECRET:-$(read_worker_env_var APP_SECRET)}"
 R2_BUCKET="${R2_BUCKET:-$(read_worker_env_var R2_BUCKET)}"
+R2_PUB_HOST="${R2_PUB_HOST:-$(read_worker_env_var R2_PUB_HOST)}"
 R2_DOWNLOAD_PREFIX="downloads"
+UPLOAD_WORKER_ENDPOINT="${UPLOAD_WORKER_ENDPOINT:-https://share.screencast.to/sign}"
 
 read_marketing_version() {
     xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
@@ -84,15 +89,6 @@ if [[ -z "$VERSION" ]]; then
 fi
 if [[ -z "$VERSION" ]]; then
     echo "error: could not determine version (pass it as the first argument)" >&2
-    exit 1
-fi
-
-if [[ ! -f screencast/Upload/Config.local.swift ]]; then
-    cat >&2 <<EOF
-error: screencast/Upload/Config.local.swift is missing.
-Copy screencast/Upload/Config.local.swift.example to Config.local.swift and set
-UploadConfig.appSecret to the same APP_SECRET used by the Worker.
-EOF
     exit 1
 fi
 
@@ -120,19 +116,74 @@ Either:
   1. Create scripts/.env (see scripts/.env.example) with APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
   2. OR set NOTARY_PROFILE after running:
        xcrun notarytool store-credentials --apple-id you@example.com \\
-           --team-id GVXC5FQ2RP --password xxxx-xxxx-xxxx-xxxx <profile-name>
+           --team-id YOUR_TEAM_ID --password xxxx-xxxx-xxxx-xxxx <profile-name>
   3. OR run with SKIP_NOTARIZE=1 for an unnotarized local build
+EOF
+    exit 1
+fi
+
+if [[ "$NOTARIZE" == true && -z "${APPLE_TEAM_ID:-}" ]]; then
+    echo "error: APPLE_TEAM_ID is required for notarized Developer ID export." >&2
+    exit 1
+fi
+
+if [[ "$NOTARIZE" == true && -z "$APP_SECRET" ]]; then
+    cat >&2 <<EOF
+error: APP_SECRET is required for an official notarized build.
+Set APP_SECRET in scripts/.env or worker/.env. Public/dev builds can use
+SKIP_NOTARIZE=1 and will compile with upload sharing disabled.
 EOF
     exit 1
 fi
 
 CODESIGN_IDENTITY="${DEVELOPER_ID_APPLICATION:-Developer ID Application}"
 
+xcconfig_value() {
+    # In .xcconfig files, // starts a comment. This preserves URL values such as
+    # https://share.screencast.to/sign without leaking secrets onto the xcodebuild CLI.
+    printf '%s' "$1" | sed 's#//#/$()/#g'
+}
+
+write_release_xcconfig() {
+    {
+        printf 'UPLOAD_WORKER_ENDPOINT = %s\n' "$(xcconfig_value "$UPLOAD_WORKER_ENDPOINT")"
+        if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
+            printf 'DEVELOPMENT_TEAM = %s\n' "$(xcconfig_value "$APPLE_TEAM_ID")"
+        fi
+        if [[ "$NOTARIZE" == false ]]; then
+            printf 'CODE_SIGNING_ALLOWED = NO\n'
+        fi
+    } > "$BUILD_SETTINGS_XCCONFIG"
+    chmod 600 "$BUILD_SETTINGS_XCCONFIG"
+}
+
+set_plist_string() {
+    local plist="$1"
+    local key="$2"
+    local value="$3"
+    if /usr/libexec/PlistBuddy -c "Set :$key $value" "$plist" 2>/dev/null; then
+        return 0
+    fi
+    /usr/libexec/PlistBuddy -c "Add :$key string $value" "$plist"
+}
+
+inject_upload_config() {
+    local app_path="$1"
+    local plist="$app_path/Contents/Info.plist"
+    if [[ ! -f "$plist" ]]; then
+        echo "error: $plist not found" >&2
+        exit 1
+    fi
+    set_plist_string "$plist" "ScreencastWorkerEndpoint" "$UPLOAD_WORKER_ENDPOINT"
+    set_plist_string "$plist" "ScreencastUploadSecret" "$APP_SECRET"
+}
+
 # ---- Build -------------------------------------------------------------------
 
 echo "==> Building $APP_NAME $VERSION"
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR" "$STAGING_DIR" "$DMG_PATH" "$TEMP_DMG" "$APP_ZIP"
 mkdir -p "$BUILD_DIR"
+write_release_xcconfig
 
 echo "==> Archiving"
 xcodebuild \
@@ -141,7 +192,11 @@ xcodebuild \
     -configuration "$CONFIGURATION" \
     -archivePath "$ARCHIVE_PATH" \
     -destination "generic/platform=macOS" \
+    -xcconfig "$BUILD_SETTINGS_XCCONFIG" \
     archive
+
+ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
+inject_upload_config "$ARCHIVE_APP_PATH"
 
 # ---- Get a Developer-ID-signed .app -----------------------------------------
 
@@ -155,7 +210,7 @@ if [[ "$NOTARIZE" == true ]]; then
     <key>method</key>
     <string>developer-id</string>
     <key>teamID</key>
-    <string>${APPLE_TEAM_ID:-GVXC5FQ2RP}</string>
+    <string>${APPLE_TEAM_ID}</string>
     <key>signingStyle</key>
     <string>automatic</string>
     <key>destination</key>
@@ -300,6 +355,7 @@ upload_to_r2() {
     local key="$1"
     echo "    $key"
     (cd worker && npx wrangler r2 object put "$R2_BUCKET/$key" \
+        --remote \
         --file "../$DMG_PATH" \
         --content-type "application/x-apple-diskimage" >/dev/null)
 }
@@ -310,5 +366,9 @@ upload_to_r2 "$DOWNLOAD_KEY_VERSIONED"
 echo
 echo "✓ Released $APP_NAME $VERSION"
 echo
-echo "  Download URL:  https://screencast.to/download/screencast.dmg"
-echo "  Versioned URL: https://screencast.to/download/screencast-$VERSION.dmg"
+echo "  GitHub Releases should be updated with:"
+echo "    gh release upload v$VERSION $DMG_PATH --clobber"
+echo
+echo "  Legacy R2 mirror:"
+echo "    https://${R2_PUB_HOST:-<r2-public-host>}/downloads/screencast.dmg"
+echo "    https://${R2_PUB_HOST:-<r2-public-host>}/downloads/screencast-$VERSION.dmg"

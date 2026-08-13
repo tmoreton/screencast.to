@@ -1,12 +1,32 @@
 import Foundation
 
 enum UploadConfig {
-    /// Endpoint for the Cloudflare Worker that mints presigned PUT URLs.
-    /// Canonical URL is the custom domain; the workers.dev URL also works
-    /// while the custom domain is being provisioned.
-    static let workerEndpoint = URL(string: "https://screencast.to/sign")!
+    private static let uploadSecretInfoKey = "ScreencastUploadSecret"
+    private static let workerEndpointInfoKey = "ScreencastWorkerEndpoint"
 
-    // `appSecret` is defined in Config.local.swift (gitignored) so secrets
-    // never enter source control. Copy Config.local.swift.example to
-    // Config.local.swift and fill in the value from worker/.env APP_SECRET.
+    /// Endpoint for the Cloudflare Worker that mints presigned PUT URLs.
+    static var workerEndpoint: URL {
+        if let raw = bundleString(for: workerEndpointInfoKey),
+           let url = URL(string: raw) {
+            return url
+        }
+        return URL(string: "https://share.screencast.to/sign")!
+    }
+
+    /// Official builds inject this value at release time. Public/dev builds
+    /// intentionally compile without it, which disables upload sharing.
+    static var appSecret: String? {
+        bundleString(for: uploadSecretInfoKey)
+    }
+
+    static var isUploadConfigured: Bool {
+        appSecret != nil
+    }
+
+    private static func bundleString(for key: String) -> String? {
+        let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String
+        let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if value.isEmpty || value == "REPLACE_ME" { return nil }
+        return value
+    }
 }

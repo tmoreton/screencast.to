@@ -8,15 +8,23 @@ struct SignResponse: Decodable {
 
 private struct SignRequest: Encodable {
     let ext: String
+    let sizeBytes: Int64
 }
 
 enum UploadError: LocalizedError {
+    case uploadNotConfigured
+    case fileSizeUnavailable
+    case fileTooLarge(maxBytes: Int64)
     case signFailed(Int)
     case uploadFailed(Int)
     case malformedResponse
 
     var errorDescription: String? {
         switch self {
+        case .uploadNotConfigured: return "Upload sharing is not configured in this build."
+        case .fileSizeUnavailable: return "Could not determine the recording size."
+        case .fileTooLarge(let maxBytes): return "Recording is larger than the upload limit (\(ByteCountFormatter.string(fromByteCount: maxBytes, countStyle: .file)))."
+        case .signFailed(413): return "Recording is larger than the upload limit."
         case .signFailed(let code): return "Failed to sign upload (status \(code))."
         case .uploadFailed(let code): return "Upload to R2 failed (status \(code))."
         case .malformedResponse: return "Unexpected response from signing service."
@@ -31,6 +39,7 @@ final class UploadClient {
 
     /// Total attempts (initial + retries). Backoff between attempts: 1s, 2s.
     private let maxAttempts = 3
+    private let defaultMaxUploadBytes: Int64 = 1_073_741_824
 
     /// Dedicated session sized for large recordings. The default
     /// `session` request timeout is 60s, which a 10-minute screen
@@ -52,7 +61,7 @@ final class UploadClient {
 
         for attempt in 1...maxAttempts {
             do {
-                let sign = try await fetchPresignedURL()
+                let sign = try await fetchPresignedURL(for: fileURL)
                 guard let uploadURL = URL(string: sign.uploadUrl),
                       let publicURL = URL(string: sign.publicUrl) else {
                     throw UploadError.malformedResponse
@@ -104,19 +113,30 @@ final class UploadClient {
             switch uploadError {
             case .signFailed(let code), .uploadFailed(let code):
                 return code == -1 || code == 408 || (code >= 500 && code < 600)
-            case .malformedResponse:
+            case .uploadNotConfigured, .fileSizeUnavailable, .fileTooLarge, .malformedResponse:
                 return false
             }
         }
         return false
     }
 
-    private func fetchPresignedURL() async throws -> SignResponse {
+    private func fetchPresignedURL(for fileURL: URL) async throws -> SignResponse {
+        guard let appSecret = UploadConfig.appSecret else {
+            throw UploadError.uploadNotConfigured
+        }
+        guard let bytes = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize else {
+            throw UploadError.fileSizeUnavailable
+        }
+        let sizeBytes = Int64(bytes)
+        if sizeBytes > defaultMaxUploadBytes {
+            throw UploadError.fileTooLarge(maxBytes: defaultMaxUploadBytes)
+        }
+
         var req = URLRequest(url: UploadConfig.workerEndpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(UploadConfig.appSecret, forHTTPHeaderField: "X-Screencast-Auth")
-        req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov"))
+        req.setValue(appSecret, forHTTPHeaderField: "X-Screencast-Auth")
+        req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov", sizeBytes: sizeBytes))
 
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {

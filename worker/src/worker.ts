@@ -13,23 +13,27 @@ export default {
     }
 
     const url = new URL(request.url);
+    const isRead = request.method === "GET" || request.method === "HEAD";
 
     // API routes
     if (url.pathname === "/sign" && request.method === "POST") {
       return handleSign(request, env);
     }
-    if (url.pathname.startsWith("/v/") && request.method === "GET") {
+    if (url.pathname.startsWith("/v/") && isRead) {
       return handleViewer(url, env);
     }
-    if (url.pathname.startsWith("/download/") && request.method === "GET") {
+    if (url.pathname.startsWith("/download/") && isRead) {
       return handleDownload(url, env);
+    }
+    if (url.pathname === "/assets/website.png" && isRead) {
+      return Response.redirect("https://raw.githubusercontent.com/tmoreton/screencast.to/main/.github/assets/website.png", 302);
     }
 
     // Pages
-    if (url.pathname === "/" && request.method === "GET") {
+    if (url.pathname === "/" && isRead) {
       return new Response(renderHome(), { status: 200, headers: HTML_HEADERS });
     }
-    if (url.pathname === "/privacy" && request.method === "GET") {
+    if (url.pathname === "/privacy" && isRead) {
       return new Response(renderPrivacy(), { status: 200, headers: HTML_HEADERS });
     }
 

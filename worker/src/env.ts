@@ -9,5 +9,6 @@ export interface Env {
   R2_SECRET_ACCESS_KEY: string;
   R2_PUB_HOST: string;
   APP_SECRET: string;
+  MAX_UPLOAD_BYTES?: string;
   SIGN_LIMITER: { limit: (opts: { key: string }) => Promise<{ success: boolean }> };
 }

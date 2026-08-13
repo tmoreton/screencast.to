@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, GA_SNIPPET } from "./shared";
+import { BRAND, DOWNLOAD_URL, FAVICON_HREF, GA_SNIPPET, OG_IMAGE_URL } from "./shared";
 
 /** Landing page at GET /. */
 export function renderHome(): string {
@@ -22,7 +22,7 @@ export function renderHome(): string {
 <meta property="og:description" content="A tiny macOS menu-bar app. Record locally, then share a 24-hour link when you choose.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
-<meta property="og:image" content="https://screencast.to/download/og.png">
+<meta property="og:image" content="${OG_IMAGE_URL}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Screencast.to — temporary screen recordings for work">
@@ -32,7 +32,7 @@ export function renderHome(): string {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Screencast.to — Temporary screen recordings for work">
 <meta name="twitter:description" content="Record locally, then share a 24-hour link when you choose.">
-<meta name="twitter:image" content="https://screencast.to/download/og.png">
+<meta name="twitter:image" content="${OG_IMAGE_URL}">
 
 ${GA_SNIPPET}
 <style>
@@ -376,7 +376,7 @@ ${GA_SNIPPET}
   <div class="links">
     <a href="#features">Features</a>
     <a href="#how">How it works</a>
-    <a class="btn btn-primary text-white" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg" download>Download</a>
+    <a class="btn btn-primary text-white" href="${DOWNLOAD_URL}" download>Download</a>
   </div>
 </nav>
 
@@ -387,7 +387,7 @@ ${GA_SNIPPET}
     <h1>Screen recordings<br><span class="accent">that don't live forever.</span></h1>
     <p>A tiny menu-bar app for macOS. Capture locally, then upload only when you choose. Share a 24-hour link anyone can watch without an account.</p>
     <div class="cta">
-      <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg" download>
+      <a class="btn btn-primary btn-lg" href="${DOWNLOAD_URL}" download>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
         </svg>
@@ -541,7 +541,7 @@ ${GA_SNIPPET}
     <h2>Get ${BRAND}</h2>
     <p>Free. Record locally, share temporary links when you choose. macOS 15+.</p>
     <div class="row">
-      <a class="btn btn-primary btn-lg" href="https://pub-e1dfef0b8d0c4a59839772bc6e8e710c.r2.dev/downloads/screencast.dmg">
+      <a class="btn btn-primary btn-lg" href="${DOWNLOAD_URL}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
         </svg>

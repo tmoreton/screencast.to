@@ -36,7 +36,7 @@ final class RecordingEngine: NSObject {
             let session = try await RecordingSession.makeAndStart(options: options, zoomState: zoomState)
             self.session = session
             state = .recording
-            log.info("Recording started -> \(session.outputURL.path, privacy: .public)")
+            log.info("Recording started")
         } catch {
             session = nil
             state = .failed(error.localizedDescription)

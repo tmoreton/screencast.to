@@ -64,7 +64,8 @@ npx wrangler secret bulk <<EOF
   "R2_ACCESS_KEY_ID": "${R2_ACCESS_KEY_ID}",
   "R2_SECRET_ACCESS_KEY": "${R2_SECRET_ACCESS_KEY}",
   "R2_PUB_HOST": "${R2_PUB_HOST}",
-  "APP_SECRET": "${APP_SECRET}"
+  "APP_SECRET": "${APP_SECRET}",
+  "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-1073741824}"
 }
 EOF
 
@@ -82,11 +83,11 @@ if [ -n "$worker_url" ]; then
   echo "Workers.dev endpoint:"
   echo "  $worker_url/sign"
   echo
-  echo "Once screencast.to is wired up as a custom domain, the canonical endpoint is:"
-  echo "  https://screencast.to/sign"
+  echo "Once share.screencast.to is wired up as a custom domain, the canonical endpoint is:"
+  echo "  https://share.screencast.to/sign"
   echo
-  echo "Paste whichever you're using into screencast/Upload/Config.swift:"
-  echo "  static let workerEndpoint = URL(string: \"https://screencast.to/sign\")!"
+  echo "Official app releases should use:"
+  echo "  UPLOAD_WORKER_ENDPOINT=https://share.screencast.to/sign"
 else
   echo "Could not auto-detect the Worker URL from output."
   echo "Look for the 'https://*.workers.dev' line above and paste it"

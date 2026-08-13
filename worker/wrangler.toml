@@ -2,14 +2,16 @@ name = "screencast"
 main = "src/worker.ts"
 compatibility_date = "2025-01-01"
 
-# Bind the Worker to screencast.to as a custom domain.
+# Bind the upload/share Worker to share.screencast.to as a custom domain.
+# The marketing/privacy site is hosted separately by GitHub Pages on the apex
+# screencast.to domain.
 # Prerequisites:
 #   1. screencast.to is added as a zone in your Cloudflare account
 #   2. Cloudflare is set as the authoritative nameservers for it
 # Until both are true, comment this block out and the Worker stays reachable
 # at https://screencast.<your-subdomain>.workers.dev.
 routes = [
-  { pattern = "screencast.to", custom_domain = true },
+  { pattern = "share.screencast.to", custom_domain = true },
 ]
 
 # Per-IP rate limit on /sign (10 requests / 60s).
@@ -27,3 +29,4 @@ simple = { limit = 10, period = 60 }
 #   R2_SECRET_ACCESS_KEY  — R2 API token secret
 #   R2_PUB_HOST           — public host, e.g. "pub-abc123.r2.dev"
 #   APP_SECRET            — shared secret; Mac app sends it in X-Screencast-Auth
+#   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB

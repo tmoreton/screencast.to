@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, escapeHtml } from "./shared";
+import { BRAND, FAVICON_HREF, OG_IMAGE_URL, escapeHtml } from "./shared";
 
 /** Share-link viewer at GET /v/<id>.<ext>. `videoUrl` is the canonical R2 URL. */
 export function renderViewer(videoUrl: string): string {
@@ -18,13 +18,13 @@ export function renderViewer(videoUrl: string): string {
 <meta property="og:title" content="Watch this screencast">
 <meta property="og:description" content="Shared via Screencast.to — temporary screen recordings for work.">
 <meta property="og:type" content="video.other">
-<meta property="og:image" content="https://screencast.to/download/og.png">
+<meta property="og:image" content="${OG_IMAGE_URL}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Watch this screencast">
 <meta name="twitter:description" content="Temporary screen recordings for work.">
-<meta name="twitter:image" content="https://screencast.to/download/og.png">
+<meta name="twitter:image" content="${OG_IMAGE_URL}">
 <style>
   :root { --accent: #ef4444; }
   * { box-sizing: border-box; margin: 0; padding: 0; }

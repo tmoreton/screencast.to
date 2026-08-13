@@ -1,13 +1,25 @@
 # screencast (Cloudflare Worker)
 
-Backs the screencast.to share viewer and mints presigned PUT URLs for the Mac app to upload recordings directly to Cloudflare R2.
+Backs the Screencast.to share viewer and mints presigned PUT URLs for the Mac app to upload recordings directly to Cloudflare R2.
+
+The static marketing/privacy pages are exported for GitHub Pages with
+`npm run build:site`; production Pages deployment is handled by
+`.github/workflows/pages.yml`.
+
+The production split is:
+
+- `https://screencast.to` — static marketing/privacy site on GitHub Pages.
+- `https://share.screencast.to` — Cloudflare Worker for `/sign` and `/v/*`.
+
+Official app releases should use
+`UPLOAD_WORKER_ENDPOINT=https://share.screencast.to/sign`.
 
 ## One-time setup
 
 1. **Install deps**
    ```sh
    cd worker
-   npm install
+   npm ci
    ```
 
 2. **Log in to Cloudflare**
@@ -27,9 +39,12 @@ Backs the screencast.to share viewer and mints presigned PUT URLs for the Mac ap
    ```sh
    openssl rand -hex 32
    ```
-   You'll paste this into both `worker/.env` (`APP_SECRET=...`) and `screencast/Upload/Config.local.swift`.
+   Put this in `worker/.env` as `APP_SECRET=...`. Official app builds inject
+   the same value through `scripts/release.sh`; public/dev app builds leave it
+   empty and compile with upload sharing disabled.
 
 6. **Fill in `worker/.env`** — copy `worker/.env.example` and replace the empty values.
+   `MAX_UPLOAD_BYTES` is optional and defaults to 1 GiB.
 
 7. **Deploy**
    ```sh
@@ -37,13 +52,15 @@ Backs the screencast.to share viewer and mints presigned PUT URLs for the Mac ap
    ```
    The script validates the env, creates the bucket if needed, applies the 24h lifecycle rule, pushes all secrets in one shot, and runs `wrangler deploy`. Idempotent — safe to re-run.
 
-8. *(Optional)* **Wire up the screencast.to custom domain**
-   Once `screencast.to` is a zone in your Cloudflare account, the route in `wrangler.toml` will activate on the next `./deploy.sh`. Share URLs then look like `https://screencast.to/v/<id>.mov` instead of the workers.dev URL.
+8. *(Optional)* **Wire up the Worker custom domain**
+   Once `screencast.to` is a zone in your Cloudflare account, the `share.screencast.to` custom domain in `wrangler.toml` will activate on the next `./deploy.sh`. Share URLs then look like `https://share.screencast.to/v/<id>.mov` instead of the workers.dev URL.
 
 ## Subsequent deploys
 
 - **Code-only change** to `src/worker.ts`: `npx wrangler deploy` is enough.
 - **Secret rotation** (new R2 keys, new `APP_SECRET`, etc.): use `./deploy.sh` again — it bulk-pushes secrets.
+- **Marketing site change**: edit the shared view files, run `npm run build:site`,
+  and let the GitHub Pages workflow deploy from `../site/`.
 
 ## Local dev
 
@@ -53,14 +70,14 @@ npx wrangler dev
 curl -X POST http://localhost:8787/sign \
   -H 'content-type: application/json' \
   -H "X-Screencast-Auth: $(grep APP_SECRET .env | cut -d= -f2)" \
-  -d '{"ext":"mov"}'
+  -d '{"ext":"mov","sizeBytes":1048576}'
 ```
 
 You should get back `{ "uploadUrl": "...", "publicUrl": "..." }`.
 
 ## How it works
 
-- Mac app `POST /sign` with `X-Screencast-Auth` → Worker checks the secret, rate-limits per-IP (10/min), generates a 10-char short ID, signs a 15-minute presigned PUT URL with [aws4fetch](https://github.com/mhart/aws4fetch), returns `{ uploadUrl, publicUrl }`.
+- Mac app `POST /sign` with `X-Screencast-Auth` and declared `sizeBytes` → Worker checks the secret, rate-limits per-IP (10/min), rejects oversized requests, generates a 10-char short ID, signs a 15-minute presigned PUT URL with [aws4fetch](https://github.com/mhart/aws4fetch), returns `{ uploadUrl, publicUrl }`.
 - Mac app `PUT`s the file body to `uploadUrl` (no signed headers; only the host is signed).
 - Object lands at `recordings/<id>.<ext>` in the bucket.
 - Anyone visiting `publicUrl` (`/v/<id>.<ext>`) gets the fullscreen viewer page; the page's `<video>` tag fetches the actual file from R2's public `pub-XXX.r2.dev` host.
@@ -70,3 +87,9 @@ You should get back `{ "uploadUrl": "...", "publicUrl": "..." }`.
 ## Auto-delete
 
 `lifecycle.json` is applied on every `./deploy.sh` and tells R2 to delete anything in `recordings/` after 1 day (actual deletion happens within 24–48h of upload).
+
+## Security note
+
+`APP_SECRET` gates casual access to `/sign`, but any secret embedded in a
+desktop app can eventually be extracted. Keep rate limits, upload-size limits,
+R2 lifecycle deletion, and abuse response procedures in place for production.

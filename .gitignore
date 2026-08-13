@@ -17,6 +17,9 @@ Packages/
 # Node
 node_modules/
 
+# Generated GitHub Pages artifact.
+site/
+
 # Local-only Swift source (anything named *.local.swift in any folder).
 # Used for files that contain secrets / per-developer config and must never
 # be committed.

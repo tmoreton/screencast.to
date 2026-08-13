@@ -294,6 +294,10 @@ final class AppState {
     func uploadRecording(_ url: URL) {
         let path = url.path
         if case .uploading = uploads[path] { return }  // already in flight
+        guard UploadConfig.isUploadConfigured else {
+            uploads[path] = .failed(UploadError.uploadNotConfigured.localizedDescription)
+            return
+        }
         uploads[path] = .uploading(0)
         Task { [weak self] in
             let client = UploadClient()
@@ -433,12 +437,10 @@ final class AppState {
             keyCode: UInt32(kVK_ANSI_Z),
             modifiers: UInt32(cmdKey) | UInt32(shiftKey),
             onPressed: { [weak self] in
-                NSLog("Zoom: ⌘⇧Z pressed -> zoom in")
                 self?.zoom.zoomIn()
                 self?.activeControls?.setZoomActive(true)
             },
             onReleased: { [weak self] in
-                NSLog("Zoom: ⌘⇧Z released -> zoom out")
                 self?.zoom.zoomOut()
                 self?.activeControls?.setZoomActive(false)
             }
