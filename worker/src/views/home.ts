@@ -1,4 +1,4 @@
-import { BRAND, DOWNLOAD_URL, FAVICON_HREF, GA_SNIPPET, OG_IMAGE_URL } from "./shared";
+import { BRAND, DOWNLOAD_URL, FAVICON_HREF, GA_SNIPPET, GITHUB_URL, OG_IMAGE_URL } from "./shared";
 
 /** Landing page at GET /. */
 export function renderHome(): string {
@@ -7,10 +7,11 @@ export function renderHome(): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0a0c10">
-<title>${BRAND} — Temporary screen recordings for work</title>
-<meta name="description" content="A tiny macOS menu-bar app. Record locally, then share a 24-hour link when you choose. No accounts, no viewer login, no permanent video library.">
-<meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, macOS, share screen recording, screencast">
+<meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0c10" media="(prefers-color-scheme: dark)">
+<title>${BRAND} — Open-source temporary screen recordings for work</title>
+<meta name="description" content="An open-source macOS menu-bar app. Record locally, then share a 24-hour link when you choose. No accounts, no viewer login, no permanent video library.">
+<meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, open source screen recorder, macOS, share screen recording, screencast">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://screencast.to/">
@@ -18,35 +19,95 @@ export function renderHome(): string {
 
 <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack) -->
 <meta property="og:site_name" content="Screencast.to">
-<meta property="og:title" content="Screencast.to — Temporary screen recordings for work">
-<meta property="og:description" content="A tiny macOS menu-bar app. Record locally, then share a 24-hour link when you choose.">
+<meta property="og:title" content="Screencast.to — Open-source temporary screen recordings for work">
+<meta property="og:description" content="A tiny open-source macOS menu-bar app. Record locally, then share a 24-hour link when you choose.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
 <meta property="og:image" content="${OG_IMAGE_URL}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Screencast.to — temporary screen recordings for work">
+<meta property="og:image:alt" content="Screencast.to — open-source temporary screen recordings for work">
 <meta property="og:locale" content="en_US">
 
 <!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Screencast.to — Temporary screen recordings for work">
-<meta name="twitter:description" content="Record locally, then share a 24-hour link when you choose.">
+<meta name="twitter:title" content="Screencast.to — Open-source temporary screen recordings for work">
+<meta name="twitter:description" content="Open-source macOS recording. Record locally, then share a 24-hour link when you choose.">
 <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
 ${GA_SNIPPET}
 <style>
   :root {
-    --bg: #0a0c10;
-    --bg-elev: #13161c;
-    --border: #1f232c;
-    --border-hi: #2a2f3a;
-    --text: #e8eaed;
-    --text-2: #b8bcc6;
-    --muted: #8b909a;
-    --accent: #ef4444;
-    --accent-hi: #f56565;
-    --grad: radial-gradient(1200px 600px at 50% -10%, rgba(239,68,68,0.18), transparent 60%);
+    color-scheme: light dark;
+    --bg: #f8fafc;
+    --bg-elev: #ffffff;
+    --bg-soft: #eef2f7;
+    --border: #d9e0ea;
+    --border-hi: #b7c1cf;
+    --text: #171a21;
+    --text-2: #464d5a;
+    --muted: #6a7280;
+    --accent: #dc2626;
+    --accent-hi: #ef4444;
+    --accent-soft: rgba(220,38,38,0.1);
+    --accent-border: rgba(220,38,38,0.22);
+    --nav-bg: rgba(248,250,252,0.78);
+    --nav-border: rgba(15,23,42,0.08);
+    --hover-bg: rgba(15,23,42,0.06);
+    --button-hover: #f1f5f9;
+    --shadow: rgba(15,23,42,0.16);
+    --selection-text: #fff;
+    --grad: radial-gradient(1200px 600px at 50% -10%, rgba(220,38,38,0.14), transparent 60%);
+    --preview-start: #ffffff;
+    --preview-end: #eef2f7;
+    --preview-overlay: rgba(15,23,42,0.035);
+    --preview-line: rgba(15,23,42,0.08);
+    --preview-mark: rgba(15,23,42,0.12);
+    --preview-strong: rgba(15,23,42,0.38);
+    --preview-card: rgba(255,255,255,0.74);
+    --preview-chart: rgba(255,255,255,0.52);
+    --preview-bar-muted: rgba(15,23,42,0.18);
+    --preview-green: rgba(22,163,74,0.46);
+    --record-pill-bg: rgba(23,26,33,0.88);
+    --bubble-bg: linear-gradient(135deg, #d3dae6 0%, #f4f6fa 100%);
+    --bubble-border: rgba(255,255,255,0.95);
+    --bubble-shape: rgba(15,23,42,0.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0c10;
+      --bg-elev: #13161c;
+      --bg-soft: #10131a;
+      --border: #1f232c;
+      --border-hi: #2a2f3a;
+      --text: #e8eaed;
+      --text-2: #b8bcc6;
+      --muted: #8b909a;
+      --accent: #ef4444;
+      --accent-hi: #f56565;
+      --accent-soft: rgba(239,68,68,0.1);
+      --accent-border: rgba(239,68,68,0.25);
+      --nav-bg: rgba(10,12,16,0.66);
+      --nav-border: rgba(255,255,255,0.04);
+      --hover-bg: rgba(255,255,255,0.05);
+      --button-hover: #1a1d24;
+      --shadow: rgba(0,0,0,0.7);
+      --grad: radial-gradient(1200px 600px at 50% -10%, rgba(239,68,68,0.18), transparent 60%);
+      --preview-start: #1c2029;
+      --preview-end: #0c0e13;
+      --preview-overlay: rgba(255,255,255,0.04);
+      --preview-line: rgba(255,255,255,0.05);
+      --preview-mark: rgba(255,255,255,0.1);
+      --preview-strong: rgba(255,255,255,0.34);
+      --preview-card: rgba(255,255,255,0.05);
+      --preview-chart: rgba(255,255,255,0.03);
+      --preview-bar-muted: rgba(255,255,255,0.18);
+      --preview-green: rgba(94,234,123,0.5);
+      --record-pill-bg: rgba(20,20,22,0.85);
+      --bubble-bg: linear-gradient(135deg, #5e6478 0%, #1f2229 100%);
+      --bubble-border: rgba(255,255,255,0.92);
+      --bubble-shape: rgba(255,255,255,0.34);
+    }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -60,7 +121,7 @@ ${GA_SNIPPET}
     -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; text-decoration: none; }
-  ::selection { background: var(--accent); color: #fff; }
+  ::selection { background: var(--accent); color: var(--selection-text); }
 
   nav {
     position: sticky; top: 0; z-index: 50;
@@ -68,8 +129,8 @@ ${GA_SNIPPET}
     padding: 18px 28px;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
-    background: rgba(10, 12, 16, 0.6);
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--nav-border);
   }
   .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -0.01em; }
   .brand .dot {
@@ -78,7 +139,9 @@ ${GA_SNIPPET}
   }
   nav .links { display: flex; align-items: center; gap: 8px; }
   nav .links a { color: var(--text-2); font-size: 14px; padding: 8px 12px; border-radius: 8px; transition: color 140ms ease, background 140ms ease; }
-  nav .links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  nav .links a:hover { color: var(--text); background: var(--hover-bg); }
+  nav .links a.btn-primary,
+  nav .links a.btn-primary:hover { color: #fff; }
 
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
@@ -91,13 +154,14 @@ ${GA_SNIPPET}
     cursor: pointer;
     transition: transform 120ms ease, background 140ms ease, border-color 140ms ease;
   }
-  .btn:hover { background: #1a1d24; border-color: var(--border-hi); }
+  .btn:hover { background: var(--button-hover); border-color: var(--border-hi); }
   .btn:active { transform: scale(0.98); }
   .btn-primary {
     background: var(--accent); border-color: var(--accent); color: #fff;
     box-shadow: 0 6px 24px -8px rgba(239,68,68,0.6);
   }
   .btn-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); }
+  .btn-secondary { background: transparent; }
   .btn-lg { padding: 14px 22px; font-size: 15px; border-radius: 12px; }
   .btn svg { width: 14px; height: 14px; }
 
@@ -109,7 +173,7 @@ ${GA_SNIPPET}
     font-size: 12px; font-weight: 600;
     color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase;
     padding: 6px 12px; border-radius: 999px;
-    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+    background: var(--accent-soft); border: 1px solid var(--accent-border);
     margin-bottom: 24px;
   }
   .hero h1 {
@@ -120,6 +184,7 @@ ${GA_SNIPPET}
   .hero h1 .accent { color: var(--accent); }
   .hero p { font-size: clamp(16px, 1.8vw, 19px); color: var(--text-2); max-width: 620px; margin: 0 auto 36px; }
   .hero .cta { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
+  .hero .cta-actions { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
   .hero .cta .note { font-size: 12px; color: var(--muted); }
 
   /* Mock player preview */
@@ -129,19 +194,19 @@ ${GA_SNIPPET}
     aspect-ratio: 16 / 10;
     border-radius: 14px;
     background:
-      linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0)),
-      linear-gradient(180deg, #1c2029, #0c0e13);
+      linear-gradient(135deg, var(--preview-overlay), transparent),
+      linear-gradient(180deg, var(--preview-start), var(--preview-end));
     border: 1px solid var(--border-hi);
-    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    box-shadow: 0 40px 80px -20px var(--shadow), 0 0 0 1px var(--preview-overlay) inset;
     position: relative;
     overflow: hidden;
   }
   .preview .chrome {
     display: flex; gap: 6px;
     padding: 12px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--preview-line);
   }
-  .preview .chrome span { width: 11px; height: 11px; border-radius: 50%; background: #2a2f3a; }
+  .preview .chrome span { width: 11px; height: 11px; border-radius: 50%; background: var(--border-hi); }
   .preview .chrome span:nth-child(1) { background: #ff5f57; }
   .preview .chrome span:nth-child(2) { background: #febc2e; }
   .preview .chrome span:nth-child(3) { background: #28c840; }
@@ -149,7 +214,7 @@ ${GA_SNIPPET}
 
   /* Mock app being recorded — full-width dashboard. */
   .preview .mock { height: 100%; width: 100%; }
-  .preview .mock-text { height: 8px; border-radius: 3px; background: rgba(255,255,255,0.10); width: 100%; }
+  .preview .mock-text { height: 8px; border-radius: 3px; background: var(--preview-mark); width: 100%; }
   .preview .w35 { width: 35%; } .preview .w40 { width: 40%; }
   .preview .w45 { width: 45%; } .preview .w50 { width: 50%; }
   .preview .w55 { width: 55%; } .preview .w60 { width: 60%; }
@@ -166,29 +231,29 @@ ${GA_SNIPPET}
   .preview .mock-toolbar {
     display: flex; align-items: center; gap: 10px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid var(--preview-line);
   }
   .preview .mock-avatar {
     width: 26px; height: 26px; border-radius: 50%;
-    background: linear-gradient(135deg, #4a5060, #1a1d24);
+    background: linear-gradient(135deg, var(--border-hi), var(--bg-soft));
     flex-shrink: 0;
   }
   .preview .mock-h {
     height: 14px; width: 36%;
-    background: rgba(255,255,255,0.18);
+    background: var(--preview-bar-muted);
     border-radius: 4px;
   }
   .preview .mock-btn {
     height: 22px; border-radius: 6px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: var(--preview-overlay);
+    border: 1px solid var(--preview-line);
     flex-shrink: 0;
   }
   .preview .mock-btn.w40px { width: 40px; }
   .preview .mock-btn.w52px { width: 52px; }
   .preview .mock-btn--accent {
-    background: rgba(239,68,68,0.22);
-    border-color: rgba(239,68,68,0.28);
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
     width: 36px;
   }
 
@@ -198,16 +263,16 @@ ${GA_SNIPPET}
   }
   .preview .mock-card {
     height: 104px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.05);
+    background: var(--preview-card);
+    border: 1px solid var(--preview-line);
     border-radius: 12px;
     padding: 14px;
     display: flex; flex-direction: column; gap: 10px;
     justify-content: space-between;
   }
-  .preview .mock-card .label { height: 8px; width: 55%; background: rgba(255,255,255,0.12); border-radius: 4px; }
-  .preview .mock-card .num   { height: 22px; width: 45%; background: rgba(255,255,255,0.34); border-radius: 5px; }
-  .preview .mock-card .trend { height: 7px; width: 70%; background: rgba(94,234,123,0.50); border-radius: 4px; }
+  .preview .mock-card .label { height: 8px; width: 55%; background: var(--preview-mark); border-radius: 4px; }
+  .preview .mock-card .num   { height: 22px; width: 45%; background: var(--preview-strong); border-radius: 5px; }
+  .preview .mock-card .trend { height: 7px; width: 70%; background: var(--preview-green); border-radius: 4px; }
   .preview .mock-card.is-down .trend { background: rgba(239,68,68,0.50); }
 
   /* Mini bar chart — fills remaining vertical space */
@@ -216,8 +281,8 @@ ${GA_SNIPPET}
     min-height: 100px;
     display: flex; align-items: flex-end; gap: 8px;
     padding: 14px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.04);
+    background: var(--preview-chart);
+    border: 1px solid var(--preview-line);
     border-radius: 12px;
   }
   .preview .mock-bar {
@@ -225,7 +290,7 @@ ${GA_SNIPPET}
     background: linear-gradient(to top, rgba(239,68,68,0.55), rgba(239,68,68,0.18));
   }
   .preview .mock-bar.muted {
-    background: linear-gradient(to top, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+    background: linear-gradient(to top, var(--preview-bar-muted), var(--preview-overlay));
   }
 
   /* Bottom rows */
@@ -237,17 +302,17 @@ ${GA_SNIPPET}
   }
   .preview .mock-row-line .pill-tag {
     width: 36px; height: 14px; border-radius: 999px;
-    background: rgba(239,68,68,0.22);
+    background: var(--accent-soft);
     flex-shrink: 0;
   }
-  .preview .mock-row-line .pill-tag.gray { background: rgba(255,255,255,0.12); }
+  .preview .mock-row-line .pill-tag.gray { background: var(--preview-mark); }
   .preview .mock-row-line .mock-text { height: 10px; }
 
   /* Recording overlays */
   .preview .pill {
     position: absolute;
     top: 16px; left: 50%; transform: translateX(-50%);
-    background: rgba(20,20,22,0.85);
+    background: var(--record-pill-bg);
     backdrop-filter: blur(14px);
     border: 1px solid rgba(255,255,255,0.14);
     color: #fff;
@@ -266,9 +331,9 @@ ${GA_SNIPPET}
   .preview .bubble {
     position: absolute; bottom: 18px; right: 18px;
     width: 84px; height: 84px; border-radius: 50%;
-    background: linear-gradient(135deg, #5e6478 0%, #1f2229 100%);
-    border: 3px solid rgba(255,255,255,0.92);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+    background: var(--bubble-bg);
+    border: 3px solid var(--bubble-border);
+    box-shadow: 0 10px 28px var(--shadow);
     overflow: hidden;
     display: grid; place-items: center;
   }
@@ -305,7 +370,7 @@ ${GA_SNIPPET}
     width: 36px; height: 36px;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 10px;
-    background: rgba(239,68,68,0.12);
+    background: var(--accent-soft);
     color: var(--accent);
     margin-bottom: 14px;
   }
@@ -337,6 +402,40 @@ ${GA_SNIPPET}
     .steps { grid-template-columns: 1fr; gap: 28px; }
   }
 
+  .open-source {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: center;
+    padding: 48px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .open-source .label {
+    display: inline-block;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .open-source h2 {
+    font-size: clamp(26px, 3.5vw, 36px);
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+  .open-source p {
+    color: var(--text-2);
+    max-width: 660px;
+  }
+  .open-source .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .install {
     text-align: center; padding: 80px 24px;
     background: var(--bg-elev);
@@ -361,8 +460,11 @@ ${GA_SNIPPET}
   @media (max-width: 600px) {
     nav { padding: 14px 18px; }
     nav .links a:not(.btn) { display: none; }
+    nav .links .btn-secondary { display: none; }
     .hero { padding: 64px 0 56px; }
     section.block { padding: 56px 0; }
+    .open-source { grid-template-columns: 1fr; padding: 40px 0; }
+    .open-source .actions { justify-content: flex-start; }
   }
 </style>
 </head>
@@ -376,31 +478,41 @@ ${GA_SNIPPET}
   <div class="links">
     <a href="#features">Features</a>
     <a href="#how">How it works</a>
-    <a class="btn btn-primary text-white" href="${DOWNLOAD_URL}" download>Download</a>
+    <a href="#open-source">Open source</a>
+    <a class="btn btn-secondary" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a class="btn btn-primary" href="${DOWNLOAD_URL}" download>Download</a>
   </div>
 </nav>
 
 <main>
 
   <section class="hero">
-    <span class="eyebrow">macOS · Local by default · 24h links</span>
+    <span class="eyebrow">Open source · macOS · Local by default · 24h links</span>
     <h1>Screen recordings<br><span class="accent">that don't live forever.</span></h1>
-    <p>A tiny menu-bar app for macOS. Capture locally, then upload only when you choose. Share a 24-hour link anyone can watch without an account.</p>
+    <p>A tiny open-source menu-bar app for macOS. Capture locally, then upload only when you choose. Share a 24-hour link anyone can watch without an account.</p>
     <div class="cta">
-      <a class="btn btn-primary btn-lg" href="${DOWNLOAD_URL}" download>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
-        </svg>
-        Download for Mac
-      </a>
-      <span class="note">macOS 15+ · Apple Silicon and Intel</span>
+      <div class="cta-actions">
+        <a class="btn btn-primary btn-lg" href="${DOWNLOAD_URL}" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
+          </svg>
+          Download for Mac
+        </a>
+        <a class="btn btn-secondary btn-lg" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5z"/>
+          </svg>
+          View source
+        </a>
+      </div>
+      <span class="note">macOS 15+ · Apple Silicon and Intel · Apache-2.0</span>
     </div>
 
     <div class="preview" aria-hidden="true">
       <div class="chrome"><span></span><span></span><span></span></div>
       <div class="body">
         <div class="mock">
-          <main class="mock-main">
+          <div class="mock-main">
             <div class="mock-toolbar">
               <div class="mock-avatar"></div>
               <div class="mock-h"></div>
@@ -436,13 +548,13 @@ ${GA_SNIPPET}
               <div class="mock-row-line"><div class="pill-tag gray"></div><div class="mock-text w65"></div></div>
               <div class="mock-row-line"><div class="pill-tag gray"></div><div class="mock-text w75"></div></div>
             </div>
-          </main>
+          </div>
         </div>
         <div class="pill"><span class="reddot"></span>00:14 · recording</div>
         <div class="bubble">
           <svg viewBox="0 0 80 80">
-            <circle cx="40" cy="30" r="13" fill="rgba(255,255,255,0.34)"/>
-            <path d="M14 72 C14 56 26 50 40 50 C54 50 66 56 66 72 Z" fill="rgba(255,255,255,0.34)"/>
+            <circle cx="40" cy="30" r="13" fill="var(--bubble-shape)"/>
+            <path d="M14 72 C14 56 26 50 40 50 C54 50 66 56 66 72 Z" fill="var(--bubble-shape)"/>
           </svg>
         </div>
       </div>
@@ -493,9 +605,9 @@ ${GA_SNIPPET}
       </div>
 
       <div class="card">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-        <h3>Free</h3>
-        <p>No accounts, no plans, no upsells. Build a habit without building another permanent video library.</p>
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg></div>
+        <h3>Open source</h3>
+        <p>The macOS app, upload Worker, and static site are public on GitHub under the Apache-2.0 license.</p>
       </div>
 
       <div class="card">
@@ -537,15 +649,37 @@ ${GA_SNIPPET}
     </div>
   </section>
 
+  <section class="open-source" id="open-source">
+    <div>
+      <span class="label">Open source</span>
+      <h2>Built in the open.</h2>
+      <p>${BRAND} is a public project, not a black-box recorder. Review the Swift app, the Cloudflare Worker that powers temporary links, and the GitHub Pages site in one repo.</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary btn-lg" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5z"/>
+        </svg>
+        GitHub repo
+      </a>
+    </div>
+  </section>
+
   <section class="install" id="install">
     <h2>Get ${BRAND}</h2>
-    <p>Free. Record locally, share temporary links when you choose. macOS 15+.</p>
+    <p>Free and open source. Record locally, share temporary links when you choose. macOS 15+.</p>
     <div class="row">
       <a class="btn btn-primary btn-lg" href="${DOWNLOAD_URL}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>
         </svg>
         Download .dmg
+      </a>
+      <a class="btn btn-secondary btn-lg" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5z"/>
+        </svg>
+        Source
       </a>
     </div>
   </section>
@@ -554,7 +688,7 @@ ${GA_SNIPPET}
 
 <footer>
   <span>© ${new Date().getFullYear()} ${BRAND}</span>
-  <span>Uploaded links auto-delete after 24 hours · <a href="/privacy">Privacy</a></span>
+  <span>Uploaded links auto-delete after 24 hours · <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a> · <a href="/privacy">Privacy</a></span>
 </footer>
 
 </body>
