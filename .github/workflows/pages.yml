@@ -30,7 +30,7 @@ jobs:
         working-directory: worker
       - run: npm run build:site
         working-directory: worker
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
