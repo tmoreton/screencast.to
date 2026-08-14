@@ -289,29 +289,6 @@ ${THEME_SCRIPT}
   .hero-copy-block {
     max-width: 590px;
   }
-  .signal-pill {
-    width: fit-content;
-    min-height: 46px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 26px;
-    padding: 0 18px;
-    border-radius: 0 0 22px 22px;
-    background: var(--panel);
-    color: #fff;
-    box-shadow: 0 22px 58px -34px var(--shadow-strong);
-    font-size: 14px;
-    font-weight: 820;
-  }
-  .signal-pill::before {
-    content: "";
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 18px rgba(255,71,63,0.7);
-  }
   .eyebrow {
     display: inline-flex;
     align-items: center;
@@ -554,13 +531,6 @@ ${THEME_SCRIPT}
     .icon-button { width: 38px; min-height: 38px; }
     .nav-actions .button.primary { min-height: 38px; padding: 8px 11px; }
     .hero { padding-top: 48px; }
-    .signal-pill {
-      width: 100%;
-      justify-content: center;
-      border-radius: 8px;
-      margin-bottom: 26px;
-      text-align: center;
-    }
     h1 { font-size: 46px; }
     h2 { font-size: 34px; }
     .hero-copy { font-size: 18px; }
@@ -638,8 +608,7 @@ ${THEME_SCRIPT}
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy-block">
-        <div class="signal-pill">Open source &middot; local first &middot; no account</div>
-        <div class="eyebrow">Mac screen recorder</div>
+        <div class="eyebrow">Open source &middot; local first &middot; no account &middot; Mac screen recorder</div>
         <h1>Record locally. Share only if needed.</h1>
         <p class="hero-copy">An open-source Mac recorder for demos and bug reports. Files stay on your Mac unless you choose to upload a temporary link.</p>
         <div class="cta-row">
