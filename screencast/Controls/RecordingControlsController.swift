@@ -16,7 +16,7 @@ final class RecordingControlsController: RecordingControlsHost {
         bar?.onStop = onStop
         bar?.onPauseResume = onPauseResume
         bar?.onCycleFormat = onCycleFormat
-        bar?.begin()
+        bar?.end()
         window?.orderFrontRegardless()
     }
 
@@ -25,6 +25,9 @@ final class RecordingControlsController: RecordingControlsHost {
         window?.orderOut(nil)
     }
 
+    func beginCountdown(seconds: Int) { bar?.beginCountdown(seconds: seconds) }
+    func updateCountdown(seconds: Int) { bar?.updateCountdown(seconds: seconds) }
+    func beginRecording() { bar?.begin() }
     func setPaused(_ paused: Bool) { bar?.setPaused(paused) }
     func setFormat(_ format: CaptureFormat) { bar?.setFormat(format) }
     func setZoomActive(_ active: Bool) { bar?.setZoomActive(active) }

@@ -25,6 +25,10 @@ await copyFile(
   resolve(repoRoot, ".github", "assets", "website.png"),
   resolve(siteRoot, "assets", "website.png")
 );
+await copyFile(
+  resolve(repoRoot, "screencast", "Assets.xcassets", "AppIcon.appiconset", "icon_512x512@2x.png"),
+  resolve(siteRoot, "assets", "icon.png")
+);
 
 function notFoundPage(): string {
   return `<!doctype html>

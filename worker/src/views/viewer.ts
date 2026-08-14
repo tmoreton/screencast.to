@@ -53,7 +53,7 @@ export function renderViewer(videoUrl: string): string {
     text-shadow: 0 1px 8px rgba(0,0,0,0.55); }
   .brand .dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%;
     box-shadow: 0 0 14px var(--accent); flex: 0 0 auto; }
-  .brand h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+  .brand h1 { font-size: 15px; font-weight: 600; letter-spacing: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -113,7 +113,7 @@ export function renderViewer(videoUrl: string): string {
   }
   #expired .icon svg { width: 28px; height: 28px; stroke: currentColor; fill: none;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  #expired h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; }
+  #expired h2 { font-size: 22px; font-weight: 600; letter-spacing: 0; margin-bottom: 10px; }
   #expired p { color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.55; margin-bottom: 24px; }
   #expired a.btn {
     display: inline-flex; align-items: center; gap: 8px;

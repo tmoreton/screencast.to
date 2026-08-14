@@ -20,6 +20,60 @@ export const GA_SNIPPET = GA_MEASUREMENT_ID ? `
   gtag('config', '${GA_MEASUREMENT_ID}');
 </script>` : "";
 
+export const THEME_SCRIPT = `
+<script>
+(function() {
+  var key = "screencast.theme";
+  var root = document.documentElement;
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function storedTheme() {
+    try { return window.localStorage.getItem(key); } catch (_) { return ""; }
+  }
+
+  function saveTheme(theme) {
+    try { window.localStorage.setItem(key, theme); } catch (_) {}
+  }
+
+  function applyTheme(theme) {
+    if (theme === "light" || theme === "dark") {
+      root.dataset.theme = theme;
+    } else {
+      root.removeAttribute("data-theme");
+    }
+  }
+
+  function activeTheme() {
+    return root.dataset.theme || (mq.matches ? "dark" : "light");
+  }
+
+  applyTheme(storedTheme());
+
+  window.addEventListener("DOMContentLoaded", function() {
+    var toggle = document.querySelector("[data-theme-toggle]");
+    var label = document.querySelector("[data-theme-label]");
+
+    function paint() {
+      var next = activeTheme() === "dark" ? "Light" : "Dark";
+      if (label) label.textContent = next;
+      if (toggle) toggle.setAttribute("aria-label", "Switch to " + next.toLowerCase() + " mode");
+    }
+
+    if (toggle) {
+      toggle.addEventListener("click", function() {
+        var next = activeTheme() === "dark" ? "light" : "dark";
+        saveTheme(next);
+        applyTheme(next);
+        paint();
+      });
+    }
+
+    if (mq.addEventListener) mq.addEventListener("change", paint);
+    paint();
+  });
+})();
+</script>`;
+
 // Inline SVG favicon — red squircle + white ring + white record dot.
 // Mirrors the macOS app icon and the onboarding brand mark.
 // All `"` inside the SVG are %22-encoded so the data URI doesn't break out

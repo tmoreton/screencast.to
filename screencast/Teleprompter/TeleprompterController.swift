@@ -55,6 +55,9 @@ final class TeleprompterController: RecordingControlsHost {
     }
 
     func hideControls() { hide() }
+    func beginCountdown(seconds: Int) { recordingBar?.beginCountdown(seconds: seconds) }
+    func updateCountdown(seconds: Int) { recordingBar?.updateCountdown(seconds: seconds) }
+    func beginRecording() { recordingBar?.begin() }
     func setPaused(_ paused: Bool) { recordingBar?.setPaused(paused) }
     func setFormat(_ format: CaptureFormat) { recordingBar?.setFormat(format) }
     func setZoomActive(_ active: Bool) { recordingBar?.setZoomActive(active) }
@@ -78,7 +81,7 @@ final class TeleprompterController: RecordingControlsHost {
             recordingBar?.onStop = onStop
             recordingBar?.onPauseResume = onPauseResume
             recordingBar?.onCycleFormat = onCycleFormat
-            recordingBar?.begin()
+            recordingBar?.end()
         } else {
             recordingBar?.end()
         }

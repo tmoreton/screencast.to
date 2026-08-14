@@ -24,7 +24,7 @@ struct MenuBarView: View {
             Divider()
             teleprompterSection
 
-            if !state.recordings.isEmpty, !state.isActive {
+            if !state.recordings.isEmpty, !state.isBusy {
                 Divider()
                 recordingsList
             }
@@ -59,6 +59,12 @@ struct MenuBarView: View {
     private var statusText: some View {
         switch state.phase {
         case .idle: Text("Idle")
+        case .starting(let remaining):
+            if let remaining {
+                Text("Starting in \(remaining)…")
+            } else {
+                Text("Starting…")
+            }
         case .recording: Text("Recording")
         case .paused: Text("Paused")
         case .saving: Text("Saving…")
@@ -101,6 +107,26 @@ struct MenuBarView: View {
     @ViewBuilder
     private var primary: some View {
         switch state.phase {
+        case .starting(let remaining):
+            VStack(spacing: 8) {
+                Button(action: { state.toggleRecording() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Cancel Recording")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        if let remaining {
+                            Text("00:\(String(format: "%02d", remaining))")
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+            }
         case .saving:
             HStack(spacing: 8) {
                 ProgressView()
@@ -117,9 +143,6 @@ struct MenuBarView: View {
                         Text(state.isActive ? "Stop Recording" : "Start Recording")
                             .fontWeight(.semibold)
                         Spacer()
-                        Text("⌘⇧R")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.65))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
