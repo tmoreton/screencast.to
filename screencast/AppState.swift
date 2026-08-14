@@ -5,6 +5,7 @@ import Observation
 
 enum AppPhase: Equatable {
     case idle
+    case starting(Int?)
     case recording
     case paused
     case saving
@@ -45,6 +46,7 @@ final class AppState {
     private static let uploadsKey = "screencast.uploads.v1"
     /// Uploaded links expire server-side after this (R2 lifecycle rule).
     static let linkLifetime: TimeInterval = 24 * 60 * 60
+    private static let cameraPreflightCountdownSeconds = 3
 
     let devices = DeviceCatalog()
 
@@ -69,6 +71,7 @@ final class AppState {
     private var teleprompterHotkeyID: UInt32?
     /// Live filming format during a recording (starts from `options.format`).
     private var currentFormat: CaptureFormat = .screenAndCamera
+    private var startTask: Task<Void, Never>?
 
     /// Re-entry guard for `stopRecording()`. The popover and the floating
     /// controls window each have a Stop button, and on long recordings
@@ -82,7 +85,6 @@ final class AppState {
         teleprompterEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         loadUploads()
         refreshRecordings()
-        registerGlobalHotkey()
     }
 
     var isRecording: Bool {
@@ -98,9 +100,14 @@ final class AppState {
     /// A recording is in progress (whether actively capturing or paused).
     var isActive: Bool { isRecording || isPaused }
 
+    var isStarting: Bool {
+        if case .starting = phase { return true }
+        return false
+    }
+
     var isBusy: Bool {
         switch phase {
-        case .recording, .paused, .saving: return true
+        case .starting, .recording, .paused, .saving: return true
         default: return false
         }
     }
@@ -108,10 +115,15 @@ final class AppState {
     // MARK: - Recording
 
     func toggleRecording() {
-        if isActive {
+        switch phase {
+        case .starting:
+            cancelStartingRecording()
+        case .recording, .paused:
             stopRecording()
-        } else {
+        case .idle:
             startRecording()
+        case .saving:
+            break
         }
     }
 
@@ -132,13 +144,16 @@ final class AppState {
     }
 
     private func startRecording() {
+        guard case .idle = phase else { return }
+
         // Dismiss the menu popover so it isn't caught in the first frames.
         dismissMenuPopover()
 
+        phase = .starting(nil)
         currentFormat = options.format
         let captureRect = captureRectGlobal()
         if let region = options.captureRegion {
-            regionOverlay.show(rect: region, recording: true)
+            regionOverlay.show(rect: region, recording: false)
         }
         zoom.start(captureRectGlobal: captureRect)
         registerZoomHotkey()
@@ -153,38 +168,89 @@ final class AppState {
             activeControls = controls
         }
 
-        Task {
+        startTask = Task { [weak self] in
+            guard let self else { return }
             do {
-                if currentFormat.usesCamera {
+                if self.currentFormat.usesCamera {
                     // Warm up the camera and wait for a live frame before
-                    // capturing, so the bubble isn't an empty circle at the
-                    // start. This also covers the popover-dismiss delay.
-                    await bubble.apply(format: currentFormat, deviceID: options.cameraDeviceID, region: options.captureRegion)
+                    // the visible countdown, so auto-exposure/focus settle
+                    // before ScreenCaptureKit starts writing frames.
+                    await self.bubble.apply(format: self.currentFormat,
+                                            deviceID: self.options.cameraDeviceID,
+                                            region: self.options.captureRegion)
+                    try Task.checkCancellation()
+                    self.activeControls?.showControls(
+                        onStop: { [weak self] in self?.stopRecording() },
+                        onPauseResume: { [weak self] in self?.togglePauseResume() },
+                        onCycleFormat: { [weak self] in self?.cycleFormat() }
+                    )
+                    self.activeControls?.setFormat(self.currentFormat)
+                    self.activeControls?.beginCountdown(seconds: Self.cameraPreflightCountdownSeconds)
+                    try await self.runCameraPreflightCountdown()
                 } else {
-                    bubble.hide()
+                    self.bubble.hide()
                     // Give the dismissed popover a beat to disappear.
-                    try? await Task.sleep(for: .milliseconds(250))
+                    try await Task.sleep(for: .milliseconds(250))
                 }
-                try await recorder.start(options: options, zoomState: zoom.state)
-                phase = .recording
-                activeControls?.showControls(
-                    onStop: { [weak self] in self?.stopRecording() },
-                    onPauseResume: { [weak self] in self?.togglePauseResume() },
-                    onCycleFormat: { [weak self] in self?.cycleFormat() }
-                )
-                activeControls?.setFormat(currentFormat)
+                try Task.checkCancellation()
+                try await self.recorder.start(options: self.options, zoomState: self.zoom.state)
+                try Task.checkCancellation()
+
+                if let region = self.options.captureRegion {
+                    self.regionOverlay.show(rect: region, recording: true)
+                }
+                self.phase = .recording
+                if !self.currentFormat.usesCamera {
+                    self.activeControls?.showControls(
+                        onStop: { [weak self] in self?.stopRecording() },
+                        onPauseResume: { [weak self] in self?.togglePauseResume() },
+                        onCycleFormat: { [weak self] in self?.cycleFormat() }
+                    )
+                    self.activeControls?.setFormat(self.currentFormat)
+                }
+                self.activeControls?.beginRecording()
+                self.startTask = nil
+            } catch is CancellationError {
+                _ = try? await self.recorder.stop()
+                self.finishStartingRecording()
+                self.showIdleRegionOverlayIfNeeded()
             } catch {
-                lastError = error.localizedDescription
-                phase = .idle
-                bubble.hide()
-                regionOverlay.hide()
-                zoom.stop()
-                teleprompter.hide()
-                unregisterZoomHotkey()
-                unregisterFormatHotkey()
-                unregisterTeleprompterHotkey()
+                self.lastError = error.localizedDescription
+                self.finishStartingRecording()
             }
         }
+    }
+
+    private func runCameraPreflightCountdown() async throws {
+        for remaining in stride(from: Self.cameraPreflightCountdownSeconds, through: 1, by: -1) {
+            phase = .starting(remaining)
+            activeControls?.updateCountdown(seconds: remaining)
+            try await Task.sleep(for: .seconds(1))
+        }
+        phase = .starting(nil)
+        activeControls?.updateCountdown(seconds: 0)
+    }
+
+    private func cancelStartingRecording() {
+        guard isStarting else { return }
+        startTask?.cancel()
+        startTask = nil
+        finishStartingRecording()
+        showIdleRegionOverlayIfNeeded()
+    }
+
+    private func finishStartingRecording() {
+        startTask = nil
+        activeControls?.hideControls()
+        activeControls = nil
+        phase = .idle
+        bubble.hide()
+        regionOverlay.hide()
+        zoom.stop()
+        teleprompter.hide()
+        unregisterZoomHotkey()
+        unregisterFormatHotkey()
+        unregisterTeleprompterHotkey()
     }
 
     /// Cycle Screen → Screen+Camera → Camera, applied live during recording.
@@ -200,6 +266,10 @@ final class AppState {
     }
 
     private func stopRecording() {
+        if isStarting {
+            cancelStartingRecording()
+            return
+        }
         // Guard against double-clicks (popover + floating controls both fire).
         guard !isStopping, isActive else { return }
         isStopping = true
@@ -421,15 +491,7 @@ final class AppState {
         }
     }
 
-    // MARK: - Global hotkey
-
-    private func registerGlobalHotkey() {
-        hotkey.register(
-            keyCode: UInt32(kVK_ANSI_R),
-            modifiers: UInt32(cmdKey) | UInt32(shiftKey),
-            onPressed: { [weak self] in self?.toggleRecording() }
-        )
-    }
+    // MARK: - Recording hotkeys
 
     private func registerZoomHotkey() {
         guard zoomHotkeyID == nil else { return }

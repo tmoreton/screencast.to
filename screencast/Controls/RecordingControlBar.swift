@@ -11,6 +11,9 @@ protocol RecordingControlsHost: AnyObject {
                       onPauseResume: @escaping () -> Void,
                       onCycleFormat: @escaping () -> Void)
     func hideControls()
+    func beginCountdown(seconds: Int)
+    func updateCountdown(seconds: Int)
+    func beginRecording()
     func setPaused(_ paused: Bool)
     func setFormat(_ format: CaptureFormat)
     func setZoomActive(_ active: Bool)
@@ -30,8 +33,10 @@ final class RecordingControlBar: NSView {
     private var segmentStart: Date?
     private var timer: Timer?
     private var isPaused = false
+    private var isCountingDown = false
 
     private weak var timeLabel: NSTextField?
+    private weak var stopButton: NSButton?
     private weak var pauseButton: NSButton?
     private weak var formatButton: NSButton?
     private weak var recDot: NSView?
@@ -48,10 +53,43 @@ final class RecordingControlBar: NSView {
 
     // MARK: - Lifecycle
 
+    func beginCountdown(seconds: Int) {
+        timer?.invalidate()
+        timer = nil
+        accumulated = 0
+        segmentStart = nil
+        isPaused = false
+        isCountingDown = true
+        zoomBadge?.isHidden = true
+
+        stopButton?.toolTip = "Cancel recording"
+        pauseButton?.isEnabled = false
+        formatButton?.isEnabled = false
+        pauseButton?.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Countdown")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .bold))
+        pauseButton?.toolTip = "Recording starts after countdown"
+        timeLabel?.textColor = .systemYellow
+        updateCountdown(seconds: seconds)
+
+        if let recDot {
+            recDot.layer?.backgroundColor = NSColor.systemOrange.cgColor
+            addPulse(to: recDot)
+        }
+    }
+
+    func updateCountdown(seconds: Int) {
+        timeLabel?.stringValue = String(format: "00:%02d", max(0, seconds))
+    }
+
     func begin() {
         accumulated = 0
         segmentStart = Date()
         isPaused = false
+        isCountingDown = false
+        stopButton?.toolTip = "Stop recording"
+        pauseButton?.isEnabled = true
+        formatButton?.isEnabled = true
+        timeLabel?.textColor = .labelColor
         zoomBadge?.isHidden = true
         applyPausedAppearance()
         startTimer()
@@ -63,10 +101,22 @@ final class RecordingControlBar: NSView {
         timer = nil
         segmentStart = nil
         accumulated = 0
+        isPaused = false
+        isCountingDown = false
+        stopButton?.toolTip = "Stop recording"
+        pauseButton?.isEnabled = true
+        formatButton?.isEnabled = true
+        timeLabel?.textColor = .labelColor
+        timeLabel?.stringValue = "00:00"
         zoomBadge?.isHidden = true
+        recDot?.layer?.removeAnimation(forKey: "pulse")
     }
 
     func setZoomActive(_ active: Bool) {
+        guard !isCountingDown else {
+            zoomBadge?.isHidden = true
+            return
+        }
         zoomBadge?.isHidden = !active
     }
 
@@ -77,6 +127,7 @@ final class RecordingControlBar: NSView {
     }
 
     func setPaused(_ paused: Bool) {
+        guard !isCountingDown else { return }
         guard paused != isPaused else { return }
         isPaused = paused
         if paused {
@@ -153,6 +204,7 @@ final class RecordingControlBar: NSView {
         stop.action = #selector(stopTapped)
         stop.toolTip = "Stop recording"
         addSubview(stop)
+        self.stopButton = stop
 
         let pause = roundButton(x: 40, action: #selector(pauseTapped))
         addSubview(pause)

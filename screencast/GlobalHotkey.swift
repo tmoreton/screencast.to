@@ -22,7 +22,7 @@ final class GlobalHotkey {
 
     private var refs: [UInt32: EventHotKeyRef] = [:]
 
-    /// `keyCode` is a Carbon virtual keycode (e.g. `kVK_ANSI_R`).
+    /// `keyCode` is a Carbon virtual keycode (e.g. `kVK_ANSI_Z`).
     /// `modifiers` is the Carbon modifier mask (e.g. `cmdKey | shiftKey`).
     /// Returns an id used to `unregister` later.
     @discardableResult

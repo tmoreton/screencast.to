@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, GA_SNIPPET, PRIVACY_UPDATED } from "./shared";
+import { BRAND, FAVICON_HREF, GA_SNIPPET, PRIVACY_UPDATED, THEME_SCRIPT } from "./shared";
 
 /** Privacy policy page at GET /privacy. */
 export function renderPrivacy(): string {
@@ -7,22 +7,65 @@ export function renderPrivacy(): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0a0c10">
+<meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d0f" media="(prefers-color-scheme: dark)">
 <title>Privacy — ${BRAND}</title>
 <meta name="description" content="Screencast.to's privacy policy. Plain language, no tricks.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://screencast.to/privacy">
 <link rel="icon" href="${FAVICON_HREF}">
 ${GA_SNIPPET}
+${THEME_SCRIPT}
 <style>
   :root {
-    --bg: #0a0c10;
-    --bg-elev: #13161c;
-    --border: #1f232c;
-    --text: #e8eaed;
-    --text-2: #b8bcc6;
-    --muted: #8b909a;
-    --accent: #ef4444;
+    color-scheme: light;
+    --bg: #f7f4ef;
+    --bg-elev: #fffaf4;
+    --border: #d4cabd;
+    --border-strong: #b9aa99;
+    --text: #191613;
+    --text-2: #4e463e;
+    --muted: #756b61;
+    --accent: #e9363f;
+    --nav-bg: rgba(247,244,239,0.84);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0c0d0f;
+      --bg-elev: #15171b;
+      --border: #2b3038;
+      --border-strong: #3c424d;
+      --text: #f4f1ec;
+      --text-2: #d0c8bd;
+      --muted: #9b9389;
+      --accent: #ff4b55;
+      --nav-bg: rgba(12,13,15,0.78);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0c0d0f;
+    --bg-elev: #15171b;
+    --border: #2b3038;
+    --border-strong: #3c424d;
+    --text: #f4f1ec;
+    --text-2: #d0c8bd;
+    --muted: #9b9389;
+    --accent: #ff4b55;
+    --nav-bg: rgba(12,13,15,0.78);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f7f4ef;
+    --bg-elev: #fffaf4;
+    --border: #d4cabd;
+    --border-strong: #b9aa99;
+    --text: #191613;
+    --text-2: #4e463e;
+    --muted: #756b61;
+    --accent: #e9363f;
+    --nav-bg: rgba(247,244,239,0.84);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -36,17 +79,45 @@ ${GA_SNIPPET}
   nav {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 28px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid var(--border);
+    background: var(--nav-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
   .brand { display: flex; align-items: center; gap: 9px; color: var(--text);
-    font-weight: 600; letter-spacing: -0.01em; }
+    font-weight: 600; letter-spacing: 0; }
   .brand .dot { width: 10px; height: 10px; border-radius: 50%;
     background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
+  .theme-toggle {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 11px;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--border-strong); }
+  .theme-toggle::before {
+    content: "";
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, var(--accent) 0 50%, var(--border) 50% 100%);
+    border: 1px solid var(--border-strong);
+  }
   main { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
-  h1 { font-size: 36px; letter-spacing: -0.02em; margin-bottom: 8px; }
+  h1 { font-size: 36px; letter-spacing: 0; margin-bottom: 8px; }
   .lede { color: var(--text-2); margin-bottom: 8px; font-size: 17px; }
   .updated { color: var(--muted); font-size: 12px; margin-bottom: 40px; }
-  h2 { font-size: 18px; letter-spacing: -0.01em; margin-top: 36px; margin-bottom: 10px; }
+  h2 { font-size: 18px; letter-spacing: 0; margin-top: 36px; margin-bottom: 10px; }
   p, li { color: var(--text-2); }
   p { margin-bottom: 12px; }
   ul { padding-left: 22px; margin-bottom: 12px; }
@@ -54,12 +125,12 @@ ${GA_SNIPPET}
   .tldr {
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 18px 22px;
     margin: 24px 0 8px;
   }
   .tldr h2 { margin-top: 0; color: var(--text); }
-  code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  code { background: var(--bg-elev); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
   footer { border-top: 1px solid var(--border); padding: 24px; color: var(--muted); font-size: 13px; text-align: center; }
   footer a { color: var(--text-2); }
 </style>
@@ -67,7 +138,10 @@ ${GA_SNIPPET}
 <body>
 <nav>
   <a class="brand" href="/"><span class="dot"></span><span>${BRAND}</span></a>
-  <a href="/" style="color: var(--text-2); font-size: 14px;">← Home</a>
+  <div class="nav-actions">
+    <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
+    <a href="/" style="color: var(--text-2); font-size: 14px;">&larr; Home</a>
+  </div>
 </nav>
 <main>
   <h1>Privacy</h1>

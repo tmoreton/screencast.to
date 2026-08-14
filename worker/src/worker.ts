@@ -28,6 +28,9 @@ export default {
     if (url.pathname === "/assets/website.png" && isRead) {
       return Response.redirect("https://raw.githubusercontent.com/tmoreton/screencast.to/main/.github/assets/website.png", 302);
     }
+    if (url.pathname === "/assets/icon.png" && isRead) {
+      return Response.redirect("https://raw.githubusercontent.com/tmoreton/screencast.to/main/screencast/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png", 302);
+    }
 
     // Pages
     if (url.pathname === "/" && isRead) {
