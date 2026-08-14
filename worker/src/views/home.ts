@@ -7,10 +7,10 @@ export function renderHome(): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#fbfaee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)">
 <title>${BRAND} - Local-first Mac screen recorder</title>
-<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Capture locally, then share an optional 24-hour link. No accounts, no permanent video library.">
+<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Record locally, then share an optional 24-hour link. No accounts, no permanent video library.">
 <meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, open source screen recorder, macOS, temporary video link">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
@@ -38,113 +38,109 @@ ${THEME_SCRIPT}
 <style>
   :root {
     color-scheme: light;
-    --bg: #fbfbfa;
-    --surface: #ffffff;
-    --surface-2: #f4f4f2;
-    --surface-3: #ececea;
-    --ink: #101113;
-    --ink-soft: #434852;
-    --muted: #6d7380;
-    --line: #e1e2df;
-    --line-strong: #c6c8c3;
-    --accent: #ff3b30;
-    --accent-strong: #d92d24;
-    --accent-soft: #fff0ee;
-    --blue: #0a84ff;
-    --green: #1f9d5a;
-    --amber: #f7a51b;
+    --bg: #fbfaee;
+    --bg-2: #f1f0e2;
+    --surface: #fffff8;
+    --surface-soft: #f6f5e8;
+    --ink: #141414;
+    --ink-soft: #3f403d;
+    --muted: #707066;
+    --line: rgba(20,20,20,0.14);
+    --line-strong: rgba(20,20,20,0.24);
+    --accent: #ff473f;
+    --accent-strong: #d9302a;
+    --accent-soft: #ffe0dc;
+    --lavender: #ecd7ff;
+    --sage: #dff4dc;
+    --blue: #dbeaff;
     --button-text: #ffffff;
-    --nav-bg: rgba(251,251,250,0.84);
-    --shadow: rgba(16,17,19,0.12);
-    --shadow-strong: rgba(16,17,19,0.2);
-    --screen: #101318;
-    --screen-2: #171b22;
-    --screen-3: #222833;
-    --screen-line: rgba(255,255,255,0.12);
-    --screen-text: rgba(255,255,255,0.76);
+    --nav-bg: rgba(251,250,238,0.82);
+    --shadow: rgba(20,20,20,0.14);
+    --shadow-strong: rgba(20,20,20,0.24);
+    --panel: #171717;
+    --panel-2: #222222;
+    --panel-line: rgba(255,255,255,0.14);
+    --panel-text: rgba(255,255,255,0.72);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
       --bg: #08090b;
-      --surface: #111318;
-      --surface-2: #171a20;
-      --surface-3: #20242c;
-      --ink: #f7f7f4;
-      --ink-soft: #c5c9d1;
-      --muted: #8f96a3;
-      --line: #282d35;
-      --line-strong: #3b414d;
-      --accent: #ff4f47;
-      --accent-strong: #ff746e;
-      --accent-soft: rgba(255,79,71,0.14);
-      --blue: #60aaff;
-      --green: #55d98e;
-      --amber: #ffc257;
+      --bg-2: #111318;
+      --surface: #12141a;
+      --surface-soft: #191c22;
+      --ink: #fbfaf4;
+      --ink-soft: #d3d2ca;
+      --muted: #96958c;
+      --line: rgba(255,255,255,0.13);
+      --line-strong: rgba(255,255,255,0.24);
+      --accent: #ff5a52;
+      --accent-strong: #ff7a73;
+      --accent-soft: rgba(255,90,82,0.16);
+      --lavender: rgba(210,160,255,0.18);
+      --sage: rgba(120,230,140,0.16);
+      --blue: rgba(120,170,255,0.18);
       --button-text: #ffffff;
       --nav-bg: rgba(8,9,11,0.78);
-      --shadow: rgba(0,0,0,0.44);
+      --shadow: rgba(0,0,0,0.46);
       --shadow-strong: rgba(0,0,0,0.62);
-      --screen: #111318;
-      --screen-2: #181c24;
-      --screen-3: #222834;
-      --screen-line: rgba(255,255,255,0.12);
-      --screen-text: rgba(255,255,255,0.76);
+      --panel: #171717;
+      --panel-2: #222222;
+      --panel-line: rgba(255,255,255,0.14);
+      --panel-text: rgba(255,255,255,0.72);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #08090b;
-    --surface: #111318;
-    --surface-2: #171a20;
-    --surface-3: #20242c;
-    --ink: #f7f7f4;
-    --ink-soft: #c5c9d1;
-    --muted: #8f96a3;
-    --line: #282d35;
-    --line-strong: #3b414d;
-    --accent: #ff4f47;
-    --accent-strong: #ff746e;
-    --accent-soft: rgba(255,79,71,0.14);
-    --blue: #60aaff;
-    --green: #55d98e;
-    --amber: #ffc257;
+    --bg-2: #111318;
+    --surface: #12141a;
+    --surface-soft: #191c22;
+    --ink: #fbfaf4;
+    --ink-soft: #d3d2ca;
+    --muted: #96958c;
+    --line: rgba(255,255,255,0.13);
+    --line-strong: rgba(255,255,255,0.24);
+    --accent: #ff5a52;
+    --accent-strong: #ff7a73;
+    --accent-soft: rgba(255,90,82,0.16);
+    --lavender: rgba(210,160,255,0.18);
+    --sage: rgba(120,230,140,0.16);
+    --blue: rgba(120,170,255,0.18);
     --button-text: #ffffff;
     --nav-bg: rgba(8,9,11,0.78);
-    --shadow: rgba(0,0,0,0.44);
+    --shadow: rgba(0,0,0,0.46);
     --shadow-strong: rgba(0,0,0,0.62);
-    --screen: #111318;
-    --screen-2: #181c24;
-    --screen-3: #222834;
-    --screen-line: rgba(255,255,255,0.12);
-    --screen-text: rgba(255,255,255,0.76);
+    --panel: #171717;
+    --panel-2: #222222;
+    --panel-line: rgba(255,255,255,0.14);
+    --panel-text: rgba(255,255,255,0.72);
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --bg: #fbfbfa;
-    --surface: #ffffff;
-    --surface-2: #f4f4f2;
-    --surface-3: #ececea;
-    --ink: #101113;
-    --ink-soft: #434852;
-    --muted: #6d7380;
-    --line: #e1e2df;
-    --line-strong: #c6c8c3;
-    --accent: #ff3b30;
-    --accent-strong: #d92d24;
-    --accent-soft: #fff0ee;
-    --blue: #0a84ff;
-    --green: #1f9d5a;
-    --amber: #f7a51b;
+    --bg: #fbfaee;
+    --bg-2: #f1f0e2;
+    --surface: #fffff8;
+    --surface-soft: #f6f5e8;
+    --ink: #141414;
+    --ink-soft: #3f403d;
+    --muted: #707066;
+    --line: rgba(20,20,20,0.14);
+    --line-strong: rgba(20,20,20,0.24);
+    --accent: #ff473f;
+    --accent-strong: #d9302a;
+    --accent-soft: #ffe0dc;
+    --lavender: #ecd7ff;
+    --sage: #dff4dc;
+    --blue: #dbeaff;
     --button-text: #ffffff;
-    --nav-bg: rgba(251,251,250,0.84);
-    --shadow: rgba(16,17,19,0.12);
-    --shadow-strong: rgba(16,17,19,0.2);
-    --screen: #101318;
-    --screen-2: #171b22;
-    --screen-3: #222833;
-    --screen-line: rgba(255,255,255,0.12);
-    --screen-text: rgba(255,255,255,0.76);
+    --nav-bg: rgba(251,250,238,0.82);
+    --shadow: rgba(20,20,20,0.14);
+    --shadow-strong: rgba(20,20,20,0.24);
+    --panel: #171717;
+    --panel-2: #222222;
+    --panel-line: rgba(255,255,255,0.14);
+    --panel-text: rgba(255,255,255,0.72);
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -197,7 +193,7 @@ ${THEME_SCRIPT}
     width: 28px;
     height: 28px;
     border-radius: 7px;
-    box-shadow: 0 10px 22px rgba(255,59,48,0.24);
+    box-shadow: 0 12px 22px rgba(255,71,63,0.24);
   }
   .nav-actions {
     display: flex;
@@ -226,27 +222,25 @@ ${THEME_SCRIPT}
     font: inherit;
     font-size: 14px;
     font-weight: 720;
-    padding: 9px 13px;
+    padding: 9px 14px;
     cursor: pointer;
   }
   .button:hover, .theme-toggle:hover, .menu-button:hover { border-color: var(--line-strong); }
   .button.primary {
-    background: var(--ink);
+    background: var(--accent);
     border-color: var(--ink);
-    color: var(--bg);
-    box-shadow: 0 16px 34px -22px var(--shadow-strong);
+    color: var(--button-text);
+    box-shadow: 0 16px 34px -20px rgba(255,71,63,0.8);
   }
   .button.primary:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--button-text);
+    background: var(--accent-strong);
   }
   .theme-toggle::before {
     content: "";
     width: 15px;
     height: 15px;
     border-radius: 50%;
-    background: linear-gradient(90deg, var(--accent) 0 50%, var(--surface-3) 50% 100%);
+    background: linear-gradient(90deg, var(--accent) 0 50%, var(--surface-soft) 50% 100%);
     border: 1px solid var(--line-strong);
   }
   .menu-button {
@@ -263,8 +257,21 @@ ${THEME_SCRIPT}
   }
 
   .hero {
-    padding: 48px 0 58px;
-    text-align: center;
+    position: relative;
+    min-height: calc(100vh - 68px);
+    padding: 80px 0 0;
+    overflow: hidden;
+  }
+  .hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+    gap: 52px;
+    align-items: center;
+  }
+  .hero-copy-block {
+    max-width: 590px;
   }
   .eyebrow {
     display: inline-flex;
@@ -272,10 +279,6 @@ ${THEME_SCRIPT}
     gap: 8px;
     margin-bottom: 18px;
     color: var(--accent-strong);
-    background: var(--accent-soft);
-    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-    border-radius: 999px;
-    padding: 7px 12px;
     font-size: 12px;
     font-weight: 820;
     text-transform: uppercase;
@@ -286,25 +289,22 @@ ${THEME_SCRIPT}
     height: 8px;
     border-radius: 50%;
     background: var(--accent);
+    box-shadow: 0 0 18px rgba(255,71,63,0.72);
   }
   h1 {
-    max-width: 790px;
-    margin: 0 auto 18px;
-    font-size: 58px;
-    line-height: 1.02;
-    font-weight: 820;
+    margin: 0 0 20px;
+    font: 820 70px/0.96 ui-serif, Georgia, Cambria, "Times New Roman", serif;
   }
   .hero-copy {
-    max-width: 720px;
-    margin: 0 auto;
+    max-width: 560px;
+    margin: 0;
     color: var(--ink-soft);
-    font-size: 19px;
+    font-size: 20px;
   }
   .cta-row {
-    margin-top: 28px;
+    margin-top: 30px;
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: 10px;
   }
   .fine-print {
@@ -312,193 +312,158 @@ ${THEME_SCRIPT}
     color: var(--muted);
     font-size: 13px;
   }
-  .facts {
-    margin: 28px auto 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    list-style: none;
+
+  .demo-stage {
+    position: relative;
+    min-height: 540px;
   }
-  .facts li {
-    border: 1px solid var(--line);
-    background: var(--surface);
+  .motion-line {
+    position: absolute;
+    left: -8%;
+    right: -18%;
+    top: 134px;
+    height: 46px;
     border-radius: 999px;
-    padding: 7px 11px;
-    color: var(--ink-soft);
-    font-size: 13px;
-    font-weight: 680;
+    background: var(--panel);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    transform: rotate(-5deg);
+    box-shadow: 0 22px 60px -36px var(--shadow-strong);
   }
-  .product {
-    margin: 26px auto 0;
-    max-width: 980px;
-    text-align: left;
+  .motion-line span {
+    display: inline-block;
+    padding-right: 48px;
+    animation: marquee 18s linear infinite;
+    font-weight: 720;
+  }
+  .recorder-card {
+    position: absolute;
+    right: 0;
+    top: 16px;
+    width: min(100%, 460px);
     border: 1px solid var(--line-strong);
     border-radius: 8px;
-    background: var(--screen);
-    box-shadow: 0 34px 90px -56px var(--shadow-strong), 0 1px 0 rgba(255,255,255,0.08) inset;
+    background: var(--surface);
+    box-shadow: 0 34px 90px -54px var(--shadow-strong);
     overflow: hidden;
+    animation: floatCard 7s ease-in-out infinite;
   }
-  .product-top {
+  .card-top {
     height: 42px;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 0 14px;
-    border-bottom: 1px solid var(--screen-line);
-    background: var(--screen-2);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-soft);
   }
   .traffic { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
   .traffic:nth-child(2) { background: #febc2e; }
   .traffic:nth-child(3) { background: #28c840; }
-  .product-title {
+  .card-title {
     margin-left: 8px;
-    color: var(--screen-text);
+    color: var(--muted);
     font-size: 12px;
     font-weight: 720;
   }
-  .product-body {
-    position: relative;
-    min-height: 430px;
-    padding: 28px;
-    color: #f8f8f6;
-  }
-  .recording-surface {
-    min-height: 310px;
-    border: 1px solid var(--screen-line);
-    border-radius: 8px;
-    background: var(--screen-2);
-    padding: 20px;
-  }
-  .workspace-bar {
-    display: grid;
-    grid-template-columns: 28px minmax(90px, 210px) 1fr 76px;
+  .card-body { padding: 22px; }
+  .menu-head {
+    display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
   }
-  .avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #59677a, #b7c1cd);
-  }
-  .line { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.16); }
-  .line.short { width: 70%; }
-  .line.blue { background: color-mix(in srgb, var(--blue) 46%, transparent); }
-  .line.green { background: color-mix(in srgb, var(--green) 56%, transparent); }
-  .work-grid {
+  .menu-head img { width: 34px; height: 34px; border-radius: 8px; }
+  .menu-title { font-weight: 780; }
+  .menu-sub { color: var(--muted); font-size: 13px; }
+  .settings {
     display: grid;
-    grid-template-columns: 1fr 1fr 1.15fr;
-    gap: 12px;
+    gap: 10px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
   }
-  .work-panel {
-    min-height: 190px;
-    border: 1px solid var(--screen-line);
-    border-radius: 8px;
-    background: rgba(255,255,255,0.045);
-    padding: 14px;
-  }
-  .work-panel.large {
+  .setting {
     display: flex;
-    align-items: end;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 14px;
   }
-  .work-panel h4 {
-    margin: 0 0 14px;
-    color: rgba(255,255,255,0.9);
-    font-size: 13px;
-  }
-  .work-panel .line { margin-bottom: 13px; }
-  .work-panel.large span {
-    flex: 1;
-    min-width: 8px;
-    border-radius: 4px 4px 0 0;
-    background: rgba(255,255,255,0.18);
-  }
-  .work-panel.large span:nth-child(3),
-  .work-panel.large span:nth-child(5),
-  .work-panel.large span:nth-child(8) {
-    background: color-mix(in srgb, var(--accent) 70%, transparent);
-  }
-  .menu-panel {
-    position: absolute;
-    left: 48px;
-    bottom: 38px;
-    width: 306px;
-    border: 1px solid var(--screen-line);
+  .setting strong { color: var(--ink); }
+  .record-button {
+    margin-top: 18px;
+    min-height: 46px;
     border-radius: 8px;
-    background: rgba(17,19,24,0.9);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.36);
-    overflow: hidden;
-    backdrop-filter: blur(16px);
+    background: var(--accent);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 820;
   }
-  .menu-head, .menu-row, .recording-row {
+  .share-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid var(--screen-line);
-    padding: 13px 14px;
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 13px;
   }
-  .menu-head img { width: 24px; height: 24px; border-radius: 6px; }
-  .menu-title { color: #fff; font-weight: 760; }
-  .menu-sub { color: var(--screen-text); font-size: 12px; }
-  .menu-row { justify-content: space-between; color: var(--screen-text); font-size: 13px; }
-  .menu-row strong { color: #fff; font-weight: 720; }
-  .start-button {
-    margin: 14px;
-    height: 42px;
-    border-radius: 8px;
+  .share-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
     background: var(--accent);
-    display: grid;
-    place-items: center;
-    color: #fff;
+  }
+  .share-link {
+    margin-left: auto;
+    color: #1f9d5a;
     font-weight: 820;
   }
-  .recording-row { border-bottom: 0; align-items: flex-start; }
-  .recording-dot { width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--accent); }
-  .upload { margin-left: auto; color: var(--green); font-weight: 820; font-size: 12px; }
-  .control-bar {
+  .floating-control {
     position: absolute;
-    top: 94px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 10px;
+    bottom: 92px;
     min-width: 286px;
-    height: 46px;
+    height: 50px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-line);
+    background: rgba(23,23,23,0.92);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.18);
-    background: rgba(8,9,11,0.82);
-    color: #fff;
-    box-shadow: 0 18px 40px rgba(0,0,0,0.32);
+    box-shadow: 0 24px 58px -34px var(--shadow-strong);
+    animation: floatBar 5.8s ease-in-out infinite;
     backdrop-filter: blur(14px);
-    font-weight: 820;
   }
-  .control-bar .pulse {
+  .pulse {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--amber);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--amber) 78%, transparent);
+    background: #ffc257;
+    box-shadow: 0 0 18px rgba(255,194,87,0.8);
   }
-  .camera {
+  .camera-bubble {
     position: absolute;
-    right: 48px;
-    bottom: 42px;
-    width: 108px;
-    height: 108px;
+    right: 32px;
+    bottom: 30px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
     border: 4px solid rgba(255,255,255,0.88);
-    background: linear-gradient(145deg, #c1cad5, #56616f);
+    background: linear-gradient(145deg, #c5ccd4, #5f6a76);
     display: grid;
     place-items: center;
-    box-shadow: 0 18px 38px rgba(0,0,0,0.36);
+    box-shadow: 0 26px 54px -26px var(--shadow-strong);
+    animation: floatCamera 6.4s ease-in-out infinite;
   }
-  .camera::before {
+  .camera-bubble::before {
     content: "";
     width: 44px;
     height: 44px;
@@ -506,127 +471,129 @@ ${THEME_SCRIPT}
     background: rgba(255,255,255,0.28);
     box-shadow: 0 40px 0 18px rgba(255,255,255,0.18);
   }
+  .hero-curve {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 136px;
+    background: var(--panel);
+    border-radius: 72px 72px 0 0;
+  }
+
+  .proof-band {
+    position: relative;
+    z-index: 2;
+    background: var(--panel);
+    color: #fff;
+    padding: 54px 0 66px;
+  }
+  .proof-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+  }
+  .proof-item span {
+    display: block;
+    color: var(--panel-text);
+    font-size: 12px;
+    font-weight: 820;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .proof-item strong {
+    display: block;
+    font-size: 18px;
+    line-height: 1.25;
+  }
 
   section {
-    padding: 72px 0;
+    padding: 86px 0;
     border-top: 1px solid var(--line);
   }
-  .section-head {
-    max-width: 660px;
-    margin-bottom: 28px;
+  .simple-section {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 56px;
+    align-items: start;
   }
   .section-kicker {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
     color: var(--accent);
     font-size: 12px;
     font-weight: 820;
     text-transform: uppercase;
   }
   h2 {
-    margin: 0 0 10px;
-    font-size: 34px;
-    line-height: 1.15;
+    margin: 0;
+    font: 760 44px/1.05 ui-serif, Georgia, Cambria, "Times New Roman", serif;
   }
-  .section-head p, .split p, .card p, .step p, .compact-copy {
+  .section-copy {
+    margin: 18px 0 0;
     color: var(--ink-soft);
-    margin: 0;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-  }
-  .card {
-    min-height: 176px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 22px;
-  }
-  .card small {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--muted);
-    font-weight: 820;
-    text-transform: uppercase;
-    font-size: 11px;
-    margin-bottom: 16px;
-  }
-  .card small::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .card:nth-child(2) small::before { background: var(--blue); }
-  .card:nth-child(3) small::before { background: var(--green); }
-  .card h3 {
-    margin: 0 0 8px;
     font-size: 18px;
   }
-  .feature-table {
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
-    overflow: hidden;
-  }
-  .feature-row {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 22px;
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--line);
-  }
-  .feature-row:last-child { border-bottom: 0; }
-  .feature-row strong { font-size: 15px; }
-  .feature-row p { margin: 0; color: var(--ink-soft); }
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-  }
-  .step {
-    border-left: 3px solid var(--accent);
-    padding-left: 18px;
-  }
-  .step:nth-child(2) { border-left-color: var(--amber); }
-  .step:nth-child(3) { border-left-color: var(--green); }
-  .step strong {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 18px;
-  }
-  .split {
-    display: grid;
-    grid-template-columns: 0.88fr 1.12fr;
-    gap: 34px;
-    align-items: start;
-  }
-  .checks {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .feature-list {
     display: grid;
     gap: 10px;
   }
-  .checks li {
+  .feature-row {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 18px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface);
-    padding: 15px 16px;
+  }
+  .feature-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 820;
+  }
+  .feature-row:nth-child(2) .feature-icon { background: var(--blue); color: #2364c8; }
+  .feature-row:nth-child(3) .feature-icon { background: var(--sage); color: #267247; }
+  .feature-row h3 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+  .feature-row p {
+    margin: 0;
     color: var(--ink-soft);
   }
-  .checks strong { color: var(--ink); }
-  .final-cta {
-    text-align: center;
+  .mini-workflow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .mini-step {
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface);
-    padding: 44px 24px;
+    padding: 18px;
   }
-  .final-cta h2 { margin-bottom: 12px; }
+  .mini-step span {
+    display: block;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 820;
+    margin-bottom: 12px;
+  }
+  .mini-step strong { display: block; }
+  .final-cta {
+    text-align: center;
+    padding-bottom: 92px;
+  }
+  .final-cta h2 { max-width: 660px; margin: 0 auto; }
+  .final-cta .section-copy { max-width: 560px; margin-left: auto; margin-right: auto; }
+  .final-cta .cta-row { justify-content: center; }
   footer {
     border-top: 1px solid var(--line);
     padding: 24px 0;
@@ -643,29 +610,45 @@ ${THEME_SCRIPT}
   footer a { color: var(--ink-soft); }
   footer a:hover { color: var(--ink); text-decoration: underline; }
 
-  @media (max-width: 900px) {
-    h1 { font-size: 50px; }
-    .product-body { min-height: 0; }
-    .work-grid { grid-template-columns: 1fr; }
-    .work-panel.large { min-height: 130px; }
-    .control-bar { top: 82px; }
-    .menu-panel {
-      position: relative;
-      left: auto;
-      bottom: auto;
-      width: 100%;
-      margin-top: 18px;
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes floatCard {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes floatBar {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(10px) rotate(1deg); }
+  }
+  @keyframes floatCamera {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
     }
-    .camera {
-      right: 32px;
-      bottom: 210px;
-      width: 92px;
-      height: 92px;
+  }
+  @media (max-width: 980px) {
+    .hero { min-height: 0; padding-top: 56px; }
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: 34px;
     }
-    .cards, .steps, .split { grid-template-columns: 1fr; }
+    h1 { font-size: 58px; }
+    .demo-stage { min-height: 500px; }
+    .recorder-card { left: 0; right: auto; }
+    .motion-line { top: 116px; }
+    .proof-grid { grid-template-columns: repeat(2, 1fr); }
+    .simple-section { grid-template-columns: 1fr; gap: 32px; }
   }
   @media (max-width: 720px) {
     .wrap { width: min(1120px, calc(100% - 28px)); }
+    html, body { overflow-x: hidden; }
     .nav-inner { height: 64px; position: relative; }
     .menu-button { display: inline-flex; }
     .nav-actions {
@@ -685,33 +668,52 @@ ${THEME_SCRIPT}
     }
     .nav-actions[data-open="true"] { display: flex; }
     .nav-link, .button, .theme-toggle { width: 100%; justify-content: flex-start; }
-    h1 { font-size: 42px; }
-    h2 { font-size: 28px; }
-    .hero { padding-top: 54px; text-align: left; }
-    .eyebrow { max-width: 100%; }
-    .hero-copy { font-size: 17px; max-width: 420px; margin-left: 0; margin-right: 0; }
-    .cta-row, .facts { justify-content: flex-start; }
+    .hero { padding-top: 48px; }
+    h1 { font-size: 46px; }
+    h2 { font-size: 34px; }
+    .hero-copy { font-size: 18px; }
+    .cta-row { display: grid; grid-template-columns: 1fr; }
+    .button { min-width: 0; }
     .cta-row .button { justify-content: center; }
-    .product { margin-top: 34px; }
-    .product-body { padding: 16px; }
-    .recording-surface { padding: 14px; }
-    .workspace-bar { grid-template-columns: 28px 1fr; }
-    .workspace-bar .line:nth-child(n+3) { display: none; }
-    .work-panel:nth-child(2) { display: none; }
-    .control-bar {
-      position: static;
-      transform: none;
+    .demo-stage { min-height: 430px; overflow: hidden; }
+    .motion-line {
+      display: none;
+    }
+    .recorder-card {
+      top: 28px;
       width: 100%;
+    }
+    .setting { align-items: flex-start; }
+    .setting strong {
       min-width: 0;
-      margin: 14px 0 0;
+      max-width: 56%;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .share-row span:nth-child(2) {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-body { padding: 18px; }
+    .floating-control {
+      left: 12px;
+      right: 12px;
+      bottom: 44px;
+      min-width: 0;
+      width: auto;
       border-radius: 8px;
     }
-    .camera { display: none; }
-    .feature-row {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-    section { padding: 56px 0; }
+    .camera-bubble { display: none; }
+    .hero-curve { height: 96px; border-radius: 42px 42px 0 0; }
+    .proof-band { padding: 38px 0 48px; }
+    .proof-grid, .mini-workflow { grid-template-columns: 1fr; }
+    section { padding: 62px 0; }
+    .final-cta { text-align: left; }
+    .final-cta .cta-row { justify-content: flex-start; }
   }
 </style>
 </head>
@@ -728,8 +730,7 @@ ${THEME_SCRIPT}
       <span class="sr-only">Open menu</span>
     </button>
     <div class="nav-actions" id="site-menu" data-nav-actions>
-      <a class="nav-link" href="#advantages">Advantages</a>
-      <a class="nav-link" href="#workflow">Workflow</a>
+      <a class="nav-link" href="#why">Why</a>
       <a class="nav-link" href="/privacy">Privacy</a>
       <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
       <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -739,185 +740,110 @@ ${THEME_SCRIPT}
 </nav>
 
 <main>
-  <section class="hero wrap">
-    <div class="eyebrow">Open source. Local first. Temporary sharing.</div>
-    <h1>A local-first Mac screen recorder.</h1>
-    <p class="hero-copy">${BRAND} lives in your menu bar. Capture screen, camera, microphone, and system audio, then keep the file on your Mac or upload a 24-hour link when sharing is easier.</p>
-    <div class="cta-row">
-      <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
-      <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">View source</a>
-    </div>
-    <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; Apache-2.0</p>
-    <ul class="facts">
-      <li>No account required</li>
-      <li>Files start local</li>
-      <li>Share links expire</li>
-      <li>Source is public</li>
-    </ul>
-
-    <div class="product" aria-label="Screencast.to recording workflow preview">
-      <div class="product-top">
-        <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
-        <span class="product-title">${BRAND} recording workflow</span>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy-block">
+        <div class="eyebrow">Open-source screen recording</div>
+        <h1>Record your screen. Keep control.</h1>
+        <p class="hero-copy">A tiny Mac recorder for demos and bug reports. Files save locally first; upload only when you want a 24-hour link.</p>
+        <div class="cta-row">
+          <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
+          <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">View source</a>
+        </div>
+        <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; Apache-2.0</p>
       </div>
-      <div class="product-body">
-        <div class="recording-surface">
-          <div class="workspace-bar">
-            <div class="avatar"></div>
-            <div class="line"></div>
-            <div class="line short"></div>
-            <div class="line blue"></div>
+
+      <div class="demo-stage" aria-label="Screencast.to recording workflow preview">
+        <div class="motion-line" aria-hidden="true">
+          <span>screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp; screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp;</span>
+          <span>screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp; screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp;</span>
+        </div>
+        <div class="recorder-card">
+          <div class="card-top">
+            <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
+            <span class="card-title">Screencast.to</span>
           </div>
-          <div class="work-grid">
-            <div class="work-panel">
-              <h4>Bug report</h4>
-              <div class="line"></div>
-              <div class="line short"></div>
-              <div class="line green"></div>
+          <div class="card-body">
+            <div class="menu-head">
+              <img src="/assets/icon.png" alt="">
+              <div>
+                <div class="menu-title">Ready to record</div>
+                <div class="menu-sub">Stored on this Mac</div>
+              </div>
             </div>
-            <div class="work-panel">
-              <h4>Demo notes</h4>
-              <div class="line"></div>
-              <div class="line short"></div>
-              <div class="line"></div>
+            <div class="settings">
+              <div class="setting"><span>Capture</span><strong>Screen + Camera</strong></div>
+              <div class="setting"><span>Audio</span><strong>Mic + System</strong></div>
+              <div class="setting"><span>Sharing</span><strong>Only when uploaded</strong></div>
             </div>
-            <div class="work-panel large" aria-hidden="true">
-              <span style="height:34%"></span>
-              <span style="height:48%"></span>
-              <span style="height:82%"></span>
-              <span style="height:58%"></span>
-              <span style="height:72%"></span>
-              <span style="height:44%"></span>
-              <span style="height:90%"></span>
-              <span style="height:62%"></span>
+            <div class="record-button">Start Recording</div>
+            <div class="share-row">
+              <span class="share-dot"></span>
+              <span>Screencast 2.0.1.mov</span>
+              <span class="share-link">Upload</span>
             </div>
           </div>
         </div>
-        <div class="control-bar"><span class="pulse"></span><span>00:03 &middot; camera warming up</span></div>
-        <div class="menu-panel">
-          <div class="menu-head">
-            <img src="/assets/icon.png" alt="">
-            <div>
-              <div class="menu-title">Ready to record</div>
-              <div class="menu-sub">Stored locally by default</div>
-            </div>
-          </div>
-          <div class="menu-row"><span>Capture</span><strong>Screen + Camera</strong></div>
-          <div class="menu-row"><span>Audio</span><strong>Mic + System</strong></div>
-          <div class="menu-row"><span>Sharing</span><strong>24-hour link</strong></div>
-          <div class="start-button">Start Recording</div>
-          <div class="recording-row">
-            <span class="recording-dot"></span>
-            <div>
-              <div class="menu-title">Screencast 2.0.1.mov</div>
-              <div class="menu-sub">Saved on this Mac</div>
-            </div>
-            <span class="upload">Upload</span>
-          </div>
-        </div>
-        <div class="camera"></div>
+        <div class="floating-control"><span class="pulse"></span><span>00:03 &middot; camera warming up</span></div>
+        <div class="camera-bubble"></div>
       </div>
+    </div>
+    <div class="hero-curve" aria-hidden="true"></div>
+  </section>
+
+  <section class="proof-band" aria-label="Product principles">
+    <div class="wrap proof-grid">
+      <div class="proof-item"><span>Local first</span><strong>Recordings start on your Mac, not in a cloud library.</strong></div>
+      <div class="proof-item"><span>Open source</span><strong>The app, upload worker, and site are public.</strong></div>
+      <div class="proof-item"><span>Temporary links</span><strong>Shared recordings auto-delete after the short window.</strong></div>
+      <div class="proof-item"><span>No accounts</span><strong>Record and share without making viewers sign in.</strong></div>
     </div>
   </section>
 
-  <section id="advantages">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="section-kicker">Why it is different</p>
-        <h2>Fast screen recordings without the permanent workspace.</h2>
-        <p>Most recording tools turn every clip into another cloud library. ${BRAND} keeps the default simple: record locally, share temporarily, and stay in control.</p>
-      </div>
-      <div class="cards">
-        <article class="card">
-          <small>Local first</small>
-          <h3>Your recordings start on your Mac.</h3>
-          <p>Nothing is uploaded while you record. Keep the file, move it, delete it, or share it only when you decide.</p>
-        </article>
-        <article class="card">
-          <small>Transparent</small>
-          <h3>Open source from app to upload worker.</h3>
-          <p>The Swift app, Cloudflare Worker, and static site are public, so the product claims are inspectable.</p>
-        </article>
-        <article class="card">
-          <small>Temporary</small>
-          <h3>Share links are designed to disappear.</h3>
-          <p>Uploaded recordings get a browser link for viewers and are removed automatically after the short sharing window.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap split">
+  <section id="why">
+    <div class="wrap simple-section">
       <div>
-        <p class="section-kicker">What it records</p>
-        <h2>Everything you need for a useful walkthrough.</h2>
-        <p class="compact-copy">Use it for bug reports, customer demos, design notes, async updates, or quick “look at this” clips that do not need a team workspace.</p>
+        <p class="section-kicker">Why use it</p>
+        <h2>Made for the quick recording you do not want to manage forever.</h2>
+        <p class="section-copy">Use it when a screenshot is not enough and a full video workspace is too much.</p>
       </div>
-      <div class="feature-table">
-        <div class="feature-row">
-          <strong>Screen and region capture</strong>
-          <p>Record a whole display or draw a focused region around the work.</p>
-        </div>
-        <div class="feature-row">
-          <strong>Camera, mic, and system audio</strong>
-          <p>Add presence and context without configuring a heavy studio setup.</p>
-        </div>
-        <div class="feature-row">
-          <strong>Camera warm-up countdown</strong>
-          <p>Camera recordings wait before capture starts, so the first frame is already ready.</p>
-        </div>
-        <div class="feature-row">
-          <strong>Browser viewer links</strong>
-          <p>Share with anyone who has the URL. Viewers do not need to install anything or create an account.</p>
-        </div>
+      <div class="feature-list">
+        <article class="feature-row">
+          <span class="feature-icon">1</span>
+          <div>
+            <h3>Capture the useful context.</h3>
+            <p>Record screen, region, camera, microphone, and system audio from the menu bar.</p>
+          </div>
+        </article>
+        <article class="feature-row">
+          <span class="feature-icon">2</span>
+          <div>
+            <h3>Start cleanly.</h3>
+            <p>Camera recordings wait through a short countdown so the first recorded frame is ready.</p>
+          </div>
+        </article>
+        <article class="feature-row">
+          <span class="feature-icon">3</span>
+          <div>
+            <h3>Share, then let it expire.</h3>
+            <p>Upload only when needed. The viewer link works in a browser and then disappears.</p>
+          </div>
+        </article>
       </div>
+    </div>
+
+    <div class="wrap mini-workflow">
+      <div class="mini-step"><span>01</span><strong>Pick a capture mode.</strong></div>
+      <div class="mini-step"><span>02</span><strong>Record locally.</strong></div>
+      <div class="mini-step"><span>03</span><strong>Upload only if needed.</strong></div>
     </div>
   </section>
 
-  <section id="workflow">
+  <section class="final-cta">
     <div class="wrap">
-      <div class="section-head">
-        <p class="section-kicker">Workflow</p>
-        <h2>Three steps, then back to work.</h2>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <strong>1. Pick a capture mode.</strong>
-          <p>Choose screen, region, camera layout, microphone, and system audio from the menu bar.</p>
-        </div>
-        <div class="step">
-          <strong>2. Record locally.</strong>
-          <p>The file is written to your Mac first, with no sign-in flow or remote library in the way.</p>
-        </div>
-        <div class="step">
-          <strong>3. Share only if needed.</strong>
-          <p>Upload for a temporary link, or keep the recording local and send the file however you prefer.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap split">
-      <div>
-        <p class="section-kicker">Privacy posture</p>
-        <h2>Built for recordings you do not want hanging around.</h2>
-        <p>${BRAND} is intentionally small: no accounts, no feed, no searchable team vault, and no permanent hosted archive.</p>
-      </div>
-      <ul class="checks">
-        <li><strong>Local by default:</strong> recording and saving happen on your Mac before any upload exists.</li>
-        <li><strong>No viewer login:</strong> people with the link can watch in the browser until it expires.</li>
-        <li><strong>Short-lived uploads:</strong> shared files are deleted automatically by the Cloudflare R2 lifecycle rule.</li>
-        <li><strong>Open implementation:</strong> review the app and server code on GitHub.</li>
-      </ul>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap final-cta">
-      <h2>Download ${BRAND}</h2>
-      <p class="hero-copy">Free, open source, and built for macOS 15 or newer.</p>
+      <p class="section-kicker">Get started</p>
+      <h2>A small recorder for work that should not become another inbox.</h2>
+      <p class="section-copy">Free, open source, and built for macOS 15 or newer.</p>
       <div class="cta-row">
         <a class="button primary" href="${DOWNLOAD_URL}" download>Download .dmg</a>
         <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">Read the code</a>
