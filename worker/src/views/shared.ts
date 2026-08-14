@@ -52,6 +52,8 @@ export const THEME_SCRIPT = `
   window.addEventListener("DOMContentLoaded", function() {
     var toggle = document.querySelector("[data-theme-toggle]");
     var label = document.querySelector("[data-theme-label]");
+    var menuButton = document.querySelector("[data-menu-button]");
+    var menu = document.querySelector("[data-nav-actions]");
 
     function paint() {
       var next = activeTheme() === "dark" ? "Light" : "Dark";
@@ -66,6 +68,26 @@ export const THEME_SCRIPT = `
         applyTheme(next);
         paint();
       });
+    }
+
+    function setMenu(open) {
+      if (!menu || !menuButton) return;
+      menu.dataset.open = open ? "true" : "false";
+      menuButton.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    if (menuButton && menu) {
+      menuButton.addEventListener("click", function() {
+        setMenu(menu.dataset.open !== "true");
+      });
+      menu.addEventListener("click", function(event) {
+        var target = event.target;
+        if (target && target.closest && target.closest("a")) setMenu(false);
+      });
+      window.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") setMenu(false);
+      });
+      setMenu(false);
     }
 
     if (mq.addEventListener) mq.addEventListener("change", paint);
