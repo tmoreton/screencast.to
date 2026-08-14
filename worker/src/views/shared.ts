@@ -47,7 +47,7 @@ export const THEME_SCRIPT = `
     return root.dataset.theme || (mq.matches ? "dark" : "light");
   }
 
-  applyTheme(storedTheme());
+  applyTheme(storedTheme() || "light");
 
   window.addEventListener("DOMContentLoaded", function() {
     var toggle = document.querySelector("[data-theme-toggle]");
