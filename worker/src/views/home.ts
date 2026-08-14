@@ -220,22 +220,42 @@ ${THEME_SCRIPT}
     padding: 9px 14px;
     cursor: pointer;
   }
-  .icon-button { padding: 0; }
-  .button:hover, .icon-button:hover { border-color: var(--line-strong); }
+  .icon-button {
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+  }
+  .button:hover { border-color: var(--line-strong); }
+  .icon-button:hover {
+    border-color: transparent;
+    background: var(--surface-soft);
+  }
   .button.primary {
     background: var(--accent);
-    border-color: var(--ink);
+    border-color: transparent;
     color: var(--button-text);
     box-shadow: 0 16px 34px -20px rgba(255,71,63,0.8);
   }
   .button.primary:hover {
     background: var(--accent-strong);
   }
-  .theme-favicon {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    box-shadow: 0 8px 18px rgba(255,71,63,0.2);
+  .theme-icon {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .theme-icon.sun-icon {
+    display: none;
+  }
+  :root[data-theme="dark"] .theme-icon.moon-icon {
+    display: none;
+  }
+  :root[data-theme="dark"] .theme-icon.sun-icon {
+    display: block;
   }
   .github-mark {
     width: 18px;
@@ -244,8 +264,19 @@ ${THEME_SCRIPT}
   }
   .hero {
     position: relative;
-    padding: 92px 0 84px;
+    padding: 68px 0 68px;
     overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.32), transparent 68%);
+    pointer-events: none;
   }
   .hero-grid {
     position: relative;
@@ -257,6 +288,29 @@ ${THEME_SCRIPT}
   }
   .hero-copy-block {
     max-width: 590px;
+  }
+  .signal-pill {
+    width: fit-content;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 26px;
+    padding: 0 18px;
+    border-radius: 0 0 22px 22px;
+    background: var(--panel);
+    color: #fff;
+    box-shadow: 0 22px 58px -34px var(--shadow-strong);
+    font-size: 14px;
+    font-weight: 820;
+  }
+  .signal-pill::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 18px rgba(255,71,63,0.7);
   }
   .eyebrow {
     display: inline-flex;
@@ -278,7 +332,7 @@ ${THEME_SCRIPT}
   }
   h1 {
     margin: 0 0 20px;
-    font: 820 70px/0.96 ui-serif, Georgia, Cambria, "Times New Roman", serif;
+    font: 820 62px/0.98 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   }
   .hero-copy {
     max-width: 560px;
@@ -392,35 +446,61 @@ ${THEME_SCRIPT}
     z-index: 2;
     background: var(--panel);
     color: #fff;
-    padding: 0;
+    padding: 78px 0;
+  }
+  .proof-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    gap: 52px;
+    align-items: start;
+  }
+  .proof-copy {
+    position: sticky;
+    top: 104px;
+  }
+  .proof-kicker {
+    margin: 0 0 12px;
+    color: var(--accent-strong);
+    font-size: 12px;
+    font-weight: 820;
+    text-transform: uppercase;
+  }
+  h2 {
+    margin: 0;
+    font: 820 44px/1.05 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  }
+  .proof-copy p:last-child {
+    margin: 18px 0 0;
+    color: var(--panel-text);
+    font-size: 18px;
   }
   .proof-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    overflow: hidden;
-    border-top: 1px solid var(--panel-line);
-    border-bottom: 1px solid var(--panel-line);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   .proof-item {
-    min-height: 88px;
+    min-height: 172px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding: 18px 28px;
-    border-right: 1px solid var(--panel-line);
+    justify-content: space-between;
+    padding: 22px;
+    border: 1px solid var(--panel-line);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.045);
   }
-  .proof-item:last-child { border-right: 0; }
+  .proof-item:nth-child(1) { background: rgba(255,71,63,0.13); }
   .proof-item p {
-    margin: 6px 0 0;
+    margin: 16px 0 0;
     color: var(--panel-text);
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 15px;
+    line-height: 1.5;
   }
   .proof-item span {
     display: block;
     color: #fff;
-    font-size: 13px;
+    font-size: 25px;
+    line-height: 1.08;
     font-weight: 820;
   }
 
@@ -460,9 +540,11 @@ ${THEME_SCRIPT}
     h1 { font-size: 58px; }
     .demo-stage { min-height: 430px; }
     .recorder-card { left: 0; right: auto; }
-    .proof-grid { grid-template-columns: repeat(2, 1fr); }
-    .proof-item:nth-child(2) { border-right: 0; }
-    .proof-item:nth-child(1), .proof-item:nth-child(2) { border-bottom: 1px solid var(--panel-line); }
+    .proof-layout {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .proof-copy { position: static; }
   }
   @media (max-width: 720px) {
     .wrap { width: min(1120px, calc(100% - 28px)); }
@@ -472,7 +554,15 @@ ${THEME_SCRIPT}
     .icon-button { width: 38px; min-height: 38px; }
     .nav-actions .button.primary { min-height: 38px; padding: 8px 11px; }
     .hero { padding-top: 48px; }
+    .signal-pill {
+      width: 100%;
+      justify-content: center;
+      border-radius: 8px;
+      margin-bottom: 26px;
+      text-align: center;
+    }
     h1 { font-size: 46px; }
+    h2 { font-size: 34px; }
     .hero-copy { font-size: 18px; }
     .cta-row { display: grid; grid-template-columns: 1fr; }
     .button { min-width: 0; }
@@ -498,11 +588,10 @@ ${THEME_SCRIPT}
       white-space: nowrap;
     }
     .card-body { padding: 18px; }
-    .proof-grid { grid-template-columns: 1fr 1fr; }
-    .proof-item { min-height: 84px; border-right: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); padding: 16px; }
-    .proof-item:nth-child(2), .proof-item:nth-child(4) { border-right: 0; }
-    .proof-item:nth-child(3), .proof-item:nth-child(4) { border-bottom: 0; }
-    .proof-item:last-child { border-bottom: 0; }
+    .proof-band { padding: 54px 0; }
+    .proof-grid { grid-template-columns: 1fr; }
+    .proof-item { min-height: 138px; padding: 18px; }
+    .proof-item span { font-size: 22px; }
   }
   @media (max-width: 420px) {
     .brand span { display: none; }
@@ -519,7 +608,20 @@ ${THEME_SCRIPT}
     </a>
     <div class="nav-actions">
       <button class="icon-button theme-toggle" type="button" data-theme-toggle>
-        <img class="theme-favicon" src="${FAVICON_HREF}" alt="">
+        <svg class="theme-icon moon-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.8A8.7 8.7 0 1 1 11.2 3 6.8 6.8 0 0 0 21 12.8Z"></path>
+        </svg>
+        <svg class="theme-icon sun-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.9 4.9 1.4 1.4"></path>
+          <path d="m17.7 17.7 1.4 1.4"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m4.9 19.1 1.4-1.4"></path>
+          <path d="m17.7 6.3 1.4-1.4"></path>
+        </svg>
         <span class="sr-only" data-theme-label>Theme</span>
       </button>
       <a class="icon-button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
@@ -536,9 +638,10 @@ ${THEME_SCRIPT}
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy-block">
-        <div class="eyebrow">Open-source screen recording</div>
-        <h1>Record your screen. Keep control.</h1>
-        <p class="hero-copy">A tiny Mac recorder for demos and bug reports. Files save locally first; sharing is optional and temporary.</p>
+        <div class="signal-pill">Open source &middot; local first &middot; no account</div>
+        <div class="eyebrow">Mac screen recorder</div>
+        <h1>Record locally. Share only if needed.</h1>
+        <p class="hero-copy">An open-source Mac recorder for demos and bug reports. Files stay on your Mac unless you choose to upload a temporary link.</p>
         <div class="cta-row">
           <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
         </div>
@@ -577,11 +680,18 @@ ${THEME_SCRIPT}
   </section>
 
   <section class="proof-band" aria-label="Product principles">
-    <div class="proof-grid">
-      <div class="proof-item"><span>Local first</span><p>Recordings start on your Mac.</p></div>
-      <div class="proof-item"><span>Open source</span><p>The app and worker are public.</p></div>
-      <div class="proof-item"><span>Optional links</span><p>Uploads are short-lived.</p></div>
-      <div class="proof-item"><span>No accounts</span><p>No sign-in for viewers.</p></div>
+    <div class="wrap proof-layout">
+      <div class="proof-copy">
+        <p class="proof-kicker">Why Screencast.to</p>
+        <h2>Screen recording without the black box.</h2>
+        <p>Capture from the menu bar, keep the file locally, and create a browser link only when sharing actually helps.</p>
+      </div>
+      <div class="proof-grid">
+        <div class="proof-item"><span>Local first</span><p>Recordings are files on your Mac before anything leaves the machine.</p></div>
+        <div class="proof-item"><span>Open source</span><p>The macOS app and Cloudflare worker are public, inspectable, and Apache-2.0 licensed.</p></div>
+        <div class="proof-item"><span>Optional links</span><p>Upload only when needed. Shared videos are short-lived instead of becoming a permanent library.</p></div>
+        <div class="proof-item"><span>No account wall</span><p>Viewers can open the link in a browser without signing in or joining a workspace.</p></div>
+      </div>
     </div>
   </section>
 </main>
