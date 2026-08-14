@@ -10,7 +10,7 @@ export function renderHome(): string {
 <meta name="theme-color" content="#fbfaee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)">
 <title>${BRAND} - Local-first Mac screen recorder</title>
-<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Record locally, then share an optional 24-hour link. No accounts, no permanent video library.">
+<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Record locally, then share an optional expiring link. No accounts, no permanent video library.">
 <meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, open source screen recorder, macOS, temporary video link">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
@@ -19,7 +19,7 @@ export function renderHome(): string {
 
 <meta property="og:site_name" content="Screencast.to">
 <meta property="og:title" content="Screencast.to - Local-first Mac screen recorder">
-<meta property="og:description" content="Record on your Mac. Share a 24-hour link only when you choose. Open source, local first, no accounts.">
+<meta property="og:description" content="Record on your Mac. Share an expiring link only when you choose. Open source, local first, no accounts.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
 <meta property="og:image" content="${OG_IMAGE_URL}">
@@ -30,7 +30,7 @@ export function renderHome(): string {
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Screencast.to - Local-first Mac screen recorder">
-<meta name="twitter:description" content="A tiny open-source Mac recorder for local captures and optional 24-hour share links.">
+<meta name="twitter:description" content="A tiny open-source Mac recorder for local captures and optional expiring share links.">
 <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
 ${GA_SNIPPET}
@@ -200,16 +200,11 @@ ${THEME_SCRIPT}
     align-items: center;
     gap: 8px;
   }
-  .nav-link {
-    min-height: 38px;
-    display: inline-flex;
-    align-items: center;
-    color: var(--ink-soft);
-    font-size: 14px;
-    padding: 8px 10px;
+  .icon-button {
+    width: 40px;
+    padding: 0;
   }
-  .nav-link:hover { color: var(--ink); }
-  .button, .theme-toggle, .menu-button {
+  .button, .icon-button {
     min-height: 40px;
     display: inline-flex;
     align-items: center;
@@ -225,7 +220,8 @@ ${THEME_SCRIPT}
     padding: 9px 14px;
     cursor: pointer;
   }
-  .button:hover, .theme-toggle:hover, .menu-button:hover { border-color: var(--line-strong); }
+  .icon-button { padding: 0; }
+  .button:hover, .icon-button:hover { border-color: var(--line-strong); }
   .button.primary {
     background: var(--accent);
     border-color: var(--ink);
@@ -235,31 +231,20 @@ ${THEME_SCRIPT}
   .button.primary:hover {
     background: var(--accent-strong);
   }
-  .theme-toggle::before {
-    content: "";
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: linear-gradient(90deg, var(--accent) 0 50%, var(--surface-soft) 50% 100%);
-    border: 1px solid var(--line-strong);
+  .theme-favicon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    box-shadow: 0 8px 18px rgba(255,71,63,0.2);
   }
-  .menu-button {
-    display: none;
-    width: 40px;
-    padding: 0;
+  .github-mark {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
   }
-  .menu-button span {
-    width: 16px;
-    height: 2px;
-    border-radius: 999px;
-    background: currentColor;
-    box-shadow: 0 5px 0 currentColor, 0 -5px 0 currentColor;
-  }
-
   .hero {
     position: relative;
-    min-height: calc(100vh - 68px);
-    padding: 80px 0 0;
+    padding: 92px 0 84px;
     overflow: hidden;
   }
   .hero-grid {
@@ -315,34 +300,12 @@ ${THEME_SCRIPT}
 
   .demo-stage {
     position: relative;
-    min-height: 540px;
-  }
-  .motion-line {
-    position: absolute;
-    left: -8%;
-    right: -18%;
-    top: 134px;
-    height: 46px;
-    border-radius: 999px;
-    background: var(--panel);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-    overflow: hidden;
-    transform: rotate(-5deg);
-    box-shadow: 0 22px 60px -36px var(--shadow-strong);
-  }
-  .motion-line span {
-    display: inline-block;
-    padding-right: 48px;
-    animation: marquee 18s linear infinite;
-    font-weight: 720;
+    min-height: 430px;
   }
   .recorder-card {
     position: absolute;
     right: 0;
-    top: 16px;
+    top: 0;
     width: min(100%, 460px);
     border: 1px solid var(--line-strong);
     border-radius: 8px;
@@ -424,176 +387,43 @@ ${THEME_SCRIPT}
     color: #1f9d5a;
     font-weight: 820;
   }
-  .floating-control {
-    position: absolute;
-    left: 10px;
-    bottom: 92px;
-    min-width: 286px;
-    height: 50px;
-    border-radius: 999px;
-    border: 1px solid var(--panel-line);
-    background: rgba(23,23,23,0.92);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    box-shadow: 0 24px 58px -34px var(--shadow-strong);
-    animation: floatBar 5.8s ease-in-out infinite;
-    backdrop-filter: blur(14px);
-  }
-  .pulse {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #ffc257;
-    box-shadow: 0 0 18px rgba(255,194,87,0.8);
-  }
-  .camera-bubble {
-    position: absolute;
-    right: 32px;
-    bottom: 30px;
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    border: 4px solid rgba(255,255,255,0.88);
-    background: linear-gradient(145deg, #c5ccd4, #5f6a76);
-    display: grid;
-    place-items: center;
-    box-shadow: 0 26px 54px -26px var(--shadow-strong);
-    animation: floatCamera 6.4s ease-in-out infinite;
-  }
-  .camera-bubble::before {
-    content: "";
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.28);
-    box-shadow: 0 40px 0 18px rgba(255,255,255,0.18);
-  }
-  .hero-curve {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 136px;
-    background: var(--panel);
-    border-radius: 72px 72px 0 0;
-  }
-
   .proof-band {
     position: relative;
     z-index: 2;
     background: var(--panel);
     color: #fff;
-    padding: 54px 0 66px;
+    padding: 0;
   }
   .proof-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 28px;
+    gap: 0;
+    overflow: hidden;
+    border-top: 1px solid var(--panel-line);
+    border-bottom: 1px solid var(--panel-line);
+  }
+  .proof-item {
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 18px 28px;
+    border-right: 1px solid var(--panel-line);
+  }
+  .proof-item:last-child { border-right: 0; }
+  .proof-item p {
+    margin: 6px 0 0;
+    color: var(--panel-text);
+    font-size: 13px;
+    line-height: 1.35;
   }
   .proof-item span {
     display: block;
-    color: var(--panel-text);
-    font-size: 12px;
+    color: #fff;
+    font-size: 13px;
     font-weight: 820;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .proof-item strong {
-    display: block;
-    font-size: 18px;
-    line-height: 1.25;
   }
 
-  section {
-    padding: 86px 0;
-    border-top: 1px solid var(--line);
-  }
-  .simple-section {
-    display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 56px;
-    align-items: start;
-  }
-  .section-kicker {
-    margin: 0 0 10px;
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 820;
-    text-transform: uppercase;
-  }
-  h2 {
-    margin: 0;
-    font: 760 44px/1.05 ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  }
-  .section-copy {
-    margin: 18px 0 0;
-    color: var(--ink-soft);
-    font-size: 18px;
-  }
-  .feature-list {
-    display: grid;
-    gap: 10px;
-  }
-  .feature-row {
-    display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 14px;
-    align-items: start;
-    padding: 18px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
-  }
-  .feature-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    background: var(--accent-soft);
-    color: var(--accent-strong);
-    font-weight: 820;
-  }
-  .feature-row:nth-child(2) .feature-icon { background: var(--blue); color: #2364c8; }
-  .feature-row:nth-child(3) .feature-icon { background: var(--sage); color: #267247; }
-  .feature-row h3 {
-    margin: 0 0 4px;
-    font-size: 18px;
-  }
-  .feature-row p {
-    margin: 0;
-    color: var(--ink-soft);
-  }
-  .mini-workflow {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 32px;
-  }
-  .mini-step {
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
-    padding: 18px;
-  }
-  .mini-step span {
-    display: block;
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 820;
-    margin-bottom: 12px;
-  }
-  .mini-step strong { display: block; }
-  .final-cta {
-    text-align: center;
-    padding-bottom: 92px;
-  }
-  .final-cta h2 { max-width: 660px; margin: 0 auto; }
-  .final-cta .section-copy { max-width: 560px; margin-left: auto; margin-right: auto; }
-  .final-cta .cta-row { justify-content: center; }
   footer {
     border-top: 1px solid var(--line);
     padding: 24px 0;
@@ -610,21 +440,9 @@ ${THEME_SCRIPT}
   footer a { color: var(--ink-soft); }
   footer a:hover { color: var(--ink); text-decoration: underline; }
 
-  @keyframes marquee {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
   @keyframes floatCard {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
-  }
-  @keyframes floatBar {
-    0%, 100% { transform: translateY(0) rotate(-1deg); }
-    50% { transform: translateY(10px) rotate(1deg); }
-  }
-  @keyframes floatCamera {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-14px); }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -640,47 +458,28 @@ ${THEME_SCRIPT}
       gap: 34px;
     }
     h1 { font-size: 58px; }
-    .demo-stage { min-height: 500px; }
+    .demo-stage { min-height: 430px; }
     .recorder-card { left: 0; right: auto; }
-    .motion-line { top: 116px; }
     .proof-grid { grid-template-columns: repeat(2, 1fr); }
-    .simple-section { grid-template-columns: 1fr; gap: 32px; }
+    .proof-item:nth-child(2) { border-right: 0; }
+    .proof-item:nth-child(1), .proof-item:nth-child(2) { border-bottom: 1px solid var(--panel-line); }
   }
   @media (max-width: 720px) {
     .wrap { width: min(1120px, calc(100% - 28px)); }
     html, body { overflow-x: hidden; }
-    .nav-inner { height: 64px; position: relative; }
-    .menu-button { display: inline-flex; }
-    .nav-actions {
-      position: absolute;
-      top: calc(100% + 1px);
-      left: 0;
-      right: 0;
-      display: none;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: 0 18px 48px -28px var(--shadow-strong);
-    }
-    .nav-actions[data-open="true"] { display: flex; }
-    .nav-link, .button, .theme-toggle { width: 100%; justify-content: flex-start; }
+    .nav-inner { height: 64px; position: relative; gap: 10px; }
+    .nav-actions { gap: 6px; }
+    .icon-button { width: 38px; min-height: 38px; }
+    .nav-actions .button.primary { min-height: 38px; padding: 8px 11px; }
     .hero { padding-top: 48px; }
     h1 { font-size: 46px; }
-    h2 { font-size: 34px; }
     .hero-copy { font-size: 18px; }
     .cta-row { display: grid; grid-template-columns: 1fr; }
     .button { min-width: 0; }
     .cta-row .button { justify-content: center; }
-    .demo-stage { min-height: 430px; overflow: hidden; }
-    .motion-line {
-      display: none;
-    }
+    .demo-stage { min-height: 370px; overflow: hidden; }
     .recorder-card {
-      top: 28px;
+      top: 18px;
       width: 100%;
     }
     .setting { align-items: flex-start; }
@@ -699,21 +498,14 @@ ${THEME_SCRIPT}
       white-space: nowrap;
     }
     .card-body { padding: 18px; }
-    .floating-control {
-      left: 12px;
-      right: 12px;
-      bottom: 44px;
-      min-width: 0;
-      width: auto;
-      border-radius: 8px;
-    }
-    .camera-bubble { display: none; }
-    .hero-curve { height: 96px; border-radius: 42px 42px 0 0; }
-    .proof-band { padding: 38px 0 48px; }
-    .proof-grid, .mini-workflow { grid-template-columns: 1fr; }
-    section { padding: 62px 0; }
-    .final-cta { text-align: left; }
-    .final-cta .cta-row { justify-content: flex-start; }
+    .proof-grid { grid-template-columns: 1fr 1fr; }
+    .proof-item { min-height: 84px; border-right: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); padding: 16px; }
+    .proof-item:nth-child(2), .proof-item:nth-child(4) { border-right: 0; }
+    .proof-item:nth-child(3), .proof-item:nth-child(4) { border-bottom: 0; }
+    .proof-item:last-child { border-bottom: 0; }
+  }
+  @media (max-width: 420px) {
+    .brand span { display: none; }
   }
 </style>
 </head>
@@ -725,15 +517,16 @@ ${THEME_SCRIPT}
       <img src="/assets/icon.png" alt="">
       <span>${BRAND}</span>
     </a>
-    <button class="menu-button" type="button" data-menu-button aria-controls="site-menu" aria-expanded="false">
-      <span aria-hidden="true"></span>
-      <span class="sr-only">Open menu</span>
-    </button>
-    <div class="nav-actions" id="site-menu" data-nav-actions>
-      <a class="nav-link" href="#why">Why</a>
-      <a class="nav-link" href="/privacy">Privacy</a>
-      <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
-      <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <div class="nav-actions">
+      <button class="icon-button theme-toggle" type="button" data-theme-toggle>
+        <img class="theme-favicon" src="${FAVICON_HREF}" alt="">
+        <span class="sr-only" data-theme-label>Theme</span>
+      </button>
+      <a class="icon-button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+        <svg class="github-mark" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.67 0 8.19c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.39 0-.19-.01-.84-.01-1.53-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.16-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.83.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.09-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.2-.08-.21-.36-1.04.08-2.17 0 0 .67-.22 2.2.84A7.38 7.38 0 0 1 8 3.95c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.13.16 1.96.08 2.17.51.58.82 1.31.82 2.2 0 3.13-1.87 3.82-3.65 4.03.29.26.54.75.54 1.52 0 1.09-.01 1.97-.01 2.24 0 .21.15.47.55.39A8.13 8.13 0 0 0 16 8.19C16 3.67 12.42 0 8 0Z"/>
+        </svg>
+      </a>
       <a class="button primary" href="${DOWNLOAD_URL}" download>Download</a>
     </div>
   </div>
@@ -745,19 +538,14 @@ ${THEME_SCRIPT}
       <div class="hero-copy-block">
         <div class="eyebrow">Open-source screen recording</div>
         <h1>Record your screen. Keep control.</h1>
-        <p class="hero-copy">A tiny Mac recorder for demos and bug reports. Files save locally first; upload only when you want a 24-hour link.</p>
+        <p class="hero-copy">A tiny Mac recorder for demos and bug reports. Files save locally first; sharing is optional and temporary.</p>
         <div class="cta-row">
           <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
-          <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">View source</a>
         </div>
         <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; Apache-2.0</p>
       </div>
 
       <div class="demo-stage" aria-label="Screencast.to recording workflow preview">
-        <div class="motion-line" aria-hidden="true">
-          <span>screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp; screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp;</span>
-          <span>screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp; screen + camera &nbsp; local file &nbsp; optional upload &nbsp; 24-hour link &nbsp;</span>
-        </div>
         <div class="recorder-card">
           <div class="card-top">
             <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
@@ -784,70 +572,16 @@ ${THEME_SCRIPT}
             </div>
           </div>
         </div>
-        <div class="floating-control"><span class="pulse"></span><span>00:03 &middot; camera warming up</span></div>
-        <div class="camera-bubble"></div>
       </div>
     </div>
-    <div class="hero-curve" aria-hidden="true"></div>
   </section>
 
   <section class="proof-band" aria-label="Product principles">
-    <div class="wrap proof-grid">
-      <div class="proof-item"><span>Local first</span><strong>Recordings start on your Mac, not in a cloud library.</strong></div>
-      <div class="proof-item"><span>Open source</span><strong>The app, upload worker, and site are public.</strong></div>
-      <div class="proof-item"><span>Temporary links</span><strong>Shared recordings auto-delete after the short window.</strong></div>
-      <div class="proof-item"><span>No accounts</span><strong>Record and share without making viewers sign in.</strong></div>
-    </div>
-  </section>
-
-  <section id="why">
-    <div class="wrap simple-section">
-      <div>
-        <p class="section-kicker">Why use it</p>
-        <h2>Made for the quick recording you do not want to manage forever.</h2>
-        <p class="section-copy">Use it when a screenshot is not enough and a full video workspace is too much.</p>
-      </div>
-      <div class="feature-list">
-        <article class="feature-row">
-          <span class="feature-icon">1</span>
-          <div>
-            <h3>Capture the useful context.</h3>
-            <p>Record screen, region, camera, microphone, and system audio from the menu bar.</p>
-          </div>
-        </article>
-        <article class="feature-row">
-          <span class="feature-icon">2</span>
-          <div>
-            <h3>Start cleanly.</h3>
-            <p>Camera recordings wait through a short countdown so the first recorded frame is ready.</p>
-          </div>
-        </article>
-        <article class="feature-row">
-          <span class="feature-icon">3</span>
-          <div>
-            <h3>Share, then let it expire.</h3>
-            <p>Upload only when needed. The viewer link works in a browser and then disappears.</p>
-          </div>
-        </article>
-      </div>
-    </div>
-
-    <div class="wrap mini-workflow">
-      <div class="mini-step"><span>01</span><strong>Pick a capture mode.</strong></div>
-      <div class="mini-step"><span>02</span><strong>Record locally.</strong></div>
-      <div class="mini-step"><span>03</span><strong>Upload only if needed.</strong></div>
-    </div>
-  </section>
-
-  <section class="final-cta">
-    <div class="wrap">
-      <p class="section-kicker">Get started</p>
-      <h2>A small recorder for work that should not become another inbox.</h2>
-      <p class="section-copy">Free, open source, and built for macOS 15 or newer.</p>
-      <div class="cta-row">
-        <a class="button primary" href="${DOWNLOAD_URL}" download>Download .dmg</a>
-        <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">Read the code</a>
-      </div>
+    <div class="proof-grid">
+      <div class="proof-item"><span>Local first</span><p>Recordings start on your Mac.</p></div>
+      <div class="proof-item"><span>Open source</span><p>The app and worker are public.</p></div>
+      <div class="proof-item"><span>Optional links</span><p>Uploads are short-lived.</p></div>
+      <div class="proof-item"><span>No accounts</span><p>No sign-in for viewers.</p></div>
     </div>
   </section>
 </main>
@@ -855,7 +589,7 @@ ${THEME_SCRIPT}
 <footer>
   <div class="wrap foot">
     <span>&copy; ${new Date().getFullYear()} ${BRAND}</span>
-    <span>Local first &middot; Open source &middot; 24-hour links &middot; <a href="/privacy">Privacy</a> &middot; <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    <span>Local first &middot; Open source &middot; Optional sharing &middot; <a href="/privacy">Privacy</a> &middot; <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a></span>
   </div>
 </footer>
 
