@@ -76,7 +76,19 @@ ${THEME_SCRIPT}
   }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   nav {
+    position: sticky; top: 0; z-index: 20;
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 28px;
     border-bottom: 1px solid var(--border);
@@ -89,10 +101,12 @@ ${THEME_SCRIPT}
   .brand .dot { width: 10px; height: 10px; border-radius: 50%;
     background: var(--accent); box-shadow: 0 0 14px var(--accent); }
   .nav-actions { display: flex; align-items: center; gap: 8px; }
-  .theme-toggle {
+  .home-link { color: var(--text-2); font-size: 14px; }
+  .theme-toggle, .menu-button {
     min-height: 36px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -104,7 +118,7 @@ ${THEME_SCRIPT}
     padding: 7px 11px;
     cursor: pointer;
   }
-  .theme-toggle:hover { border-color: var(--border-strong); }
+  .theme-toggle:hover, .menu-button:hover { border-color: var(--border-strong); }
   .theme-toggle::before {
     content: "";
     width: 14px;
@@ -112,6 +126,18 @@ ${THEME_SCRIPT}
     border-radius: 50%;
     background: linear-gradient(90deg, var(--accent) 0 50%, var(--border) 50% 100%);
     border: 1px solid var(--border-strong);
+  }
+  .menu-button {
+    display: none;
+    width: 38px;
+    padding: 0;
+  }
+  .menu-button span {
+    width: 16px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 5px 0 currentColor, 0 -5px 0 currentColor;
   }
   main { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
   h1 { font-size: 36px; letter-spacing: 0; margin-bottom: 8px; }
@@ -133,14 +159,39 @@ ${THEME_SCRIPT}
   code { background: var(--bg-elev); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
   footer { border-top: 1px solid var(--border); padding: 24px; color: var(--muted); font-size: 13px; text-align: center; }
   footer a { color: var(--text-2); }
+  @media (max-width: 640px) {
+    nav { padding: 14px; }
+    .menu-button { display: inline-flex; }
+    .nav-actions {
+      position: absolute;
+      top: calc(100% + 1px);
+      left: 14px;
+      right: 14px;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elev);
+      box-shadow: 0 18px 48px -28px rgba(0,0,0,0.32);
+    }
+    .nav-actions[data-open="true"] { display: flex; }
+    .theme-toggle, .home-link { width: 100%; justify-content: flex-start; }
+  }
 </style>
 </head>
 <body>
 <nav>
   <a class="brand" href="/"><span class="dot"></span><span>${BRAND}</span></a>
-  <div class="nav-actions">
+  <button class="menu-button" type="button" data-menu-button aria-controls="site-menu" aria-expanded="false">
+    <span aria-hidden="true"></span>
+    <span class="sr-only">Open menu</span>
+  </button>
+  <div class="nav-actions" id="site-menu" data-nav-actions>
     <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
-    <a href="/" style="color: var(--text-2); font-size: 14px;">&larr; Home</a>
+    <a class="home-link" href="/">&larr; Home</a>
   </div>
 </nav>
 <main>

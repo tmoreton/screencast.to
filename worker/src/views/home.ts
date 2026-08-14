@@ -7,10 +7,10 @@ export function renderHome(): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0d0f" media="(prefers-color-scheme: dark)">
-<title>${BRAND} - Temporary screen recording for Mac</title>
-<meta name="description" content="Screencast.to is a tiny open-source macOS menu-bar recorder. Record locally, then share an optional 24-hour link. No accounts, no permanent video library.">
+<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)">
+<title>${BRAND} - Local-first Mac screen recorder</title>
+<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Capture locally, then share an optional 24-hour link. No accounts, no permanent video library.">
 <meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, open source screen recorder, macOS, temporary video link">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
@@ -18,8 +18,8 @@ export function renderHome(): string {
 <link rel="icon" href="${FAVICON_HREF}">
 
 <meta property="og:site_name" content="Screencast.to">
-<meta property="og:title" content="Screencast.to - Temporary screen recording for Mac">
-<meta property="og:description" content="Record locally. Share a 24-hour link only when you choose. Open source, no accounts.">
+<meta property="og:title" content="Screencast.to - Local-first Mac screen recorder">
+<meta property="og:description" content="Record on your Mac. Share a 24-hour link only when you choose. Open source, local first, no accounts.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
 <meta property="og:image" content="${OG_IMAGE_URL}">
@@ -29,7 +29,7 @@ export function renderHome(): string {
 <meta property="og:locale" content="en_US">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Screencast.to - Temporary screen recording for Mac">
+<meta name="twitter:title" content="Screencast.to - Local-first Mac screen recorder">
 <meta name="twitter:description" content="A tiny open-source Mac recorder for local captures and optional 24-hour share links.">
 <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
@@ -38,97 +38,113 @@ ${THEME_SCRIPT}
 <style>
   :root {
     color-scheme: light;
-    --bg: #f7f4ef;
-    --surface: #fffaf4;
-    --surface-2: #efe7dc;
-    --surface-3: #e4dccf;
-    --line: #d4cabd;
-    --line-strong: #b9aa99;
-    --text: #191613;
-    --text-soft: #4e463e;
-    --muted: #756b61;
-    --accent: #e9363f;
-    --accent-strong: #c91f2b;
-    --accent-soft: #ffe0df;
-    --good: #26734d;
+    --bg: #fbfbfa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f2;
+    --surface-3: #ececea;
+    --ink: #101113;
+    --ink-soft: #434852;
+    --muted: #6d7380;
+    --line: #e1e2df;
+    --line-strong: #c6c8c3;
+    --accent: #ff3b30;
+    --accent-strong: #d92d24;
+    --accent-soft: #fff0ee;
+    --blue: #0a84ff;
+    --green: #1f9d5a;
+    --amber: #f7a51b;
     --button-text: #ffffff;
-    --shadow: rgba(75, 51, 35, 0.16);
-    --nav-bg: rgba(247, 244, 239, 0.84);
-    --mock-screen: #24282f;
-    --mock-screen-2: #303641;
-    --mock-line: rgba(255,255,255,0.14);
-    --mock-text: rgba(255,255,255,0.72);
+    --nav-bg: rgba(251,251,250,0.84);
+    --shadow: rgba(16,17,19,0.12);
+    --shadow-strong: rgba(16,17,19,0.2);
+    --screen: #101318;
+    --screen-2: #171b22;
+    --screen-3: #222833;
+    --screen-line: rgba(255,255,255,0.12);
+    --screen-text: rgba(255,255,255,0.76);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #0c0d0f;
-      --surface: #15171b;
-      --surface-2: #1d2026;
-      --surface-3: #282c34;
-      --line: #2b3038;
-      --line-strong: #3c424d;
-      --text: #f4f1ec;
-      --text-soft: #d0c8bd;
-      --muted: #9b9389;
-      --accent: #ff4b55;
-      --accent-strong: #ff6870;
-      --accent-soft: rgba(255,75,85,0.14);
-      --good: #6fe09f;
+      --bg: #08090b;
+      --surface: #111318;
+      --surface-2: #171a20;
+      --surface-3: #20242c;
+      --ink: #f7f7f4;
+      --ink-soft: #c5c9d1;
+      --muted: #8f96a3;
+      --line: #282d35;
+      --line-strong: #3b414d;
+      --accent: #ff4f47;
+      --accent-strong: #ff746e;
+      --accent-soft: rgba(255,79,71,0.14);
+      --blue: #60aaff;
+      --green: #55d98e;
+      --amber: #ffc257;
       --button-text: #ffffff;
-      --shadow: rgba(0,0,0,0.46);
-      --nav-bg: rgba(12, 13, 15, 0.78);
-      --mock-screen: #222731;
-      --mock-screen-2: #111318;
-      --mock-line: rgba(255,255,255,0.12);
-      --mock-text: rgba(255,255,255,0.76);
+      --nav-bg: rgba(8,9,11,0.78);
+      --shadow: rgba(0,0,0,0.44);
+      --shadow-strong: rgba(0,0,0,0.62);
+      --screen: #111318;
+      --screen-2: #181c24;
+      --screen-3: #222834;
+      --screen-line: rgba(255,255,255,0.12);
+      --screen-text: rgba(255,255,255,0.76);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0c0d0f;
-    --surface: #15171b;
-    --surface-2: #1d2026;
-    --surface-3: #282c34;
-    --line: #2b3038;
-    --line-strong: #3c424d;
-    --text: #f4f1ec;
-    --text-soft: #d0c8bd;
-    --muted: #9b9389;
-    --accent: #ff4b55;
-    --accent-strong: #ff6870;
-    --accent-soft: rgba(255,75,85,0.14);
-    --good: #6fe09f;
+    --bg: #08090b;
+    --surface: #111318;
+    --surface-2: #171a20;
+    --surface-3: #20242c;
+    --ink: #f7f7f4;
+    --ink-soft: #c5c9d1;
+    --muted: #8f96a3;
+    --line: #282d35;
+    --line-strong: #3b414d;
+    --accent: #ff4f47;
+    --accent-strong: #ff746e;
+    --accent-soft: rgba(255,79,71,0.14);
+    --blue: #60aaff;
+    --green: #55d98e;
+    --amber: #ffc257;
     --button-text: #ffffff;
-    --shadow: rgba(0,0,0,0.46);
-    --nav-bg: rgba(12, 13, 15, 0.78);
-    --mock-screen: #222731;
-    --mock-screen-2: #111318;
-    --mock-line: rgba(255,255,255,0.12);
-    --mock-text: rgba(255,255,255,0.76);
+    --nav-bg: rgba(8,9,11,0.78);
+    --shadow: rgba(0,0,0,0.44);
+    --shadow-strong: rgba(0,0,0,0.62);
+    --screen: #111318;
+    --screen-2: #181c24;
+    --screen-3: #222834;
+    --screen-line: rgba(255,255,255,0.12);
+    --screen-text: rgba(255,255,255,0.76);
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --bg: #f7f4ef;
-    --surface: #fffaf4;
-    --surface-2: #efe7dc;
-    --surface-3: #e4dccf;
-    --line: #d4cabd;
-    --line-strong: #b9aa99;
-    --text: #191613;
-    --text-soft: #4e463e;
-    --muted: #756b61;
-    --accent: #e9363f;
-    --accent-strong: #c91f2b;
-    --accent-soft: #ffe0df;
-    --good: #26734d;
+    --bg: #fbfbfa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f2;
+    --surface-3: #ececea;
+    --ink: #101113;
+    --ink-soft: #434852;
+    --muted: #6d7380;
+    --line: #e1e2df;
+    --line-strong: #c6c8c3;
+    --accent: #ff3b30;
+    --accent-strong: #d92d24;
+    --accent-soft: #fff0ee;
+    --blue: #0a84ff;
+    --green: #1f9d5a;
+    --amber: #f7a51b;
     --button-text: #ffffff;
-    --shadow: rgba(75, 51, 35, 0.16);
-    --nav-bg: rgba(247, 244, 239, 0.84);
-    --mock-screen: #24282f;
-    --mock-screen-2: #303641;
-    --mock-line: rgba(255,255,255,0.14);
-    --mock-text: rgba(255,255,255,0.72);
+    --nav-bg: rgba(251,251,250,0.84);
+    --shadow: rgba(16,17,19,0.12);
+    --shadow-strong: rgba(16,17,19,0.2);
+    --screen: #101318;
+    --screen-2: #171b22;
+    --screen-3: #222833;
+    --screen-line: rgba(255,255,255,0.12);
+    --screen-text: rgba(255,255,255,0.76);
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -136,40 +152,52 @@ ${THEME_SCRIPT}
     margin: 0;
     min-height: 100vh;
     background: var(--bg);
-    color: var(--text);
+    color: var(--ink);
     font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; text-decoration: none; }
   ::selection { background: var(--accent); color: #fff; }
   .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   nav {
     position: sticky;
     top: 0;
-    z-index: 20;
-    background: var(--nav-bg);
+    z-index: 30;
     border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--nav-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
   .nav-inner {
-    height: 72px;
+    height: 68px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
   }
   .brand {
+    min-width: max-content;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    font-weight: 700;
+    font-weight: 760;
   }
   .brand img {
     width: 28px;
     height: 28px;
     border-radius: 7px;
-    box-shadow: 0 8px 18px rgba(233,54,63,0.24);
+    box-shadow: 0 10px 22px rgba(255,59,48,0.24);
   }
   .nav-actions {
     display: flex;
@@ -177,12 +205,15 @@ ${THEME_SCRIPT}
     gap: 8px;
   }
   .nav-link {
-    color: var(--text-soft);
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    color: var(--ink-soft);
     font-size: 14px;
     padding: 8px 10px;
   }
-  .nav-link:hover { color: var(--text); }
-  .button, .theme-toggle {
+  .nav-link:hover { color: var(--ink); }
+  .button, .theme-toggle, .menu-button {
     min-height: 40px;
     display: inline-flex;
     align-items: center;
@@ -191,23 +222,24 @@ ${THEME_SCRIPT}
     border-radius: 8px;
     border: 1px solid var(--line);
     background: var(--surface);
-    color: var(--text);
+    color: var(--ink);
     font: inherit;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 720;
     padding: 9px 13px;
     cursor: pointer;
   }
-  .button:hover, .theme-toggle:hover { border-color: var(--line-strong); }
+  .button:hover, .theme-toggle:hover, .menu-button:hover { border-color: var(--line-strong); }
   .button.primary {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+    box-shadow: 0 16px 34px -22px var(--shadow-strong);
+  }
+  .button.primary:hover {
     background: var(--accent);
     border-color: var(--accent);
     color: var(--button-text);
-    box-shadow: 0 14px 28px -18px var(--accent);
-  }
-  .button.primary:hover {
-    background: var(--accent-strong);
-    border-color: var(--accent-strong);
   }
   .theme-toggle::before {
     content: "";
@@ -217,9 +249,21 @@ ${THEME_SCRIPT}
     background: linear-gradient(90deg, var(--accent) 0 50%, var(--surface-3) 50% 100%);
     border: 1px solid var(--line-strong);
   }
+  .menu-button {
+    display: none;
+    width: 40px;
+    padding: 0;
+  }
+  .menu-button span {
+    width: 16px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 5px 0 currentColor, 0 -5px 0 currentColor;
+  }
 
   .hero {
-    padding: 78px 0 54px;
+    padding: 48px 0 58px;
     text-align: center;
   }
   .eyebrow {
@@ -227,13 +271,13 @@ ${THEME_SCRIPT}
     align-items: center;
     gap: 8px;
     margin-bottom: 18px;
-    color: var(--accent);
+    color: var(--accent-strong);
     background: var(--accent-soft);
-    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
     border-radius: 999px;
     padding: 7px 12px;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 820;
     text-transform: uppercase;
   }
   .eyebrow::before {
@@ -244,16 +288,16 @@ ${THEME_SCRIPT}
     background: var(--accent);
   }
   h1 {
+    max-width: 790px;
     margin: 0 auto 18px;
-    max-width: 820px;
-    font-size: 64px;
+    font-size: 58px;
     line-height: 1.02;
-    font-weight: 800;
+    font-weight: 820;
   }
   .hero-copy {
-    max-width: 680px;
+    max-width: 720px;
     margin: 0 auto;
-    color: var(--text-soft);
+    color: var(--ink-soft);
     font-size: 19px;
   }
   .cta-row {
@@ -282,19 +326,18 @@ ${THEME_SCRIPT}
     background: var(--surface);
     border-radius: 999px;
     padding: 7px 11px;
-    color: var(--text-soft);
+    color: var(--ink-soft);
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 680;
   }
-
   .product {
-    margin: 44px auto 0;
-    max-width: 920px;
+    margin: 26px auto 0;
+    max-width: 980px;
     text-align: left;
     border: 1px solid var(--line-strong);
     border-radius: 8px;
-    background: var(--mock-screen);
-    box-shadow: 0 32px 80px -44px var(--shadow), 0 1px 0 rgba(255,255,255,0.08) inset;
+    background: var(--screen);
+    box-shadow: 0 34px 90px -56px var(--shadow-strong), 0 1px 0 rgba(255,255,255,0.08) inset;
     overflow: hidden;
   }
   .product-top {
@@ -303,41 +346,106 @@ ${THEME_SCRIPT}
     align-items: center;
     gap: 8px;
     padding: 0 14px;
-    border-bottom: 1px solid var(--mock-line);
-    background: var(--mock-screen-2);
+    border-bottom: 1px solid var(--screen-line);
+    background: var(--screen-2);
   }
   .traffic { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
   .traffic:nth-child(2) { background: #febc2e; }
   .traffic:nth-child(3) { background: #28c840; }
+  .product-title {
+    margin-left: 8px;
+    color: var(--screen-text);
+    font-size: 12px;
+    font-weight: 720;
+  }
   .product-body {
     position: relative;
     min-height: 430px;
     padding: 28px;
-    color: #f6f3ef;
+    color: #f8f8f6;
+  }
+  .recording-surface {
+    min-height: 310px;
+    border: 1px solid var(--screen-line);
+    border-radius: 8px;
+    background: var(--screen-2);
+    padding: 20px;
+  }
+  .workspace-bar {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 22px;
+    grid-template-columns: 28px minmax(90px, 210px) 1fr 76px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #59677a, #b7c1cd);
+  }
+  .line { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.16); }
+  .line.short { width: 70%; }
+  .line.blue { background: color-mix(in srgb, var(--blue) 46%, transparent); }
+  .line.green { background: color-mix(in srgb, var(--green) 56%, transparent); }
+  .work-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr;
+    gap: 12px;
+  }
+  .work-panel {
+    min-height: 190px;
+    border: 1px solid var(--screen-line);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.045);
+    padding: 14px;
+  }
+  .work-panel.large {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+  }
+  .work-panel h4 {
+    margin: 0 0 14px;
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+  }
+  .work-panel .line { margin-bottom: 13px; }
+  .work-panel.large span {
+    flex: 1;
+    min-width: 8px;
+    border-radius: 4px 4px 0 0;
+    background: rgba(255,255,255,0.18);
+  }
+  .work-panel.large span:nth-child(3),
+  .work-panel.large span:nth-child(5),
+  .work-panel.large span:nth-child(8) {
+    background: color-mix(in srgb, var(--accent) 70%, transparent);
   }
   .menu-panel {
-    align-self: start;
-    border: 1px solid var(--mock-line);
+    position: absolute;
+    left: 48px;
+    bottom: 38px;
+    width: 306px;
+    border: 1px solid var(--screen-line);
     border-radius: 8px;
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+    background: rgba(17,19,24,0.9);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.36);
     overflow: hidden;
+    backdrop-filter: blur(16px);
   }
   .menu-head, .menu-row, .recording-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid var(--mock-line);
+    border-bottom: 1px solid var(--screen-line);
     padding: 13px 14px;
   }
   .menu-head img { width: 24px; height: 24px; border-radius: 6px; }
-  .menu-title { font-weight: 750; }
-  .menu-sub { color: var(--mock-text); font-size: 12px; }
-  .menu-row { justify-content: space-between; color: var(--mock-text); font-size: 13px; }
-  .menu-row strong { color: #fff; font-weight: 700; }
+  .menu-title { color: #fff; font-weight: 760; }
+  .menu-sub { color: var(--screen-text); font-size: 12px; }
+  .menu-row { justify-content: space-between; color: var(--screen-text); font-size: 13px; }
+  .menu-row strong { color: #fff; font-weight: 720; }
   .start-button {
     margin: 14px;
     height: 42px;
@@ -346,70 +454,17 @@ ${THEME_SCRIPT}
     display: grid;
     place-items: center;
     color: #fff;
-    font-weight: 800;
+    font-weight: 820;
   }
   .recording-row { border-bottom: 0; align-items: flex-start; }
   .recording-dot { width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--accent); }
-  .upload { margin-left: auto; color: var(--good); font-weight: 800; font-size: 12px; }
-  .screen {
-    min-height: 330px;
-    border: 1px solid var(--mock-line);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
-      var(--mock-screen-2);
-    padding: 20px;
-  }
-  .screen-toolbar {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 22px;
-  }
-  .avatar { width: 28px; height: 28px; border-radius: 50%; background: #7b8494; }
-  .line { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.16); }
-  .line.a { width: 44%; }
-  .line.b { width: 20%; margin-left: auto; }
-  .screen-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .screen-card {
-    height: 90px;
-    border-radius: 8px;
-    border: 1px solid var(--mock-line);
-    background: rgba(255,255,255,0.06);
-    padding: 14px;
-  }
-  .screen-card .line { margin-bottom: 14px; }
-  .screen-card .line:last-child { width: 62%; background: rgba(111,224,159,0.5); }
-  .bars {
-    height: 142px;
-    border: 1px solid var(--mock-line);
-    border-radius: 8px;
-    background: rgba(0,0,0,0.12);
-    display: flex;
-    align-items: end;
-    gap: 8px;
-    padding: 14px;
-  }
-  .bars span {
-    flex: 1;
-    min-width: 8px;
-    border-radius: 4px 4px 0 0;
-    background: rgba(255,255,255,0.18);
-  }
-  .bars span:nth-child(4), .bars span:nth-child(5), .bars span:nth-child(7) {
-    background: rgba(255,75,85,0.6);
-  }
-  .countdown {
+  .upload { margin-left: auto; color: var(--green); font-weight: 820; font-size: 12px; }
+  .control-bar {
     position: absolute;
-    top: 70px;
+    top: 94px;
     left: 50%;
     transform: translateX(-50%);
-    min-width: 246px;
+    min-width: 286px;
     height: 46px;
     display: flex;
     align-items: center;
@@ -417,32 +472,30 @@ ${THEME_SCRIPT}
     gap: 10px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.18);
-    background: rgba(12,13,15,0.8);
-    box-shadow: 0 18px 40px rgba(0,0,0,0.28);
-    backdrop-filter: blur(14px);
+    background: rgba(8,9,11,0.82);
     color: #fff;
-    font-weight: 800;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.32);
+    backdrop-filter: blur(14px);
+    font-weight: 820;
   }
-  .countdown .pulse {
+  .control-bar .pulse {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #f6a23a;
-    box-shadow: 0 0 16px rgba(246,162,58,0.78);
+    background: var(--amber);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--amber) 78%, transparent);
   }
   .camera {
     position: absolute;
     right: 48px;
     bottom: 42px;
-    width: 106px;
-    height: 106px;
+    width: 108px;
+    height: 108px;
     border-radius: 50%;
     border: 4px solid rgba(255,255,255,0.88);
-    background: linear-gradient(145deg, #b4bfcb, #5b6471);
+    background: linear-gradient(145deg, #c1cad5, #56616f);
     display: grid;
     place-items: center;
-    color: rgba(255,255,255,0.72);
-    font-weight: 900;
     box-shadow: 0 18px 38px rgba(0,0,0,0.36);
   }
   .camera::before {
@@ -455,20 +508,27 @@ ${THEME_SCRIPT}
   }
 
   section {
-    padding: 70px 0;
+    padding: 72px 0;
     border-top: 1px solid var(--line);
   }
   .section-head {
-    max-width: 620px;
+    max-width: 660px;
     margin-bottom: 28px;
+  }
+  .section-kicker {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 820;
+    text-transform: uppercase;
   }
   h2 {
     margin: 0 0 10px;
     font-size: 34px;
-    line-height: 1.16;
+    line-height: 1.15;
   }
-  .section-head p, .split p, .card p, .step p {
-    color: var(--text-soft);
+  .section-head p, .split p, .card p, .step p, .compact-copy {
+    color: var(--ink-soft);
     margin: 0;
   }
   .cards {
@@ -477,24 +537,51 @@ ${THEME_SCRIPT}
     gap: 14px;
   }
   .card {
-    min-height: 170px;
+    min-height: 176px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 22px;
   }
   .card small {
-    display: inline-block;
-    color: var(--accent);
-    font-weight: 850;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-weight: 820;
     text-transform: uppercase;
     font-size: 11px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
+  .card small::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .card:nth-child(2) small::before { background: var(--blue); }
+  .card:nth-child(3) small::before { background: var(--green); }
   .card h3 {
     margin: 0 0 8px;
     font-size: 18px;
   }
+  .feature-table {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .feature-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 22px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .feature-row:last-child { border-bottom: 0; }
+  .feature-row strong { font-size: 15px; }
+  .feature-row p { margin: 0; color: var(--ink-soft); }
   .steps {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -504,6 +591,8 @@ ${THEME_SCRIPT}
     border-left: 3px solid var(--accent);
     padding-left: 18px;
   }
+  .step:nth-child(2) { border-left-color: var(--amber); }
+  .step:nth-child(3) { border-left-color: var(--green); }
   .step strong {
     display: block;
     margin-bottom: 6px;
@@ -511,8 +600,8 @@ ${THEME_SCRIPT}
   }
   .split {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 28px;
+    grid-template-columns: 0.88fr 1.12fr;
+    gap: 34px;
     align-items: start;
   }
   .checks {
@@ -526,16 +615,16 @@ ${THEME_SCRIPT}
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface);
-    padding: 14px 16px;
-    color: var(--text-soft);
+    padding: 15px 16px;
+    color: var(--ink-soft);
   }
-  .checks strong { color: var(--text); }
+  .checks strong { color: var(--ink); }
   .final-cta {
     text-align: center;
-    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 42px 24px;
+    background: var(--surface);
+    padding: 44px 24px;
   }
   .final-cta h2 { margin-bottom: 12px; }
   footer {
@@ -551,35 +640,78 @@ ${THEME_SCRIPT}
     gap: 14px;
     flex-wrap: wrap;
   }
-  footer a { color: var(--text-soft); }
-  footer a:hover { color: var(--text); text-decoration: underline; }
+  footer a { color: var(--ink-soft); }
+  footer a:hover { color: var(--ink); text-decoration: underline; }
 
-  @media (max-width: 840px) {
-    .nav-inner { height: auto; padding: 14px 0; align-items: flex-start; }
-    .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
-    .nav-link { display: none; }
-    h1 { font-size: 46px; }
-    .hero { padding-top: 54px; }
-    .product-body { grid-template-columns: 1fr; min-height: 0; }
-    .countdown { top: 360px; }
+  @media (max-width: 900px) {
+    h1 { font-size: 50px; }
+    .product-body { min-height: 0; }
+    .work-grid { grid-template-columns: 1fr; }
+    .work-panel.large { min-height: 130px; }
+    .control-bar { top: 82px; }
+    .menu-panel {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      width: 100%;
+      margin-top: 18px;
+    }
+    .camera {
+      right: 32px;
+      bottom: 210px;
+      width: 92px;
+      height: 92px;
+    }
     .cards, .steps, .split { grid-template-columns: 1fr; }
-    .screen-grid { grid-template-columns: 1fr; }
   }
-  @media (max-width: 560px) {
+  @media (max-width: 720px) {
     .wrap { width: min(1120px, calc(100% - 28px)); }
-    h1 { font-size: 38px; }
+    .nav-inner { height: 64px; position: relative; }
+    .menu-button { display: inline-flex; }
+    .nav-actions {
+      position: absolute;
+      top: calc(100% + 1px);
+      left: 0;
+      right: 0;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 18px 48px -28px var(--shadow-strong);
+    }
+    .nav-actions[data-open="true"] { display: flex; }
+    .nav-link, .button, .theme-toggle { width: 100%; justify-content: flex-start; }
+    h1 { font-size: 42px; }
     h2 { font-size: 28px; }
-    .hero { text-align: left; }
-    .hero-copy { font-size: 17px; max-width: 360px; margin-left: 0; margin-right: 0; }
-    .cta-row, .facts { justify-content: flex-start; max-width: 360px; }
-    .button, .theme-toggle { width: 100%; }
-    .nav-actions { width: 100%; flex-direction: column; align-items: stretch; }
-    .brand { margin-bottom: 4px; }
-    .nav-inner { display: block; }
+    .hero { padding-top: 54px; text-align: left; }
+    .eyebrow { max-width: 100%; }
+    .hero-copy { font-size: 17px; max-width: 420px; margin-left: 0; margin-right: 0; }
+    .cta-row, .facts { justify-content: flex-start; }
+    .cta-row .button { justify-content: center; }
+    .product { margin-top: 34px; }
     .product-body { padding: 16px; }
-    .screen { display: none; }
-    .countdown { position: static; transform: none; margin: 16px 0 0; width: 100%; }
+    .recording-surface { padding: 14px; }
+    .workspace-bar { grid-template-columns: 28px 1fr; }
+    .workspace-bar .line:nth-child(n+3) { display: none; }
+    .work-panel:nth-child(2) { display: none; }
+    .control-bar {
+      position: static;
+      transform: none;
+      width: 100%;
+      min-width: 0;
+      margin: 14px 0 0;
+      border-radius: 8px;
+    }
     .camera { display: none; }
+    .feature-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    section { padding: 56px 0; }
   }
 </style>
 </head>
@@ -591,8 +723,13 @@ ${THEME_SCRIPT}
       <img src="/assets/icon.png" alt="">
       <span>${BRAND}</span>
     </a>
-    <div class="nav-actions">
-      <a class="nav-link" href="#what">What it does</a>
+    <button class="menu-button" type="button" data-menu-button aria-controls="site-menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span class="sr-only">Open menu</span>
+    </button>
+    <div class="nav-actions" id="site-menu" data-nav-actions>
+      <a class="nav-link" href="#advantages">Advantages</a>
+      <a class="nav-link" href="#workflow">Workflow</a>
       <a class="nav-link" href="/privacy">Privacy</a>
       <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
       <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -603,110 +740,159 @@ ${THEME_SCRIPT}
 
 <main>
   <section class="hero wrap">
-    <div class="eyebrow">Open-source macOS recorder</div>
-    <h1>Temporary screen recording for Mac</h1>
-    <p class="hero-copy">${BRAND} records locally from your menu bar. When you need to share, it uploads one file and gives you a 24-hour link. No accounts. No permanent cloud library.</p>
+    <div class="eyebrow">Open source. Local first. Temporary sharing.</div>
+    <h1>A local-first Mac screen recorder.</h1>
+    <p class="hero-copy">${BRAND} lives in your menu bar. Capture screen, camera, microphone, and system audio, then keep the file on your Mac or upload a 24-hour link when sharing is easier.</p>
     <div class="cta-row">
       <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
       <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">View source</a>
     </div>
-    <p class="fine-print">macOS 15+ · Apple Silicon and Intel · Apache-2.0</p>
+    <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; Apache-2.0</p>
     <ul class="facts">
-      <li>Screen, camera, mic, system audio</li>
-      <li>Camera countdown before recording</li>
-      <li>Viewer links expire after 24 hours</li>
-      <li>Viewers never need an account</li>
+      <li>No account required</li>
+      <li>Files start local</li>
+      <li>Share links expire</li>
+      <li>Source is public</li>
     </ul>
 
     <div class="product" aria-label="Screencast.to recording workflow preview">
-      <div class="product-top"><span class="traffic"></span><span class="traffic"></span><span class="traffic"></span></div>
+      <div class="product-top">
+        <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
+        <span class="product-title">${BRAND} recording workflow</span>
+      </div>
       <div class="product-body">
+        <div class="recording-surface">
+          <div class="workspace-bar">
+            <div class="avatar"></div>
+            <div class="line"></div>
+            <div class="line short"></div>
+            <div class="line blue"></div>
+          </div>
+          <div class="work-grid">
+            <div class="work-panel">
+              <h4>Bug report</h4>
+              <div class="line"></div>
+              <div class="line short"></div>
+              <div class="line green"></div>
+            </div>
+            <div class="work-panel">
+              <h4>Demo notes</h4>
+              <div class="line"></div>
+              <div class="line short"></div>
+              <div class="line"></div>
+            </div>
+            <div class="work-panel large" aria-hidden="true">
+              <span style="height:34%"></span>
+              <span style="height:48%"></span>
+              <span style="height:82%"></span>
+              <span style="height:58%"></span>
+              <span style="height:72%"></span>
+              <span style="height:44%"></span>
+              <span style="height:90%"></span>
+              <span style="height:62%"></span>
+            </div>
+          </div>
+        </div>
+        <div class="control-bar"><span class="pulse"></span><span>00:03 &middot; camera warming up</span></div>
         <div class="menu-panel">
           <div class="menu-head">
             <img src="/assets/icon.png" alt="">
             <div>
               <div class="menu-title">Ready to record</div>
-              <div class="menu-sub">Local by default</div>
+              <div class="menu-sub">Stored locally by default</div>
             </div>
           </div>
-          <div class="menu-row"><span>Format</span><strong>Screen + Camera</strong></div>
-          <div class="menu-row"><span>Microphone</span><strong>System default</strong></div>
-          <div class="menu-row"><span>Share link</span><strong>24 hours</strong></div>
+          <div class="menu-row"><span>Capture</span><strong>Screen + Camera</strong></div>
+          <div class="menu-row"><span>Audio</span><strong>Mic + System</strong></div>
+          <div class="menu-row"><span>Sharing</span><strong>24-hour link</strong></div>
           <div class="start-button">Start Recording</div>
           <div class="recording-row">
             <span class="recording-dot"></span>
             <div>
               <div class="menu-title">Screencast 2.0.1.mov</div>
-              <div class="menu-sub">Stored on this Mac</div>
+              <div class="menu-sub">Saved on this Mac</div>
             </div>
             <span class="upload">Upload</span>
           </div>
         </div>
-        <div class="screen">
-          <div class="screen-toolbar">
-            <div class="avatar"></div>
-            <div class="line a"></div>
-            <div class="line b"></div>
-          </div>
-          <div class="screen-grid">
-            <div class="screen-card"><div class="line"></div><div class="line"></div></div>
-            <div class="screen-card"><div class="line"></div><div class="line"></div></div>
-            <div class="screen-card"><div class="line"></div><div class="line"></div></div>
-          </div>
-          <div class="bars">
-            <span style="height:36%"></span><span style="height:52%"></span><span style="height:42%"></span><span style="height:78%"></span><span style="height:66%"></span><span style="height:46%"></span><span style="height:88%"></span><span style="height:58%"></span>
-          </div>
-        </div>
-        <div class="countdown"><span class="pulse"></span><span>00:03 · camera warming up</span></div>
         <div class="camera"></div>
       </div>
     </div>
   </section>
 
-  <section id="what">
+  <section id="advantages">
     <div class="wrap">
       <div class="section-head">
-        <h2>What it does</h2>
-        <p>A short list, because the app should be obvious.</p>
+        <p class="section-kicker">Why it is different</p>
+        <h2>Fast screen recordings without the permanent workspace.</h2>
+        <p>Most recording tools turn every clip into another cloud library. ${BRAND} keeps the default simple: record locally, share temporarily, and stay in control.</p>
       </div>
       <div class="cards">
         <article class="card">
-          <small>Record</small>
-          <h3>Capture the screen you actually need.</h3>
-          <p>Full display or selected region, with cursor, camera bubble, microphone, and system audio.</p>
+          <small>Local first</small>
+          <h3>Your recordings start on your Mac.</h3>
+          <p>Nothing is uploaded while you record. Keep the file, move it, delete it, or share it only when you decide.</p>
         </article>
         <article class="card">
-          <small>Keep</small>
-          <h3>Your recording starts on your Mac.</h3>
-          <p>Files are local first. Upload happens only when you click the upload control.</p>
+          <small>Transparent</small>
+          <h3>Open source from app to upload worker.</h3>
+          <p>The Swift app, Cloudflare Worker, and static site are public, so the product claims are inspectable.</p>
         </article>
         <article class="card">
-          <small>Share</small>
-          <h3>Send a link that expires.</h3>
-          <p>The viewer opens in a browser and disappears after 24 hours. No viewer login.</p>
+          <small>Temporary</small>
+          <h3>Share links are designed to disappear.</h3>
+          <p>Uploaded recordings get a browser link for viewers and are removed automatically after the short sharing window.</p>
         </article>
       </div>
     </div>
   </section>
 
   <section>
+    <div class="wrap split">
+      <div>
+        <p class="section-kicker">What it records</p>
+        <h2>Everything you need for a useful walkthrough.</h2>
+        <p class="compact-copy">Use it for bug reports, customer demos, design notes, async updates, or quick “look at this” clips that do not need a team workspace.</p>
+      </div>
+      <div class="feature-table">
+        <div class="feature-row">
+          <strong>Screen and region capture</strong>
+          <p>Record a whole display or draw a focused region around the work.</p>
+        </div>
+        <div class="feature-row">
+          <strong>Camera, mic, and system audio</strong>
+          <p>Add presence and context without configuring a heavy studio setup.</p>
+        </div>
+        <div class="feature-row">
+          <strong>Camera warm-up countdown</strong>
+          <p>Camera recordings wait before capture starts, so the first frame is already ready.</p>
+        </div>
+        <div class="feature-row">
+          <strong>Browser viewer links</strong>
+          <p>Share with anyone who has the URL. Viewers do not need to install anything or create an account.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow">
     <div class="wrap">
       <div class="section-head">
-        <h2>How it works</h2>
-        <p>The normal workflow is three clicks.</p>
+        <p class="section-kicker">Workflow</p>
+        <h2>Three steps, then back to work.</h2>
       </div>
       <div class="steps">
         <div class="step">
-          <strong>1. Pick your capture.</strong>
-          <p>Choose screen, camera layout, microphone, and optional region from the menu bar.</p>
+          <strong>1. Pick a capture mode.</strong>
+          <p>Choose screen, region, camera layout, microphone, and system audio from the menu bar.</p>
         </div>
         <div class="step">
-          <strong>2. Record after the countdown.</strong>
-          <p>Camera formats wait a few seconds so the camera can wake up before frames are written.</p>
+          <strong>2. Record locally.</strong>
+          <p>The file is written to your Mac first, with no sign-in flow or remote library in the way.</p>
         </div>
         <div class="step">
-          <strong>3. Upload only if needed.</strong>
-          <p>Copy a 24-hour link, or keep the file local and share it another way.</p>
+          <strong>3. Share only if needed.</strong>
+          <p>Upload for a temporary link, or keep the recording local and send the file however you prefer.</p>
         </div>
       </div>
     </div>
@@ -715,20 +901,22 @@ ${THEME_SCRIPT}
   <section>
     <div class="wrap split">
       <div>
-        <h2>Small by design</h2>
-        <p>${BRAND} is for quick work recordings: bug reports, walkthroughs, demos, and async updates. It is not a workspace, not a social feed, and not a place where videos pile up forever.</p>
+        <p class="section-kicker">Privacy posture</p>
+        <h2>Built for recordings you do not want hanging around.</h2>
+        <p>${BRAND} is intentionally small: no accounts, no feed, no searchable team vault, and no permanent hosted archive.</p>
       </div>
       <ul class="checks">
-        <li><strong>Open source:</strong> Swift app, Cloudflare Worker, and static site are public.</li>
-        <li><strong>Temporary uploads:</strong> shared recordings auto-delete after 24 hours.</li>
-        <li><strong>No accounts:</strong> no sign-up for you or your viewer.</li>
+        <li><strong>Local by default:</strong> recording and saving happen on your Mac before any upload exists.</li>
+        <li><strong>No viewer login:</strong> people with the link can watch in the browser until it expires.</li>
+        <li><strong>Short-lived uploads:</strong> shared files are deleted automatically by the Cloudflare R2 lifecycle rule.</li>
+        <li><strong>Open implementation:</strong> review the app and server code on GitHub.</li>
       </ul>
     </div>
   </section>
 
   <section>
     <div class="wrap final-cta">
-      <h2>Get ${BRAND}</h2>
+      <h2>Download ${BRAND}</h2>
       <p class="hero-copy">Free, open source, and built for macOS 15 or newer.</p>
       <div class="cta-row">
         <a class="button primary" href="${DOWNLOAD_URL}" download>Download .dmg</a>
@@ -741,7 +929,7 @@ ${THEME_SCRIPT}
 <footer>
   <div class="wrap foot">
     <span>&copy; ${new Date().getFullYear()} ${BRAND}</span>
-    <span>Local first · 24-hour links · <a href="/privacy">Privacy</a> · <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    <span>Local first &middot; Open source &middot; 24-hour links &middot; <a href="/privacy">Privacy</a> &middot; <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a></span>
   </div>
 </footer>
 
