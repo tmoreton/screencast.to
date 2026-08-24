@@ -21,9 +21,11 @@ final class TeleprompterController: RecordingControlsHost {
     private var speed: CGFloat = 40          // points per second
     private let speedRange: ClosedRange<CGFloat> = 10...160
     private var fontSize: CGFloat = 30
-    private let fontRange: ClosedRange<CGFloat> = 18...60
+    private let fontRange: ClosedRange<CGFloat> = 10...60
 
     private let headerHeight: CGFloat = 48
+    private let textInset = NSSize(width: 28, height: 18)
+    private let minimumWindowSize = NSSize(width: 460, height: 160)
 
     var isVisible: Bool { window?.isVisible ?? false }
 
@@ -150,8 +152,12 @@ final class TeleprompterController: RecordingControlsHost {
     @objc private func closeTapped() { hide() }
     @objc private func speedUp() { setSpeed(speed + 10) }
     @objc private func speedDown() { setSpeed(speed - 10) }
-    @objc private func fontUp() { setFont(fontSize + 4) }
-    @objc private func fontDown() { setFont(fontSize - 4) }
+    @objc private func fontUp() { setFont(fontSize + fontStep) }
+    @objc private func fontDown() { setFont(fontSize - fontStep) }
+
+    private var fontStep: CGFloat {
+        fontSize <= 18 ? 2 : 4
+    }
 
     private func setSpeed(_ value: CGFloat) {
         speed = min(max(value, speedRange.lowerBound), speedRange.upperBound)
@@ -170,11 +176,14 @@ final class TeleprompterController: RecordingControlsHost {
     }
 
     private func applyText() {
+        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
         let style = NSMutableParagraphStyle()
         style.lineSpacing = 8
-        style.alignment = .center
+        style.alignment = .left
+        style.lineBreakMode = .byWordWrapping
+        style.defaultTabInterval = "    ".size(withAttributes: [.font: font]).width
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: fontSize, weight: .medium),
+            .font: font,
             .foregroundColor: NSColor.white,
             .paragraphStyle: style
         ]
@@ -192,10 +201,11 @@ final class TeleprompterController: RecordingControlsHost {
 
         let panel = NonactivatingTeleprompterPanel(
             contentRect: NSRect(origin: origin, size: size),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless, .nonactivatingPanel, .resizable],
             backing: .buffered,
             defer: false
         )
+        panel.minSize = minimumWindowSize
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 2)
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -229,14 +239,25 @@ final class TeleprompterController: RecordingControlsHost {
         text.isEditable = false
         text.isSelectable = false
         text.drawsBackground = false
-        text.textContainerInset = NSSize(width: 28, height: 18)
+        text.textContainerInset = textInset
         text.isVerticallyResizable = true
         text.isHorizontallyResizable = false
         text.autoresizingMask = [.width]
+        text.minSize = NSSize(width: 0, height: scroll.contentSize.height)
+        text.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         text.textContainer?.widthTracksTextView = true
+        text.textContainer?.containerSize = NSSize(width: scroll.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = text
 
         bg.addSubview(scroll)
+
+        let resizeHandle = TeleprompterResizeHandle(
+            frame: NSRect(x: panel.frame.width - 22, y: 0, width: 22, height: 22),
+            minimumSize: minimumWindowSize
+        )
+        resizeHandle.autoresizingMask = [.minXMargin, .maxYMargin]
+        bg.addSubview(resizeHandle)
+
         panel.contentView = bg
 
         self.window = panel
@@ -310,4 +331,64 @@ final class TeleprompterController: RecordingControlsHost {
 private final class NonactivatingTeleprompterPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+}
+
+private final class TeleprompterResizeHandle: NSView {
+    private let minimumSize: NSSize
+    private var initialFrame = NSRect.zero
+    private var initialMouseLocation = NSPoint.zero
+
+    init(frame frameRect: NSRect, minimumSize: NSSize) {
+        self.minimumSize = minimumSize
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .resizeLeftRight)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let path = NSBezierPath()
+        path.lineWidth = 1
+        NSColor.white.withAlphaComponent(0.35).setStroke()
+
+        for offset in [7.0, 12.0, 17.0] {
+            path.move(to: NSPoint(x: bounds.maxX - offset, y: 4))
+            path.line(to: NSPoint(x: bounds.maxX - 4, y: offset))
+        }
+
+        path.stroke()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        initialFrame = window.frame
+        initialMouseLocation = NSEvent.mouseLocation
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window else { return }
+
+        let current = NSEvent.mouseLocation
+        let deltaX = current.x - initialMouseLocation.x
+        let deltaY = current.y - initialMouseLocation.y
+        let top = initialFrame.maxY
+        let width = max(minimumSize.width, initialFrame.width + deltaX)
+        let height = max(minimumSize.height, initialFrame.height - deltaY)
+
+        var frame = NSRect(x: initialFrame.minX, y: top - height, width: width, height: height)
+        if let visible = (window.screen ?? NSScreen.main)?.visibleFrame {
+            frame.size.width = min(frame.width, visible.width)
+            frame.size.height = min(frame.height, visible.height)
+            frame.origin.y = max(visible.minY, top - frame.height)
+        }
+
+        window.setFrame(frame, display: true)
+    }
 }

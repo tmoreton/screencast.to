@@ -315,7 +315,9 @@ struct MenuBarView: View {
             }
             if state.teleprompterEnabled {
                 TextEditor(text: $state.teleprompterScript)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, design: .monospaced))
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.never)
                     .frame(height: 88)
                     .scrollContentBackground(.hidden)
                     .padding(4)
