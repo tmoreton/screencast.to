@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # One-shot deploy: validate env, ensure bucket exists, push secrets, deploy worker.
 set -euo pipefail
+umask 077
 
 cd "$(dirname "$0")"
 
@@ -10,10 +11,14 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-set -a
+chmod 600 .env
 # shellcheck disable=SC1091
 . ./.env
-set +a
+# Keep deployment values in this shell only. They are passed to Wrangler's
+# secret bulk endpoint over stdin below and must not leak into child processes.
+export -n R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY \
+  R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET SELF_HOSTED_UPLOAD_TOKEN \
+  APP_SECRET MAX_UPLOAD_BYTES 2>/dev/null || true
 
 required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET)
 missing=()
