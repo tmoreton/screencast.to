@@ -24,6 +24,8 @@ site/
 # Used for files that contain secrets / per-developer config and must never
 # be committed.
 **/*.local.swift
+**/*.local.xcconfig
+worker/wrangler.self-hosted.toml
 
 # Environment / secret files anywhere in the tree (e.g. scripts/.env).
 **/.env

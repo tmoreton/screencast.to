@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { renderHome } from "../src/views/home";
 import { renderPrivacy } from "../src/views/privacy";
+import { renderSupport } from "../src/views/support";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
@@ -13,9 +14,11 @@ const siteCname = process.env.SITE_CNAME?.trim();
 await rm(siteRoot, { recursive: true, force: true });
 await mkdir(resolve(siteRoot, "assets"), { recursive: true });
 await mkdir(resolve(siteRoot, "privacy"), { recursive: true });
+await mkdir(resolve(siteRoot, "support"), { recursive: true });
 
 await writeFile(resolve(siteRoot, "index.html"), renderHome());
 await writeFile(resolve(siteRoot, "privacy", "index.html"), renderPrivacy());
+await writeFile(resolve(siteRoot, "support", "index.html"), renderSupport());
 await writeFile(resolve(siteRoot, "404.html"), notFoundPage());
 await writeFile(resolve(siteRoot, ".nojekyll"), "");
 if (siteCname) {
@@ -26,8 +29,12 @@ await copyFile(
   resolve(siteRoot, "assets", "website.png")
 );
 await copyFile(
-  resolve(repoRoot, "screencast", "Assets.xcassets", "AppIcon.appiconset", "icon_512x512@2x.png"),
+  resolve(repoRoot, "screencast", "Assets.xcassets", "AppIcon.appiconset", "icon_256x256@2x.png"),
   resolve(siteRoot, "assets", "icon.png")
+);
+await copyFile(
+  resolve(repoRoot, "worker", "THIRD_PARTY_LICENSES.txt"),
+  resolve(siteRoot, "third-party-licenses.txt")
 );
 
 function notFoundPage(): string {

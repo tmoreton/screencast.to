@@ -1,0 +1,5 @@
+// Copy to a file ending in .local.xcconfig and fill in values for a Worker
+// deployment you control. Local xcconfig files are ignored by git.
+SCREENCAST_SHARING_MODE = self-hosted
+SCREENCAST_WORKER_BASE_URL = https:/$()/share.example.com
+SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN =

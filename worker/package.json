@@ -1,16 +1,19 @@
 {
   "name": "screencast",
-  "version": "0.1.0",
-  "license": "Apache-2.0",
+  "version": "3.0.0",
+  "license": "PolyForm-Shield-1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
+    "smoke": "bash scripts/smoke-local.sh",
     "build:site": "tsx scripts/export-static-site.ts",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "aws4fetch": "^1.0.20"
   },
   "devDependencies": {

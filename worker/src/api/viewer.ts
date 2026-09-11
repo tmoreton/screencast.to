@@ -15,7 +15,12 @@ export function handleViewer(url: URL, env: Env): Response {
   const videoUrl = `https://${normalizeHost(env.R2_PUB_HOST)}/recordings/${filename}`;
   return new Response(renderViewer(videoUrl), {
     status: 200,
-    headers: HTML_HEADERS,
+    headers: {
+      ...HTML_HEADERS,
+      // The URL path is the capability required to watch this recording. Do
+      // not disclose it when a viewer follows any link off the page.
+      "Referrer-Policy": "no-referrer",
+    },
   });
 }
 

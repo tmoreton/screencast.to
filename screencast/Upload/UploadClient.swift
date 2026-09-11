@@ -1,9 +1,11 @@
 import Foundation
 import OSLog
+import StoreKit
 
 struct SignResponse: Decodable {
     let uploadUrl: String
     let publicUrl: String
+    let requiredHeaders: [String: String]?
 }
 
 private struct SignRequest: Encodable {
@@ -11,8 +13,19 @@ private struct SignRequest: Encodable {
     let sizeBytes: Int64
 }
 
+private struct EntitlementRequest: Encodable {
+    let appTransactionJWS: String
+}
+
+private struct EntitlementResponse: Decodable {
+    let serviceToken: String
+    let expiresAt: Int64
+}
+
 enum UploadError: LocalizedError {
     case uploadNotConfigured
+    case purchaseNotVerified
+    case entitlementFailed(Int)
     case fileSizeUnavailable
     case fileTooLarge(maxBytes: Int64)
     case signFailed(Int)
@@ -22,19 +35,27 @@ enum UploadError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .uploadNotConfigured: return "Upload sharing is not configured in this build."
+        case .purchaseNotVerified: return "The App Store purchase could not be verified."
+        case .entitlementFailed(let code): return "Hosted sharing could not verify this App Store purchase (status \(code))."
         case .fileSizeUnavailable: return "Could not determine the recording size."
         case .fileTooLarge(let maxBytes): return "Recording is larger than the upload limit (\(ByteCountFormatter.string(fromByteCount: maxBytes, countStyle: .file)))."
         case .signFailed(413): return "Recording is larger than the upload limit."
-        case .signFailed(let code): return "Failed to sign upload (status \(code))."
-        case .uploadFailed(let code): return "Upload to R2 failed (status \(code))."
-        case .malformedResponse: return "Unexpected response from signing service."
+        case .signFailed(let code): return "Failed to prepare upload (status \(code))."
+        case .uploadFailed(let code): return "Upload to the temporary sharing service failed (status \(code))."
+        case .malformedResponse: return "Unexpected response from the sharing service."
         }
     }
 }
 
 @MainActor
 final class UploadClient {
+    private struct CachedToken {
+        let value: String
+        let expiresAt: Date
+    }
+
     private var progressObservation: NSKeyValueObservation?
+    private static var cachedServiceToken: CachedToken?
     private let log = Logger(subsystem: "to.screencast.app", category: "Upload")
 
     /// Total attempts (initial + retries). Backoff between attempts: 1s, 2s.
@@ -66,7 +87,12 @@ final class UploadClient {
                       let publicURL = URL(string: sign.publicUrl) else {
                     throw UploadError.malformedResponse
                 }
-                try await putFile(fileURL: fileURL, to: uploadURL, progress: progress)
+                try await putFile(
+                    fileURL: fileURL,
+                    to: uploadURL,
+                    requiredHeaders: sign.requiredHeaders ?? [:],
+                    progress: progress
+                )
                 if attempt > 1 {
                     log.info("Upload succeeded on attempt \(attempt)")
                 }
@@ -78,21 +104,16 @@ final class UploadClient {
                     log.error("Upload failed (attempt \(attempt)/\(self.maxAttempts), giving up): \(error.localizedDescription, privacy: .public)")
                     throw error
                 }
-                // Exponential-ish backoff: 1s after attempt 1, 2s after attempt 2.
                 let delaySeconds = attempt
                 log.notice("Upload attempt \(attempt) failed (\(error.localizedDescription, privacy: .public)); retrying in \(delaySeconds)s")
                 try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
-                progress(0)  // reset progress UI for the next attempt
+                progress(0)
             }
         }
 
         throw lastError ?? UploadError.uploadFailed(-1)
     }
 
-    /// Returns `true` for errors that are likely transient (network blip,
-    /// gateway hiccup, server 5xx). Auth failures, malformed responses, and
-    /// rate-limited responses are NOT retried — re-attempting won't fix them
-    /// within our short backoff window.
     private static func isRetryable(_ error: Error) -> Bool {
         if let urlError = error as? URLError {
             switch urlError.code {
@@ -111,9 +132,10 @@ final class UploadClient {
         }
         if let uploadError = error as? UploadError {
             switch uploadError {
-            case .signFailed(let code), .uploadFailed(let code):
+            case .entitlementFailed(let code), .signFailed(let code), .uploadFailed(let code):
                 return code == -1 || code == 408 || (code >= 500 && code < 600)
-            case .uploadNotConfigured, .fileSizeUnavailable, .fileTooLarge, .malformedResponse:
+            case .uploadNotConfigured, .purchaseNotVerified, .fileSizeUnavailable,
+                 .fileTooLarge, .malformedResponse:
                 return false
             }
         }
@@ -121,7 +143,7 @@ final class UploadClient {
     }
 
     private func fetchPresignedURL(for fileURL: URL) async throws -> SignResponse {
-        guard let appSecret = UploadConfig.appSecret else {
+        guard let signEndpoint = UploadConfig.signEndpoint else {
             throw UploadError.uploadNotConfigured
         }
         guard let bytes = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize else {
@@ -132,24 +154,103 @@ final class UploadClient {
             throw UploadError.fileTooLarge(maxBytes: defaultMaxUploadBytes)
         }
 
-        var req = URLRequest(url: UploadConfig.workerEndpoint)
+        let token = try await serviceToken()
+        var req = URLRequest(url: signEndpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(appSecret, forHTTPHeaderField: "X-Screencast-Auth")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONEncoder().encode(SignRequest(ext: "mov", sizeBytes: sizeBytes))
 
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            if code == 401, UploadConfig.sharingMode == .appStore {
+                Self.cachedServiceToken = nil
+            }
             throw UploadError.signFailed(code)
         }
         return try JSONDecoder().decode(SignResponse.self, from: data)
     }
 
-    private func putFile(fileURL: URL, to uploadURL: URL, progress: @escaping (Double) -> Void) async throws {
+    private func serviceToken() async throws -> String {
+        switch UploadConfig.sharingMode {
+        case .disabled:
+            throw UploadError.uploadNotConfigured
+        case .selfHosted:
+            guard let token = UploadConfig.selfHostedToken else {
+                throw UploadError.uploadNotConfigured
+            }
+            return token
+        case .appStore:
+            if let cachedServiceToken = Self.cachedServiceToken,
+               cachedServiceToken.expiresAt.timeIntervalSinceNow > 30 {
+                return cachedServiceToken.value
+            }
+            return try await exchangeAppTransaction()
+        }
+    }
+
+    private func exchangeAppTransaction() async throws -> String {
+        guard let endpoint = UploadConfig.entitlementEndpoint else {
+            throw UploadError.uploadNotConfigured
+        }
+
+        let appTransaction = try await verifiedAppTransaction()
+
+        var req = URLRequest(url: endpoint)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(
+            EntitlementRequest(appTransactionJWS: appTransaction.jwsRepresentation)
+        )
+
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw UploadError.entitlementFailed((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        guard let entitlement = try? JSONDecoder().decode(EntitlementResponse.self, from: data),
+              !entitlement.serviceToken.isEmpty else {
+            throw UploadError.malformedResponse
+        }
+
+        Self.cachedServiceToken = CachedToken(
+            value: entitlement.serviceToken,
+            expiresAt: Date(timeIntervalSince1970: TimeInterval(entitlement.expiresAt))
+        )
+        return entitlement.serviceToken
+    }
+
+    private func verifiedAppTransaction() async throws -> VerificationResult<AppTransaction> {
+        // The cached proof may be absent, throw during lookup, or be present
+        // but unverified. The upload button is an explicit user action, so all
+        // three cases may ask StoreKit to refresh (and authenticate if needed).
+        if let cached = try? await AppTransaction.shared,
+           case .verified = cached {
+            return cached
+        }
+
+        do {
+            let refreshed = try await AppTransaction.refresh()
+            guard case .verified = refreshed else {
+                throw UploadError.purchaseNotVerified
+            }
+            return refreshed
+        } catch {
+            throw UploadError.purchaseNotVerified
+        }
+    }
+
+    private func putFile(
+        fileURL: URL,
+        to uploadURL: URL,
+        requiredHeaders: [String: String],
+        progress: @escaping (Double) -> Void
+    ) async throws {
         var req = URLRequest(url: uploadURL)
         req.httpMethod = "PUT"
-        // Intentionally do NOT set Content-Type — the Worker signs only host.
+        for (name, value) in requiredHeaders {
+            req.setValue(value, forHTTPHeaderField: name)
+        }
 
         defer {
             self.progressObservation?.invalidate()

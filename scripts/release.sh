@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Builds screencast.app, signs + notarizes + staples it, packages it into a
-# styled DMG. By default it also uploads the DMG to Cloudflare R2 for backward
-# compatibility with older R2 mirrors; GitHub Releases are the canonical public
-# download channel.
+# Builds a local Developer ID artifact for development and migration testing.
+# It never uploads or publishes the artifact. Paid production builds use
+# scripts/app-store-release.sh instead.
 #
 # Usage:
-#   scripts/release.sh                                    # build + upload (reads MARKETING_VERSION)
-#   scripts/release.sh 1.0.0                              # explicit version
-#   SKIP_UPLOAD=1 scripts/release.sh                      # build only, no R2 upload
-#   SKIP_NOTARIZE=1 SKIP_UPLOAD=1 scripts/release.sh      # fastest local test build
+#   scripts/release.sh                         # reads version/build from Xcode
+#   scripts/release.sh 3.0.0                   # explicit embedded version
+#   BUILD_NUMBER=6 scripts/release.sh 3.0.0    # explicit embedded build
+#   SKIP_NOTARIZE=1 scripts/release.sh          # unsigned local test build
 #
 # Credentials are read from scripts/.env (or already-exported env vars).
 # See scripts/.env.example.
@@ -64,18 +63,8 @@ if [[ -f scripts/.env ]]; then
     set +a
 fi
 
-# R2/upload destination. Values come from scripts/.env, exported env vars, or
-# worker/.env to match what the Worker reads.
-read_worker_env_var() {
-    local key="$1"
-    [[ -f worker/.env ]] || return 0
-    grep -E "^${key}=" worker/.env | head -1 | sed -E "s/^${key}=//" | tr -d '"'
-}
-APP_SECRET="${APP_SECRET:-$(read_worker_env_var APP_SECRET)}"
-R2_BUCKET="${R2_BUCKET:-$(read_worker_env_var R2_BUCKET)}"
-R2_PUB_HOST="${R2_PUB_HOST:-$(read_worker_env_var R2_PUB_HOST)}"
-R2_DOWNLOAD_PREFIX="downloads"
-UPLOAD_WORKER_ENDPOINT="${UPLOAD_WORKER_ENDPOINT:-https://share.screencast.to/sign}"
+SELF_HOSTED_WORKER_BASE_URL="${SELF_HOSTED_WORKER_BASE_URL:-}"
+SELF_HOSTED_UPLOAD_TOKEN="${SELF_HOSTED_UPLOAD_TOKEN:-}"
 
 read_marketing_version() {
     xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
@@ -84,8 +73,20 @@ read_marketing_version() {
         | sed -E 's/^[[:space:]]*MARKETING_VERSION = //; s/[[:space:]]*$//'
 }
 
+read_build_number() {
+    xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
+        -showBuildSettings 2>/dev/null \
+        | grep -m1 -E '^[[:space:]]*CURRENT_PROJECT_VERSION = ' \
+        | sed -E 's/^[[:space:]]*CURRENT_PROJECT_VERSION = //; s/[[:space:]]*$//'
+}
+
 if [[ -z "$VERSION" ]]; then
     VERSION="$(read_marketing_version)"
+fi
+BUILD_NUMBER="${BUILD_NUMBER:-$(read_build_number)}"
+if [[ -z "$BUILD_NUMBER" ]]; then
+    echo "error: could not determine build number (set BUILD_NUMBER)" >&2
+    exit 1
 fi
 if [[ -z "$VERSION" ]]; then
     echo "error: could not determine version (pass it as the first argument)" >&2
@@ -127,15 +128,6 @@ if [[ "$NOTARIZE" == true && -z "${APPLE_TEAM_ID:-}" ]]; then
     exit 1
 fi
 
-if [[ "$NOTARIZE" == true && -z "$APP_SECRET" ]]; then
-    cat >&2 <<EOF
-error: APP_SECRET is required for an official notarized build.
-Set APP_SECRET in scripts/.env or worker/.env. Public/dev builds can use
-SKIP_NOTARIZE=1 and will compile with upload sharing disabled.
-EOF
-    exit 1
-fi
-
 CODESIGN_IDENTITY="${DEVELOPER_ID_APPLICATION:-Developer ID Application}"
 
 xcconfig_value() {
@@ -146,7 +138,17 @@ xcconfig_value() {
 
 write_release_xcconfig() {
     {
-        printf 'UPLOAD_WORKER_ENDPOINT = %s\n' "$(xcconfig_value "$UPLOAD_WORKER_ENDPOINT")"
+        printf 'MARKETING_VERSION = %s\n' "$(xcconfig_value "$VERSION")"
+        printf 'CURRENT_PROJECT_VERSION = %s\n' "$(xcconfig_value "$BUILD_NUMBER")"
+        if [[ -n "$SELF_HOSTED_WORKER_BASE_URL" && -n "$SELF_HOSTED_UPLOAD_TOKEN" ]]; then
+            printf 'SCREENCAST_SHARING_MODE = self-hosted\n'
+            printf 'SCREENCAST_WORKER_BASE_URL = %s\n' "$(xcconfig_value "$SELF_HOSTED_WORKER_BASE_URL")"
+            printf 'SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = %s\n' "$(xcconfig_value "$SELF_HOSTED_UPLOAD_TOKEN")"
+        else
+            printf 'SCREENCAST_SHARING_MODE = disabled\n'
+            printf 'SCREENCAST_WORKER_BASE_URL =\n'
+            printf 'SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN =\n'
+        fi
         if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
             printf 'DEVELOPMENT_TEAM = %s\n' "$(xcconfig_value "$APPLE_TEAM_ID")"
         fi
@@ -157,30 +159,9 @@ write_release_xcconfig() {
     chmod 600 "$BUILD_SETTINGS_XCCONFIG"
 }
 
-set_plist_string() {
-    local plist="$1"
-    local key="$2"
-    local value="$3"
-    if /usr/libexec/PlistBuddy -c "Set :$key $value" "$plist" 2>/dev/null; then
-        return 0
-    fi
-    /usr/libexec/PlistBuddy -c "Add :$key string $value" "$plist"
-}
-
-inject_upload_config() {
-    local app_path="$1"
-    local plist="$app_path/Contents/Info.plist"
-    if [[ ! -f "$plist" ]]; then
-        echo "error: $plist not found" >&2
-        exit 1
-    fi
-    set_plist_string "$plist" "ScreencastWorkerEndpoint" "$UPLOAD_WORKER_ENDPOINT"
-    set_plist_string "$plist" "ScreencastUploadSecret" "$APP_SECRET"
-}
-
 # ---- Build -------------------------------------------------------------------
 
-echo "==> Building $APP_NAME $VERSION"
+echo "==> Building local Developer ID artifact: $APP_NAME $VERSION ($BUILD_NUMBER)"
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR" "$STAGING_DIR" "$DMG_PATH" "$TEMP_DMG" "$APP_ZIP"
 mkdir -p "$BUILD_DIR"
 write_release_xcconfig
@@ -196,7 +177,14 @@ xcodebuild \
     archive
 
 ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
-inject_upload_config "$ARCHIVE_APP_PATH"
+
+APP_PLIST="$ARCHIVE_APP_PATH/Contents/Info.plist"
+actual_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PLIST")"
+actual_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PLIST")"
+if [[ "$actual_version" != "$VERSION" || "$actual_build" != "$BUILD_NUMBER" ]]; then
+    echo "error: archived app is $actual_version ($actual_build), expected $VERSION ($BUILD_NUMBER)" >&2
+    exit 1
+fi
 
 # ---- Get a Developer-ID-signed .app -----------------------------------------
 
@@ -331,44 +319,5 @@ fi
 echo
 echo "==> Built: $DMG_PATH"
 ls -lh "$DMG_PATH"
-
-# ---- Upload to Cloudflare R2 -------------------------------------------------
-
-if [[ "${SKIP_UPLOAD:-0}" == "1" ]]; then
-    echo
-    echo "==> SKIP_UPLOAD=1 set; not uploading to R2."
-    exit 0
-fi
-
-if [[ -z "$R2_BUCKET" ]]; then
-    echo "error: R2_BUCKET not set (looked in worker/.env and env vars)" >&2
-    exit 1
-fi
-
-DOWNLOAD_KEY_LATEST="$R2_DOWNLOAD_PREFIX/screencast.dmg"
-DOWNLOAD_KEY_VERSIONED="$R2_DOWNLOAD_PREFIX/screencast-$VERSION.dmg"
-
 echo
-echo "==> Uploading to Cloudflare R2 ($R2_BUCKET)"
-
-upload_to_r2() {
-    local key="$1"
-    echo "    $key"
-    (cd worker && npx wrangler r2 object put "$R2_BUCKET/$key" \
-        --remote \
-        --file "../$DMG_PATH" \
-        --content-type "application/x-apple-diskimage" >/dev/null)
-}
-
-upload_to_r2 "$DOWNLOAD_KEY_LATEST"
-upload_to_r2 "$DOWNLOAD_KEY_VERSIONED"
-
-echo
-echo "✓ Released $APP_NAME $VERSION"
-echo
-echo "  GitHub Releases should be updated with:"
-echo "    gh release upload v$VERSION $DMG_PATH --clobber"
-echo
-echo "  Legacy R2 mirror:"
-echo "    https://${R2_PUB_HOST:-<r2-public-host>}/downloads/screencast.dmg"
-echo "    https://${R2_PUB_HOST:-<r2-public-host>}/downloads/screencast-$VERSION.dmg"
+echo "Local-only artifact. Do not publish this Developer ID build as the paid App Store product."

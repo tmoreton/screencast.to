@@ -6,8 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B10000042FC0000000000001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = B10000012FC0000000000001 /* LICENSE */; };
+		B10000052FC0000000000001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000022FC0000000000001 /* THIRD_PARTY_NOTICES.md */; };
+		B10000062FC0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */; };
+		B10000092FC0000000000001 /* Apache-2.0.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000072FC0000000000001 /* Apache-2.0.txt */; };
+		B100000A2FC0000000000001 /* MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000082FC0000000000001 /* MIT.txt */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		AF9F0C762FB240E700FCA627 /* screencast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = screencast.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000012FC0000000000001 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = SOURCE_ROOT; };
+		B10000022FC0000000000001 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = SOURCE_ROOT; };
+		B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "LICENSES/PolyForm-Shield-1.0.0.md"; sourceTree = SOURCE_ROOT; };
+		B10000072FC0000000000001 /* Apache-2.0.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSES/Apache-2.0.txt"; sourceTree = SOURCE_ROOT; };
+		B10000082FC0000000000001 /* MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSES/MIT.txt"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -46,6 +59,11 @@
 			isa = PBXGroup;
 			children = (
 				AF9F0C782FB240E700FCA627 /* screencast */,
+				B10000012FC0000000000001 /* LICENSE */,
+				B10000022FC0000000000001 /* THIRD_PARTY_NOTICES.md */,
+				B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */,
+				B10000072FC0000000000001 /* Apache-2.0.txt */,
+				B10000082FC0000000000001 /* MIT.txt */,
 				AF9F0C772FB240E700FCA627 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -122,6 +140,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B10000042FC0000000000001 /* LICENSE in Resources */,
+				B10000052FC0000000000001 /* THIRD_PARTY_NOTICES.md in Resources */,
+				B10000062FC0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */,
+				B10000092FC0000000000001 /* Apache-2.0.txt in Resources */,
+				B100000A2FC0000000000001 /* MIT.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,11 +287,10 @@
 				CODE_SIGN_ENTITLEMENTS = screencast/screencast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = screencast/Info.plist;
@@ -276,18 +298,18 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
+				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
+				SCREENCAST_SHARING_MODE = disabled;
+				SCREENCAST_WORKER_BASE_URL = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				UPLOAD_APP_SECRET = "";
-				UPLOAD_WORKER_ENDPOINT = "https://screencast.to/sign";
 			};
 			name = Debug;
 		};
@@ -299,11 +321,10 @@
 				CODE_SIGN_ENTITLEMENTS = screencast/screencast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = screencast/Info.plist;
@@ -311,18 +332,18 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
+				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
+				SCREENCAST_SHARING_MODE = disabled;
+				SCREENCAST_WORKER_BASE_URL = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				UPLOAD_APP_SECRET = "";
-				UPLOAD_WORKER_ENDPOINT = "https://screencast.to/sign";
 			};
 			name = Release;
 		};

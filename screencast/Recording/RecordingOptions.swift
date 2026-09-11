@@ -2,13 +2,16 @@ import Foundation
 
 struct RecordingOptions: Sendable {
     /// What the recording shows. Switchable live while recording.
-    var format: CaptureFormat = .screenAndCamera
+    var format: CaptureFormat = .screenOnly
 
     /// `uniqueID` of the camera device for the bubble. `nil` = system default.
     var cameraDeviceID: String? = nil
 
     /// Microphone selection: off, system default, or a specific device.
-    var microphone: MicrophoneSelection = .systemDefault
+    var microphone: MicrophoneSelection = .off
+
+    /// Capture audio produced by apps on the selected display.
+    var systemAudio: Bool = true
 
     /// Rectangle to capture, in **points**, top-left origin, relative to the main display.
     /// `nil` = full screen.

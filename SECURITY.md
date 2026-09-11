@@ -5,8 +5,9 @@
 Please do not open a public issue for a vulnerability.
 
 Use GitHub's private vulnerability reporting for this repository when it is
-available. If private reporting is not available yet, contact the maintainer
-through their GitHub profile and include enough detail to reproduce the issue.
+available. If private reporting is not available, email
+`support@screencast.to` with “Security” in the subject and include enough detail
+to reproduce the issue.
 
 Useful details:
 
@@ -22,7 +23,8 @@ In scope:
 
 - Recording permission handling
 - Local recording privacy
-- Upload signing and R2 object access
+- StoreKit AppTransaction verification, anonymous service tokens, upload
+  signing, and R2 object access
 - Share-link behavior and expiry
 - Release signing/notarization scripts
 
@@ -31,3 +33,7 @@ Out of scope:
 - Social engineering
 - Denial-of-service testing against production infrastructure
 - Reports requiring access to someone else's recordings or credentials
+
+Do not include an AppTransaction JWS, service token, live share URL, recording,
+or signing credential in a public issue. The support page explains how to begin
+a report without exposing private material.

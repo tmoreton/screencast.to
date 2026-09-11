@@ -10,14 +10,11 @@ final class OnboardingManager {
 
     private var window: NSWindow?
 
-    /// Show onboarding whenever any of the three required TCC permissions
-    /// is not yet granted. Re-evaluated on every app launch and any time
-    /// `showIfNeeded()` is called.
+    /// Screen Recording is the only permission required for the core app.
+    /// Microphone and camera access remain optional and are requested only
+    /// when the user chooses those features.
     var needsOnboarding: Bool {
-        let screen = CGPreflightScreenCaptureAccess()
-        let mic = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        let cam = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
-        return !(screen && mic && cam)
+        !CGPreflightScreenCaptureAccess()
     }
 
     func showIfNeeded() {
