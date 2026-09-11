@@ -207,7 +207,7 @@ ${THEME_SCRIPT}
   <h2>What we collect</h2>
   <ul>
     <li><strong>Your screen recordings</strong>, stored locally on your Mac by default. If you choose to upload one, the file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
-    <li><strong>Optional website analytics</strong> — the public build ships with analytics disabled. A hosted deployment may enable anonymous marketing-page analytics, but shared recording pages do not load analytics.</li>
+    <li><strong>Website analytics</strong> — Google Analytics measures visits and interactions on the public marketing and privacy pages. Shared recording pages do not load analytics.</li>
     <li><strong>IP address</strong> on each recording-upload request, used only for short-window rate limiting (10 uploads / minute / IP). Not persisted.</li>
   </ul>
   <p>That's it. We don't collect your name, email, or any account info — there are no accounts.</p>
@@ -225,11 +225,12 @@ ${THEME_SCRIPT}
   <ul>
     <li><strong>Cloudflare</strong> — hosts the upload/share worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
     <li><strong>GitHub</strong> — hosts the static marketing pages and downloadable release assets. GitHub may log visitor IP addresses for security. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Their privacy statement</a>.</li>
+    <li><strong>Google Analytics</strong> — measures visits and interactions on the public marketing and privacy pages. It is not loaded on shared recording pages. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
   </ul>
-  <p>We don't share recordings or data with anyone else.</p>
+  <p>We don't share recordings with anyone else or sell personal data.</p>
 
   <h2>Cookies</h2>
-  <p>The public site ships without analytics cookies. If a hosted deployment enables Google Analytics, only marketing/privacy pages load those cookies; shared recording pages do not. The Mac app itself uses no cookies.</p>
+  <p>Google Analytics may set analytics cookies on the public marketing and privacy pages. Shared recording pages do not load those cookies. The Mac app itself uses no cookies.</p>
 
   <h2>Your rights</h2>
   <p>You can delete local recordings from your Mac at any time. Uploaded recordings expire automatically within 24–48 hours of upload. Since we don't have accounts, there's no profile to delete.</p>

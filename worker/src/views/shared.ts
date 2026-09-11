@@ -5,11 +5,11 @@ export const BRAND = "Screencast.to";
 export const DOWNLOAD_URL = "https://github.com/tmoreton/screencast.to/releases/latest/download/screencast.dmg";
 export const GITHUB_URL = "https://github.com/tmoreton/screencast.to";
 export const OG_IMAGE_URL = "https://screencast.to/assets/website.png";
-export const PRIVACY_UPDATED = "2026-08-13";
+export const PRIVACY_UPDATED = "2026-09-10";
 
-// Optional Google Analytics 4 Measurement ID. Empty by default for public
-// builds; set a value here only for a site deployment that intentionally uses GA.
-export const GA_MEASUREMENT_ID = "";
+// Google Analytics is enabled only on the public marketing and privacy pages.
+// Shared recording viewers deliberately do not import or render this snippet.
+export const GA_MEASUREMENT_ID = "G-WCRHYK4M00";
 
 export const GA_SNIPPET = GA_MEASUREMENT_ID ? `
 <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
