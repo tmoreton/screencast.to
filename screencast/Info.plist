@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Screencast.to</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Screencast.to</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Screencast.to records system audio when you include it in a screen recording.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Screencast.to records your camera when you include the floating camera bubble.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Screencast.to records your microphone when you include it in a screen recording.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Screencast.to records the screen or region you choose so you can save and share a video.</string>
+	<key>ScreencastUploadSecret</key>
+	<string>$(UPLOAD_APP_SECRET)</string>
+	<key>ScreencastWorkerEndpoint</key>
+	<string>$(UPLOAD_WORKER_ENDPOINT)</string>
+</dict>
+</plist>

@@ -10,9 +10,22 @@
 		AF9F0C762FB240E700FCA627 /* screencast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = screencast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AF9F0C842FB240E800FCA627 /* Exceptions for "screencast" folder in "screencast" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AF9F0C752FB240E700FCA627 /* screencast */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AF9F0C782FB240E700FCA627 /* screencast */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AF9F0C842FB240E800FCA627 /* Exceptions for "screencast" folder in "screencast" target */,
+			);
 			path = screencast;
 			sourceTree = "<group>";
 		};
@@ -256,15 +269,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Screencast.to;
-				INFOPLIST_KEY_CFBundleName = Screencast.to;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "screencast records your microphone alongside the screen.";
-				INFOPLIST_KEY_ScreencastUploadSecret = "$(UPLOAD_APP_SECRET)";
-				INFOPLIST_KEY_ScreencastWorkerEndpoint = "$(UPLOAD_WORKER_ENDPOINT)";
+				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = screencast/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -297,15 +304,9 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Screencast.to;
-				INFOPLIST_KEY_CFBundleName = Screencast.to;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "screencast records your camera for the floating bubble overlay.";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "screencast records your microphone alongside the screen.";
-				INFOPLIST_KEY_ScreencastUploadSecret = "$(UPLOAD_APP_SECRET)";
-				INFOPLIST_KEY_ScreencastWorkerEndpoint = "$(UPLOAD_WORKER_ENDPOINT)";
+				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = screencast/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
