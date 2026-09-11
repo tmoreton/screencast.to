@@ -16,12 +16,14 @@ final class DeviceCatalog {
         connectedObserver = NotificationCenter.default.addObserver(
             forName: AVCaptureDevice.wasConnectedNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            guard let catalog = self else { return }
+            Task { @MainActor in catalog.refresh() }
         }
         disconnectedObserver = NotificationCenter.default.addObserver(
             forName: AVCaptureDevice.wasDisconnectedNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            guard let catalog = self else { return }
+            Task { @MainActor in catalog.refresh() }
         }
     }
 

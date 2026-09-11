@@ -15,7 +15,7 @@ set -a
 . ./.env
 set +a
 
-required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_SECRET)
+required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET)
 missing=()
 for v in "${required[@]}"; do
   if [ -z "${!v:-}" ]; then
@@ -24,6 +24,33 @@ for v in "${required[@]}"; do
 done
 if [ ${#missing[@]} -gt 0 ]; then
   echo "✗ Missing values in worker/.env: ${missing[*]}" >&2
+  exit 1
+fi
+
+if [ "${#SERVICE_TOKEN_SECRET}" -lt 32 ]; then
+  echo "✗ SERVICE_TOKEN_SECRET must contain at least 32 characters." >&2
+  exit 1
+fi
+
+if [[ ! "$APP_APPLE_ID" =~ ^[1-9][0-9]*$ ]] ||
+   ! node -e 'const value = Number(process.argv[1]); if (!Number.isSafeInteger(value) || value <= 0) process.exit(1)' "$APP_APPLE_ID"; then
+  echo "✗ APP_APPLE_ID must be a positive, safely representable decimal App Store ID." >&2
+  exit 1
+fi
+
+if [ -n "${SELF_HOSTED_UPLOAD_TOKEN:-}" ]; then
+  echo "✗ Canonical deployment refuses SELF_HOSTED_UPLOAD_TOKEN because it bypasses App Store entitlement." >&2
+  echo "  Private forks must use a distinct Worker name/routes and set UPLOAD_AUTH_MODE=self-hosted." >&2
+  exit 1
+fi
+
+if [[ ! "$R2_PUB_HOST" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
+  echo "✗ R2_PUB_HOST must be a bare DNS hostname without a scheme, port, path, or trailing slash." >&2
+  exit 1
+fi
+R2_PUB_HOST="$(printf '%s' "$R2_PUB_HOST" | tr '[:upper:]' '[:lower:]')"
+if [[ "$R2_PUB_HOST" == *.r2.dev ]]; then
+  echo "✗ R2_PUB_HOST must be a production R2 custom domain, not an r2.dev development URL." >&2
   exit 1
 fi
 
@@ -44,16 +71,20 @@ fi
 
 echo "▶ Applying R2 lifecycle rule (auto-delete after 24h)..."
 if [ -f lifecycle.json ]; then
-  set +e
-  lifecycle_output="$(npx wrangler r2 bucket lifecycle set "$R2_BUCKET" --file lifecycle.json 2>&1)"
-  lifecycle_status=$?
-  set -e
-  if [ $lifecycle_status -ne 0 ]; then
-    echo "$lifecycle_output" >&2
-    echo "⚠  Could not apply lifecycle rule (continuing anyway). You can set it manually in the dashboard." >&2
+  node -e 'const f=require("./lifecycle.json"); const r=f.rules?.find(x => x.enabled && x.conditions?.prefix === "recordings/" && x.deleteObjectsTransition?.condition?.type === "Age" && x.deleteObjectsTransition?.condition?.maxAge === 86400); if (!r) process.exit(1)' || {
+    echo "✗ lifecycle.json does not contain the enabled 24-hour recordings/ rule." >&2
+    exit 1
+  }
+  npx wrangler r2 bucket lifecycle set "$R2_BUCKET" --file lifecycle.json
+  lifecycle_output="$(npx wrangler r2 bucket lifecycle list "$R2_BUCKET" 2>&1)"
+  echo "$lifecycle_output"
+  if ! echo "$lifecycle_output" | grep -q "recordings/"; then
+    echo "✗ Lifecycle verification did not show the recordings/ rule." >&2
+    exit 1
   fi
 else
-  echo "  (no lifecycle.json — skipping)"
+  echo "✗ lifecycle.json is required; refusing to deploy without the retention rule." >&2
+  exit 1
 fi
 
 echo "▶ Pushing secrets to Worker..."
@@ -64,7 +95,8 @@ npx wrangler secret bulk <<EOF
   "R2_ACCESS_KEY_ID": "${R2_ACCESS_KEY_ID}",
   "R2_SECRET_ACCESS_KEY": "${R2_SECRET_ACCESS_KEY}",
   "R2_PUB_HOST": "${R2_PUB_HOST}",
-  "APP_SECRET": "${APP_SECRET}",
+  "APP_APPLE_ID": "${APP_APPLE_ID}",
+  "SERVICE_TOKEN_SECRET": "${SERVICE_TOKEN_SECRET}",
   "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-1073741824}"
 }
 EOF
@@ -80,20 +112,18 @@ echo
 echo "✓ Deploy complete."
 echo
 if [ -n "$worker_url" ]; then
-  echo "Workers.dev endpoint:"
+  echo "Workers.dev endpoint (diagnostics only; never embed this in an official archive):"
   echo "  $worker_url/sign"
   echo
-  echo "Once share.screencast.to is wired up as a custom domain, the canonical endpoint is:"
-  echo "  https://share.screencast.to/sign"
-  echo
-  echo "Official app releases should use:"
-  echo "  UPLOAD_WORKER_ENDPOINT=https://share.screencast.to/sign"
 else
-  echo "Could not auto-detect the Worker URL from output."
-  echo "Look for the 'https://*.workers.dev' line above and paste it"
-  echo "(with /sign appended) into screencast/Upload/Config.swift."
+  echo "Could not auto-detect a Workers.dev diagnostics URL from output."
+  echo
 fi
+echo "Verify the production custom domain before creating an App Store archive:"
+echo "  https://share.screencast.to/sign"
 echo
-echo "If you haven't yet, enable Public Development URL on the bucket:"
-echo "  Dashboard → R2 → $R2_BUCKET → Settings → Public Development URL → Enable"
-echo "Then make sure R2_PUB_HOST in .env matches the pub-XXX.r2.dev host shown there."
+echo "Official App Store archives always use:"
+echo "  SCREENCAST_WORKER_BASE_URL=https://share.screencast.to"
+echo
+echo "R2_PUB_HOST must point to the bucket's production custom domain."
+echo "Keep the Public Development URL disabled for production."

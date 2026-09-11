@@ -1,6 +1,12 @@
 name = "screencast"
 main = "src/worker.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-09-11"
+compatibility_flags = ["nodejs_compat"]
+
+[[rules]]
+type = "Data"
+globs = ["**/*.png"]
+fallthrough = true
 
 # Bind the Worker to the current Cloudflare-fronted domains.
 #
@@ -18,6 +24,12 @@ routes = [
   { pattern = "share.screencast.to", custom_domain = true },
 ]
 
+# The canonical service accepts only StoreKit-derived short-lived tokens.
+# A private fork may deliberately change this to "self-hosted" and configure
+# SELF_HOSTED_UPLOAD_TOKEN after replacing the Worker name and routes.
+[vars]
+UPLOAD_AUTH_MODE = "app-store"
+
 # Per-IP rate limit on /sign (10 requests / 60s).
 # `namespace_id` is an arbitrary unique integer per limiter in your account.
 [[unsafe.bindings]]
@@ -31,6 +43,8 @@ simple = { limit = 10, period = 60 }
 #   R2_BUCKET             — bucket name
 #   R2_ACCESS_KEY_ID      — R2 API token access key
 #   R2_SECRET_ACCESS_KEY  — R2 API token secret
-#   R2_PUB_HOST           — public host, e.g. "pub-abc123.r2.dev"
-#   APP_SECRET            — shared secret; Mac app sends it in X-Screencast-Auth
+#   R2_PUB_HOST           — production R2 custom-domain host, e.g. "media.screencast.to"
+#   APP_APPLE_ID          — numeric App Store app ID from App Store Connect
+#   SERVICE_TOKEN_SECRET  — random secret used only to sign 15-minute tokens
+#   SELF_HOSTED_UPLOAD_TOKEN — private forks only; canonical deploy refuses it
 #   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB

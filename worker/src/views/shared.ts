@@ -1,24 +1,11 @@
-// Brand constants, analytics snippet, favicon, and small string utils used
-// by every render*() view. Keep this file dependency-free.
+// Brand constants, favicon, and small string utils used by every render*()
+// view. Keep this file dependency-free.
 
 export const BRAND = "Screencast.to";
-export const DOWNLOAD_URL = "https://github.com/tmoreton/screencast.to/releases/latest/download/screencast.dmg";
 export const GITHUB_URL = "https://github.com/tmoreton/screencast.to";
 export const OG_IMAGE_URL = "https://screencast.to/assets/website.png";
-export const PRIVACY_UPDATED = "2026-09-10";
-
-// Google Analytics is enabled only on the public marketing and privacy pages.
-// Shared recording viewers deliberately do not import or render this snippet.
-export const GA_MEASUREMENT_ID = "G-WCRHYK4M00";
-
-export const GA_SNIPPET = GA_MEASUREMENT_ID ? `
-<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', '${GA_MEASUREMENT_ID}');
-</script>` : "";
+export const PRIVACY_UPDATED = "2026-09-11";
+export const SUPPORT_EMAIL = "support@screencast.to";
 
 export const THEME_SCRIPT = `
 <script>
@@ -126,7 +113,7 @@ export function escapeHtml(s: string): string {
 export const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Screencast-Auth",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
 };
 
 export const HTML_HEADERS = {

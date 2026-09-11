@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, OG_IMAGE_URL, escapeHtml } from "./shared";
+import { BRAND, FAVICON_HREF, OG_IMAGE_URL, SUPPORT_EMAIL, escapeHtml } from "./shared";
 
 /** Share-link viewer at GET /v/<id>.<ext>. `videoUrl` is the canonical R2 URL. */
 export function renderViewer(videoUrl: string): string {
@@ -9,8 +9,9 @@ export function renderViewer(videoUrl: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
+<meta name="referrer" content="no-referrer">
 <title>${BRAND}</title>
-<meta name="description" content="A temporary screencast shared via Screencast.to. Free macOS menu-bar app — record locally, share a 24-hour link when you choose.">
+<meta name="description" content="A temporary screencast shared via Screencast.to, a local-first macOS menu-bar recorder.">
 <link rel="icon" href="${FAVICON_HREF}">
 
 <!-- Open Graph / Twitter — same brand image for now -->
@@ -136,7 +137,7 @@ export function renderViewer(videoUrl: string): string {
 </style>
 </head>
 <body>
-<div class="stage" id="stage">
+<main class="stage" id="stage">
   <video id="player" src="${safe}" controls preload="metadata" playsinline></video>
 
   <div class="overlay top">
@@ -146,21 +147,25 @@ export function renderViewer(videoUrl: string): string {
         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
         <span>Copy link</span>
       </button>
-      <a class="chip" href="${safe}" download aria-label="Download">
+      <a class="chip" href="${safe}" download rel="noreferrer" aria-label="Download">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
         <span>Download</span>
+      </a>
+      <a class="chip" id="reportLink" href="mailto:${SUPPORT_EMAIL}?subject=Recording%20report" aria-label="Report recording or request removal">
+        <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-1 4 1 4H5"/></svg>
+        <span>Report</span>
       </a>
     </div>
   </div>
 
   <div class="overlay bottom">
-    <a class="watermark" href="https://screencast.to/" target="_blank" rel="noopener">
+    <a class="watermark" href="https://screencast.to/" target="_blank" rel="noopener noreferrer">
       <span class="dot"></span>
       Made with <span class="mark">${BRAND}</span>
     </a>
-    <span class="ttl" title="Recordings auto-delete after 24 hours.">
+    <span class="ttl" title="Temporary recordings are typically deleted within 24–48 hours.">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-      Auto-deletes in 24h
+      Typically deleted within 24–48h
     </span>
   </div>
 
@@ -169,14 +174,20 @@ export function renderViewer(videoUrl: string): string {
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
     </div>
     <h2>This recording is gone.</h2>
-    <p>It either expired (recordings auto-delete after 24 hours) or the link is wrong. Recordings on ${BRAND} are temporary by design — share confidently and move on.</p>
+    <p>It either expired or the link is wrong. Temporary recordings are normally deleted within 24–48 hours.</p>
     <a class="btn" href="https://screencast.to/">Make your own →</a>
   </div>
-</div>
+</main>
 <script>
   const stage = document.getElementById('stage');
   const player = document.getElementById('player');
   const copyBtn = document.getElementById('copyBtn');
+  const reportLink = document.getElementById('reportLink');
+
+  // Include the otherwise-unlisted share URL only after the viewer chooses to
+  // report it. This avoids adding a tracking or reporting request on page load.
+  reportLink.href = 'mailto:${SUPPORT_EMAIL}?subject=' + encodeURIComponent('Recording report or removal request') +
+    '&body=' + encodeURIComponent('Share URL: ' + location.href + '\\n\\nReason: ');
 
   // Auto-hide overlays after idle while playing.
   let idleTimer;

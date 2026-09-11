@@ -1,95 +1,160 @@
-# screencast (Cloudflare Worker)
+# Screencast.to sharing service
 
-Backs the Screencast.to share viewer and mints presigned PUT URLs for the Mac app to upload recordings directly to Cloudflare R2.
-
-The static marketing/privacy pages are exported for GitHub Pages with
-`npm run build:site`; production Pages deployment is handled by
-`.github/workflows/pages.yml`.
+This Cloudflare Worker provides optional, temporary recording links. Recording,
+audio capture, saving, playback, and local file access through Finder all happen
+in the Mac app without this service.
 
 The production split is:
 
-- `https://screencast.to` — static marketing/privacy site on GitHub Pages.
-- `https://share.screencast.to` — Cloudflare Worker for `/sign` and `/v/*`.
+- `https://screencast.to` — static marketing, privacy, and support pages.
+- `https://share.screencast.to` — entitlement, upload-signing, and viewer routes.
+- An R2 bucket custom domain — short-lived recording media. Do not use an
+  `r2.dev` Public Development URL in production.
 
-Official app releases should use
-`UPLOAD_WORKER_ENDPOINT=https://share.screencast.to/sign`.
+## Authorization boundary
 
-## One-time setup
+Official App Store builds do not contain a service credential:
 
-1. **Install deps**
+1. StoreKit verifies `AppTransaction.shared` on the Mac and, if its cached
+   proof is unavailable or unverified, refreshes it after the user's explicit
+   upload action.
+2. The app sends only its signed JWS representation to
+   `POST /entitlements/token`.
+3. Apple's official server library verifies the certificate chain, bundle ID
+   `to.screencast.app`, and the expected environment. Production is checked
+   first with the numeric App Store app ID; an Apple-signed Sandbox proof is
+   accepted only as the App Review/TestFlight fallback Apple requires.
+4. The Worker discards the decoded proof and returns a stateless 15-minute
+   bearer token containing no Apple or user identifier.
+5. `POST /sign` accepts that token and returns a 15-minute R2 PUT URL for a
+   `.mov` recording. Its signed `Content-Length`, `Content-Type`, and
+   `Cache-Control: no-store` headers enforce the declared size/type and keep
+   temporary recordings out of browser/CDN caches.
+
+The Worker does not log or persist the raw JWS or decoded transaction. No
+Screencast account, email address, purchase database, or App Store private key
+is used.
+
+Complete license texts for application dependencies and the runtime shim
+observed in Wrangler's production bundle are imported as a deployed text module
+and served at `GET /third-party-licenses.txt`. Re-run a dry-run bundle audit
+after every Wrangler upgrade because build-tool shims can change independently
+of the application's production dependency closure.
+
+Public source builds have sharing disabled. For a private deployment, first use
+a distinct Worker name and routes, change `UPLOAD_AUTH_MODE` to `self-hosted`,
+and configure a private `SELF_HOSTED_UPLOAD_TOKEN`; then build a local app with
+matching `SELF_HOSTED_WORKER_BASE_URL` and `SELF_HOSTED_UPLOAD_TOKEN` values.
+That static token protects only the developer's infrastructure. The canonical
+configuration accepts only StoreKit-derived tokens, and `deploy.sh` refuses to
+install the self-hosted bypass token.
+
+## Setup
+
+1. Install dependencies:
+
    ```sh
-   cd worker
    npm ci
    ```
 
-2. **Log in to Cloudflare**
+2. Log in and create R2 credentials:
+
    ```sh
    npx wrangler login
    ```
 
-3. **Create the R2 bucket** in the dashboard (e.g. `screencast-recordings`). Under the bucket's *Settings* tab, enable **Public Development URL** and note the `pub-<hash>.r2.dev` host that appears.
+   Create an R2 bucket and an Object Read & Write API token scoped to it. Attach
+   a production custom domain to the bucket and keep its Public Development URL
+   disabled. Do not configure an Edge Cache TTL rule that overrides the
+   objects' `Cache-Control: no-store` metadata.
 
-4. **Create an R2 API token**
-   Dashboard → **R2** → *Manage R2 API Tokens* → **Create API Token**.
-   - Permissions: **Object Read & Write**
-   - Specify bucket: your bucket name
-   Save the **Access Key ID** and **Secret Access Key**.
+3. For the canonical App Store service, copy `.env.example` to `.env` and
+   supply:
 
-5. **Generate a shared app secret**
-   ```sh
-   openssl rand -hex 32
-   ```
-   Put this in `worker/.env` as `APP_SECRET=...`. Official app builds inject
-   the same value through `scripts/release.sh`; public/dev app builds leave it
-   empty and compile with upload sharing disabled.
+   - R2 account, bucket, access-key, secret-key, and custom media host values.
+   - `APP_APPLE_ID`, the numeric ID assigned by App Store Connect.
+   - A server-only `SERVICE_TOKEN_SECRET` generated with
+     `openssl rand -hex 32`.
+   - Leave `SELF_HOSTED_UPLOAD_TOKEN` blank. It is deliberately rejected by
+     the canonical deployment script.
 
-6. **Fill in `worker/.env`** — copy `worker/.env.example` and replace the empty values.
-   `MAX_UPLOAD_BYTES` is optional and defaults to 1 GiB.
+4. Deploy:
 
-7. **Deploy**
    ```sh
    ./deploy.sh
    ```
-   The script validates the env, creates the bucket if needed, applies the 24h lifecycle rule, pushes all secrets in one shot, and runs `wrangler deploy`. Idempotent — safe to re-run.
 
-8. *(Optional)* **Wire up the Worker custom domain**
-   Once `screencast.to` is a zone in your Cloudflare account, the `share.screencast.to` custom domain in `wrangler.toml` will activate on the next `./deploy.sh`. Share URLs then look like `https://share.screencast.to/v/<id>.mov` instead of the workers.dev URL.
+The script creates or reuses the bucket, applies and verifies the
+`recordings/` lifecycle rule, pushes secrets, and deploys the Worker. A
+lifecycle configuration failure stops deployment so the retention claim cannot
+silently drift.
 
-## Subsequent deploys
+### Private self-hosted deployment
 
-- **Code-only change** to `src/worker.ts`: `npx wrangler deploy` is enough.
-- **Secret rotation** (new R2 keys, new `APP_SECRET`, etc.): use `./deploy.sh` again — it bulk-pushes secrets.
-- **Marketing site change**: edit the shared view files, run `npm run build:site`,
-  and let the GitHub Pages workflow deploy from `../site/`.
+Do not use the canonical `deploy.sh` for a private service. Copy
+`wrangler.toml` to an untracked configuration, give the Worker a distinct name,
+replace both official routes with domains you control, and set:
 
-## Local dev
-
-```sh
-npx wrangler dev
-# in another terminal:
-curl -X POST http://localhost:8787/sign \
-  -H 'content-type: application/json' \
-  -H "X-Screencast-Auth: $(grep APP_SECRET .env | cut -d= -f2)" \
-  -d '{"ext":"mov","sizeBytes":1048576}'
+```toml
+[vars]
+UPLOAD_AUTH_MODE = "self-hosted"
 ```
 
-You should get back `{ "uploadUrl": "...", "publicUrl": "..." }`.
+Then create the private bucket, apply the same deletion rule, and enter each
+binding interactively so credentials do not appear in shell history:
 
-## How it works
+```sh
+npx wrangler r2 bucket create YOUR_PRIVATE_BUCKET --config wrangler.self-hosted.toml
+npx wrangler r2 bucket lifecycle set YOUR_PRIVATE_BUCKET --file lifecycle.json --config wrangler.self-hosted.toml
+npx wrangler secret put R2_ACCOUNT_ID --config wrangler.self-hosted.toml
+npx wrangler secret put R2_BUCKET --config wrangler.self-hosted.toml
+npx wrangler secret put R2_ACCESS_KEY_ID --config wrangler.self-hosted.toml
+npx wrangler secret put R2_SECRET_ACCESS_KEY --config wrangler.self-hosted.toml
+npx wrangler secret put R2_PUB_HOST --config wrangler.self-hosted.toml
+npx wrangler secret put SELF_HOSTED_UPLOAD_TOKEN --config wrangler.self-hosted.toml
+npx wrangler deploy --config wrangler.self-hosted.toml
+```
 
-- Mac app `POST /sign` with `X-Screencast-Auth` and declared `sizeBytes` → Worker checks the secret, rate-limits per-IP (10/min), rejects oversized requests, generates a 10-char short ID, signs a 15-minute presigned PUT URL with [aws4fetch](https://github.com/mhart/aws4fetch), returns `{ uploadUrl, publicUrl }`.
-- Mac app `PUT`s the file body to `uploadUrl` (no signed headers; only the host is signed).
-- Object lands at `recordings/<id>.<ext>` in the bucket.
-- Anyone visiting `publicUrl` (`/v/<id>.<ext>`) gets the fullscreen viewer page; the page's `<video>` tag fetches the actual file from R2's public `pub-XXX.r2.dev` host.
+Use a random token of at least 32 characters and the same value in the app's
+gitignored sharing configuration. Keep the private Wrangler file untracked.
 
-**Why not sign `Content-Type`?** Per Cloudflare's R2 docs, signing `Content-Type` while using `signQuery: true` causes uploads from non-curl clients to be rejected as unsigned. So we only sign the host.
+After deployment, upload a disposable recording and confirm the media response
+contains `Cache-Control: no-store` and `CF-Cache-Status: BYPASS` (or `DYNAMIC`)
+before treating the 24–48 hour deletion statement as production-ready.
 
-## Auto-delete
+The Apple Inc. Root, Apple Root CA G2, and Apple Root CA G3 certificates are
+pinned from [Apple PKI](https://www.apple.com/certificateauthority/) in
+`src/apple-root-certificates.ts`. Review them when Apple changes its App Store
+certificate chain.
 
-`lifecycle.json` is applied on every `./deploy.sh` and tells R2 to delete anything in `recordings/` after 1 day (actual deletion happens within 24–48h of upload).
+## Local development
 
-## Security note
+```sh
+npm run check
+npm test
+npm run dev
+```
 
-`APP_SECRET` gates casual access to `/sign`, but any secret embedded in a
-desktop app can eventually be extracted. Keep rate limits, upload-size limits,
-R2 lifecycle deletion, and abuse response procedures in place for production.
+An arbitrary or Xcode-local JWS will be rejected. Production AppTransaction
+verification also requires a real App Store Connect app record and numeric app
+ID. Apple-signed Sandbox proofs support TestFlight and App Review. Focused tests
+cover token lifetime, anonymous token contents, authorization, maximum-size
+rejection, and signed `Content-Length` behavior.
+
+## Static site
+
+`npm run build:site` exports the marketing, privacy, and support pages to
+`../site` for GitHub Pages. The Pages workflow supplies `SITE_CNAME` in the
+canonical repository; local exports omit it by default.
+
+## Retention and operational dependency
+
+`lifecycle.json` expires objects under `recordings/` after one day. Cloudflare
+may physically delete expired objects during the following day, so public copy
+states that deletion typically occurs within 24–48 hours. Rate limiting is 10
+requests per minute per IP for each entitlement/signing route, and the default
+upload maximum is 1 GiB.
+
+The service depends on Cloudflare Workers, R2, DNS/custom-domain service, and
+Apple's certificate/StoreKit infrastructure. See `docs/BUNDLE.md` for the
+remaining App Store decisions and expected operating costs.

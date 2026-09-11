@@ -1,12 +1,17 @@
 import AppKit
 import AVFoundation
+import CoreMedia
 import OSLog
 
 @MainActor
 final class CameraBubbleController {
+    var onCaptureFailure: (() -> Void)?
+
     private var window: NSPanel?
-    private var session: AVCaptureSession?
+    private var captureSession: ManagedCameraCaptureSession?
+    private var captureObservers: [NSObjectProtocol] = []
     private var currentDeviceID: String?
+    private var applyGeneration = 0
     private let log = Logger(subsystem: "to.screencast.app", category: "CameraBubble")
     private let diameter: CGFloat = 160
     /// Bubble size multiplier toggled by double-clicking the bubble (1× / 2×).
@@ -18,25 +23,41 @@ final class CameraBubbleController {
     /// format needs it, then sizes/styles the window: hidden, a bottom-right
     /// bubble, or filling the captured area. `region` is the captured area in
     /// display points (top-left origin) or nil for full screen.
-    func apply(format: CaptureFormat, deviceID: String? = nil, region: CGRect? = nil) async {
+    @discardableResult
+    func apply(format: CaptureFormat, deviceID: String? = nil, region: CGRect? = nil) async -> Bool {
+        applyGeneration &+= 1
+        let generation = applyGeneration
         currentRegion = region
         guard format.usesCamera else {
             window?.orderOut(nil)
-            return
+            await stopAndReleaseSession()
+            return true
         }
         if window == nil { buildWindow() }
-        await ensureRunning(deviceID: deviceID)
-        guard let window, let host = window.contentView as? CameraBubbleView else { return }
+        let cameraReady = await ensureRunning(deviceID: deviceID, generation: generation)
+        guard generation == applyGeneration else { return false }
+        guard cameraReady else {
+            window?.orderOut(nil)
+            return false
+        }
+        guard let window, let host = window.contentView as? CameraBubbleView else {
+            await stopAndReleaseSession()
+            return false
+        }
 
         switch format {
         case .screenAndCamera:
             host.circular = true
             host.layer?.borderWidth = 3
+            host.layer?.backgroundColor = NSColor.clear.cgColor
             window.ignoresMouseEvents = false
             window.setFrame(bubbleFrame(region: region), display: true)
         case .cameraOnly:
             host.circular = false
             host.layer?.borderWidth = 0
+            // Keep an opaque underlay beneath the preview so compositor gaps
+            // or a late preview-layer teardown can never reveal the desktop.
+            host.layer?.backgroundColor = NSColor.black.cgColor
             window.ignoresMouseEvents = true
             window.setFrame(fillFrame(region: region), display: true)
         case .screenOnly:
@@ -45,13 +66,40 @@ final class CameraBubbleController {
         host.needsLayout = true
         host.layoutSubtreeIfNeeded()
         window.orderFrontRegardless()
+        return true
     }
 
     func hide() {
+        applyGeneration &+= 1
         window?.orderOut(nil)
+        (window?.contentView as? CameraBubbleView)?.layer?.backgroundColor = NSColor.clear.cgColor
         bubbleScale = 1
-        if let session, session.isRunning {
-            Task.detached { [session] in session.stopRunning() }
+        detachSession()?.stop()
+    }
+
+    /// Replace a visible camera preview with a full-region opaque frame, detach
+    /// the preview/session immediately, and leave the curtain up while the
+    /// screen recorder stops. This prevents even a trailing desktop frame from
+    /// being exposed when camera-only capture disappears.
+    func showSafetyCurtain() {
+        applyGeneration &+= 1
+        let shouldPresent = window?.isVisible == true
+        if shouldPresent, let window,
+           let host = window.contentView as? CameraBubbleView {
+            host.circular = false
+            host.layer?.borderWidth = 0
+            host.layer?.backgroundColor = NSColor.black.cgColor
+            window.ignoresMouseEvents = true
+            window.setFrame(fillFrame(region: currentRegion), display: true)
+            host.needsLayout = true
+            host.layoutSubtreeIfNeeded()
+        }
+
+        // removeCaptureObservers() runs inside detachSession() before the stop
+        // is enqueued, so this intentional teardown cannot recurse via callbacks.
+        detachSession()?.stop()
+        if shouldPresent {
+            window?.orderFrontRegardless()
         }
     }
 
@@ -138,8 +186,8 @@ final class CameraBubbleController {
 
     // MARK: - Capture session
 
-    private func ensureRunning(deviceID: String?) async {
-        guard let host = window?.contentView as? CameraBubbleView else { return }
+    private func ensureRunning(deviceID: String?, generation: Int) async -> Bool {
+        guard let host = window?.contentView as? CameraBubbleView else { return false }
 
         let resolved: AVCaptureDevice?
         if let deviceID, let device = AVCaptureDevice(uniqueID: deviceID) {
@@ -148,55 +196,292 @@ final class CameraBubbleController {
             resolved = AVCaptureDevice.default(for: .video)
         }
 
-        // Reuse a session already running on the requested device.
-        if let existing = session, currentDeviceID == resolved?.uniqueID {
-            if !existing.isRunning { await Self.start(existing) }
-            return
+        // Reuse a healthy session already running on the requested device.
+        if let existing = captureSession, currentDeviceID == resolved?.uniqueID {
+            let started = await existing.start()
+            guard generation == applyGeneration else { return false }
+            guard started else {
+                log.error("Camera capture session did not start")
+                await stopAndReleaseSession()
+                return false
+            }
+            let ready = await waitForFirstFrame(from: existing, generation: generation)
+            guard generation == applyGeneration else { return false }
+            if !ready {
+                log.error("Camera capture session produced no video frame")
+                await stopAndReleaseSession()
+            }
+            return ready
         }
 
         // Replace any existing session (device changed).
-        if let existing = session {
-            Task.detached { [existing] in existing.stopRunning() }
-            host.previewLayer?.removeFromSuperlayer()
-            host.previewLayer = nil
-            self.session = nil
-        }
+        await stopAndReleaseSession()
+        guard generation == applyGeneration, !Task.isCancelled else { return false }
 
-        guard let device = resolved,
-              let input = try? AVCaptureDeviceInput(device: device) else {
+        guard let device = resolved else {
             log.error("No camera input available")
-            return
+            return false
         }
 
-        let session = AVCaptureSession()
-        session.sessionPreset = .high
-        guard session.canAddInput(input) else {
-            log.error("Cannot add camera input")
-            return
+        // A running AVCaptureSession is not enough to prove that the selected
+        // camera is actually delivering video. Observe its first sample buffer
+        // and do not expose the preview (or start recording) until one arrives.
+        let captureSession = ManagedCameraCaptureSession()
+        guard await captureSession.configure(deviceID: device.uniqueID) else {
+            log.error("Cannot configure camera capture")
+            return false
         }
-        session.addInput(input)
+        guard generation == applyGeneration else { return false }
 
-        let preview = AVCaptureVideoPreviewLayer(session: session)
+        let preview = AVCaptureVideoPreviewLayer(session: captureSession.session)
         preview.videoGravity = .resizeAspectFill
         preview.frame = host.bounds
         host.layer?.addSublayer(preview)
         host.previewLayer = preview
 
-        self.session = session
+        self.captureSession = captureSession
         self.currentDeviceID = device.uniqueID
-        await Self.start(session)
+        observeUnexpectedFailure(of: captureSession)
+        let started = await captureSession.start()
+        guard generation == applyGeneration else { return false }
+        guard started else {
+            log.error("Camera capture session did not start")
+            await stopAndReleaseSession()
+            return false
+        }
+
+        let ready = await waitForFirstFrame(from: captureSession, generation: generation)
+        guard generation == applyGeneration else { return false }
+        if !ready {
+            log.error("Camera capture session produced no video frame")
+            await stopAndReleaseSession()
+        }
+        return ready
     }
 
-    /// Start the capture session off the main thread and return once it is
-    /// running, plus a short buffer so the preview layer has a frame to show.
-    private static func start(_ session: AVCaptureSession) async {
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            Task.detached {
-                session.startRunning()
-                cont.resume()
+    /// Wait at most three seconds for an actual camera frame. Polling the
+    /// thread-safe probe keeps cancellation responsive without retaining an
+    /// unresumed continuation when a camera disappears mid-start.
+    private func waitForFirstFrame(
+        from captureSession: ManagedCameraCaptureSession,
+        generation: Int
+    ) async -> Bool {
+        for _ in 0..<60 {
+            guard generation == applyGeneration, !Task.isCancelled else { return false }
+            if captureSession.hasReceivedFrame {
+                let running = await captureSession.isRunning()
+                guard generation == applyGeneration, running else { return false }
+                await captureSession.finishReadinessProbe()
+                return generation == applyGeneration
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(50))
+            } catch {
+                return false
             }
         }
-        try? await Task.sleep(for: .milliseconds(200))
+        guard generation == applyGeneration, captureSession.hasReceivedFrame else { return false }
+        guard await captureSession.isRunning(), generation == applyGeneration else { return false }
+        await captureSession.finishReadinessProbe()
+        return generation == applyGeneration
+    }
+
+    /// Drop all controller/UI references synchronously, then stop the detached
+    /// session off the main actor. This prevents a hidden camera from remaining
+    /// owned when the format switches to Screen Only.
+    private func detachSession() -> ManagedCameraCaptureSession? {
+        let detached = captureSession
+        removeCaptureObservers()
+        captureSession = nil
+        currentDeviceID = nil
+
+        if let host = window?.contentView as? CameraBubbleView {
+            host.previewLayer?.removeFromSuperlayer()
+            host.previewLayer = nil
+        }
+        return detached
+    }
+
+    private func observeUnexpectedFailure(of captureSession: ManagedCameraCaptureSession) {
+        removeCaptureObservers()
+        let sessionID = ObjectIdentifier(captureSession)
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [
+            AVCaptureSession.runtimeErrorNotification,
+            AVCaptureSession.wasInterruptedNotification,
+        ]
+        captureObservers = names.map { name in
+            center.addObserver(
+                forName: name,
+                object: captureSession.session,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.handleUnexpectedCaptureFailure(sessionID: sessionID)
+                }
+            }
+        }
+    }
+
+    private func removeCaptureObservers() {
+        let center = NotificationCenter.default
+        captureObservers.forEach(center.removeObserver)
+        captureObservers = []
+    }
+
+    private func handleUnexpectedCaptureFailure(sessionID: ObjectIdentifier) {
+        guard let captureSession,
+              ObjectIdentifier(captureSession) == sessionID else { return }
+        showSafetyCurtain()
+        onCaptureFailure?()
+    }
+
+    private func stopAndReleaseSession() async {
+        guard let captureSession = detachSession() else { return }
+        await captureSession.stopAndWait()
+    }
+}
+
+/// Owns every blocking AVCaptureSession operation on one serial queue. This
+/// prevents rapid format changes from overlapping startRunning and stopRunning.
+private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable {
+    /// Shared across session instances so an old session's queued stop always
+    /// runs before a newly selected session's configure/start operations.
+    private static let sessionQueue = DispatchQueue(label: "to.screencast.app.camera-session")
+
+    let session = AVCaptureSession()
+
+    private let frameOutput = AVCaptureVideoDataOutput()
+    private let frameProbe = CameraReadinessProbe()
+    private let outputQueue = DispatchQueue(label: "to.screencast.app.camera-readiness")
+
+    var hasReceivedFrame: Bool { frameProbe.hasReceivedFrame }
+
+    func configure(deviceID: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            Self.sessionQueue.async { [self] in
+                guard let device = AVCaptureDevice(uniqueID: deviceID) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                guard let input = try? AVCaptureDeviceInput(device: device) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+
+                session.beginConfiguration()
+                session.sessionPreset = .high
+                guard session.canAddInput(input) else {
+                    session.commitConfiguration()
+                    continuation.resume(returning: false)
+                    return
+                }
+                session.addInput(input)
+
+                frameOutput.alwaysDiscardsLateVideoFrames = true
+                frameOutput.setSampleBufferDelegate(frameProbe, queue: outputQueue)
+                guard session.canAddOutput(frameOutput) else {
+                    session.commitConfiguration()
+                    frameOutput.setSampleBufferDelegate(nil, queue: nil)
+                    continuation.resume(returning: false)
+                    return
+                }
+                session.addOutput(frameOutput)
+                session.commitConfiguration()
+                continuation.resume(returning: true)
+            }
+        }
+    }
+
+    func start() async -> Bool {
+        await withCheckedContinuation { continuation in
+            Self.sessionQueue.async { [self] in
+                if !session.isRunning {
+                    frameProbe.reset()
+                    session.startRunning()
+                }
+                continuation.resume(returning: session.isRunning)
+            }
+        }
+    }
+
+    func isRunning() async -> Bool {
+        await withCheckedContinuation { continuation in
+            Self.sessionQueue.async { [self] in
+                continuation.resume(returning: session.isRunning)
+            }
+        }
+    }
+
+    /// Once readiness is established, remove the data output so it does not
+    /// keep converting full-resolution frames for the rest of the recording.
+    func finishReadinessProbe() async {
+        await withCheckedContinuation { continuation in
+            Self.sessionQueue.async { [self] in
+                guard session.outputs.contains(where: { $0 === frameOutput }) else {
+                    continuation.resume()
+                    return
+                }
+                session.beginConfiguration()
+                session.removeOutput(frameOutput)
+                session.commitConfiguration()
+                frameOutput.setSampleBufferDelegate(nil, queue: nil)
+                continuation.resume()
+            }
+        }
+    }
+
+    /// Enqueue a stop synchronously so callers can release their reference
+    /// immediately without blocking AppKit's main actor.
+    func stop() {
+        Self.sessionQueue.async { [self] in
+            if session.isRunning {
+                session.stopRunning()
+            }
+            frameOutput.setSampleBufferDelegate(nil, queue: nil)
+        }
+    }
+
+    func stopAndWait() async {
+        await withCheckedContinuation { continuation in
+            Self.sessionQueue.async { [self] in
+                if session.isRunning {
+                    session.stopRunning()
+                }
+                frameOutput.setSampleBufferDelegate(nil, queue: nil)
+                continuation.resume()
+            }
+        }
+    }
+}
+
+/// Receives camera frames on AVFoundation's output queue and exposes only a
+/// lock-protected readiness bit to the main-actor controller.
+private nonisolated final class CameraReadinessProbe: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var receivedFrame = false
+
+    var hasReceivedFrame: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return receivedFrame
+    }
+
+    func reset() {
+        lock.lock()
+        receivedFrame = false
+        lock.unlock()
+    }
+
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        guard CMSampleBufferDataIsReady(sampleBuffer) else { return }
+        lock.lock()
+        receivedFrame = true
+        lock.unlock()
     }
 }
 

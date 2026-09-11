@@ -84,7 +84,43 @@ final class RecordingEngine: NSObject {
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
+        migrateLegacyCacheRecordings(into: dir, fileManager: fm)
         return dir
+    }
+
+    /// Versions before 2.0.1 wrote recordings to Caches. Move any surviving
+    /// files into Application Support once; name collisions are preserved by
+    /// assigning a new UUID. A still older, different bundle identifier has a
+    /// separate sandbox and must be imported manually by that user.
+    private nonisolated static func migrateLegacyCacheRecordings(into destination: URL, fileManager fm: FileManager) {
+        guard let caches = try? fm.url(
+            for: .cachesDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        ) else { return }
+        for directoryName in ["screencast", "notloom"] {
+            let legacyDirectory = caches.appendingPathComponent(directoryName, isDirectory: true)
+            guard fm.fileExists(atPath: legacyDirectory.path),
+                  let recordings = try? fm.contentsOfDirectory(
+                    at: legacyDirectory,
+                    includingPropertiesForKeys: [.isRegularFileKey],
+                    options: [.skipsHiddenFiles]
+                  ).filter({ url in
+                      guard url.pathExtension.lowercased() == "mov" else { return false }
+                      return (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+                  }) else {
+                continue
+            }
+
+            for source in recordings {
+                var target = destination.appendingPathComponent(source.lastPathComponent)
+                if fm.fileExists(atPath: target.path) {
+                    target = destination.appendingPathComponent("\(UUID().uuidString).mov")
+                }
+                try? fm.moveItem(at: source, to: target)
+            }
+        }
     }
 }
 
@@ -133,6 +169,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     private let videoFrameDuration = CMTime(value: 1, timescale: 60)
 
     // Audio mix state (outputQueue only).
+    private let systemAudioEnabled: Bool
     private let micEnabled: Bool
     private let mixFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32, sampleRate: 48_000, channels: 2, interleaved: true
@@ -145,6 +182,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
     private let maxMicQueueFloats = 48_000 * 2 * 2  // ~2s of stereo backlog
 
     private init(options: RecordingOptions, width: Int, height: Int, zoomState: ZoomState?) throws {
+        self.systemAudioEnabled = options.systemAudio
         self.micEnabled = options.microphone.isOn
         self.videoWidth = width
         self.videoHeight = height
@@ -214,7 +252,7 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
         config.showsCursor = true
         // Steady cadence so live zoom pans/animates smoothly.
         config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-        config.capturesAudio = true            // system audio: always on
+        config.capturesAudio = options.systemAudio
         config.sampleRate = 48_000
         config.channelCount = 2
         config.captureMicrophone = options.microphone.isOn
@@ -229,7 +267,9 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
         let filter = SCContentFilter(display: display, excludingWindows: [])
         let stream = SCStream(filter: filter, configuration: config, delegate: session)
         try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.outputQueue)
-        try stream.addStreamOutput(session, type: .audio, sampleHandlerQueue: session.outputQueue)
+        if options.systemAudio {
+            try stream.addStreamOutput(session, type: .audio, sampleHandlerQueue: session.outputQueue)
+        }
         if options.microphone.isOn {
             try stream.addStreamOutput(session, type: .microphone, sampleHandlerQueue: session.outputQueue)
         }
@@ -323,7 +363,15 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
                 updateLastWrittenSourceEnd(CMTimeAdd(pts, sourceDuration(sampleBuffer, fallback: duration)))
             }
         case .microphone:
-            enqueueMic(sampleBuffer)
+            if systemAudioEnabled {
+                enqueueMic(sampleBuffer)
+            } else {
+                let audioPTS = clampedOutputPTS(outPTS, after: lastAudioOutputEndPTS)
+                if let duration = appendMicrophoneAudio(sampleBuffer, at: audioPTS) {
+                    lastAudioOutputEndPTS = CMTimeAdd(audioPTS, duration)
+                    updateLastWrittenSourceEnd(CMTimeAdd(pts, sourceDuration(sampleBuffer, fallback: duration)))
+                }
+            }
         default:
             break
         }
@@ -409,6 +457,17 @@ extension RecordingSession: SCStreamOutput, SCStreamDelegate {
         if micQueue.count > maxMicQueueFloats {
             micQueue.removeFirst(micQueue.count - maxMicQueueFloats)
         }
+    }
+
+    /// With system audio disabled, the microphone owns the audio timeline
+    /// instead of waiting in the mixing queue for a system-audio buffer that
+    /// will never arrive.
+    private func appendMicrophoneAudio(_ micBuffer: CMSampleBuffer, at pts: CMTime) -> CMTime? {
+        guard audioInput.isReadyForMoreMediaData,
+              let pcm = normalize(micBuffer, converter: &micConverter),
+              let out = makeAudioSampleBuffer(from: pcm, at: pts) else { return nil }
+        let duration = audioDuration(frames: Int(pcm.frameLength))
+        return audioInput.append(out) ? duration : nil
     }
 
     // MARK: Audio helpers

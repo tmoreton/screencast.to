@@ -59,8 +59,7 @@ struct OnboardingView: View {
             .tint(.red)
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
-            // Finish is never gated — users can skip any permission and grant
-            // it later from System Settings (or be re-prompted on first use).
+            .disabled(step == 1 && permissions.screenRecording != .granted)
         }
         .padding(24)
     }
@@ -85,7 +84,7 @@ private struct WelcomeStep: View {
             }
 
             HStack(spacing: 24) {
-                feature(icon: "rectangle.dashed", text: "Full screen,\nwindow, or region")
+                feature(icon: "rectangle.dashed", text: "Full screen\nor region")
                 feature(icon: "video.bubble.left.fill", text: "Camera\nbubble")
                 feature(icon: "pause.circle", text: "Pause &\nresume")
             }
@@ -173,21 +172,29 @@ private struct PermissionsStep: View {
                 PermissionRow(
                     icon: "mic.fill",
                     title: "Microphone",
-                    detail: "Record your voice in the recording.",
+                    detail: microphoneDetail,
                     required: false,
                     status: permissions.microphone,
                     onAction: {
-                        Task { await permissions.requestMicrophone() }
+                        if permissions.microphone == .denied {
+                            permissions.openMicrophoneSettings()
+                        } else {
+                            Task { await permissions.requestMicrophone() }
+                        }
                     }
                 )
                 PermissionRow(
                     icon: "video.fill",
                     title: "Camera",
-                    detail: "Optional camera bubble overlay.",
+                    detail: cameraDetail,
                     required: false,
                     status: permissions.camera,
                     onAction: {
-                        Task { await permissions.requestCamera() }
+                        if permissions.camera == .denied {
+                            permissions.openCameraSettings()
+                        } else {
+                            Task { await permissions.requestCamera() }
+                        }
                     }
                 )
             }
@@ -203,32 +210,51 @@ private struct PermissionsStep: View {
     }
 
     private var footerHint: String {
+        if permissions.screenRecording != .granted {
+            return "Screen Recording is required. Camera and microphone are optional."
+        }
         if permissions.allGranted {
             return "You're all set."
         }
-        return "You can grant any of these later in System Settings."
+        return "Optional camera and microphone access can be granted later."
     }
 
     private var screenRecordingDetail: String {
         if permissions.screenRecording == .granted { return "Capture what's on your screen." }
-        if permissions.screenRecordingPrompted {
+        if permissions.screenRecordingSettingsOpened {
             return "After enabling in Settings, quit & relaunch for the change to apply."
+        }
+        if permissions.screenRecordingPrompted {
+            return "Screen access is off. Enable Screencast in System Settings."
         }
         return "Capture what's on your screen."
     }
 
     private var screenRecordingActionOverride: String? {
         if permissions.screenRecording == .granted { return nil }
-        if permissions.screenRecordingPrompted { return "Quit & Relaunch" }
+        if permissions.screenRecordingSettingsOpened { return "Quit & Relaunch" }
+        if permissions.screenRecordingPrompted { return "Open Settings" }
         return nil
     }
 
+    private var microphoneDetail: String {
+        permissions.microphone == .denied
+            ? "Enable voice capture in System Settings, or record without it."
+            : "Optional voice capture; otherwise recordings omit your microphone."
+    }
+
+    private var cameraDetail: String {
+        permissions.camera == .denied
+            ? "Enable camera access in System Settings, or record screen-only."
+            : "Optional camera overlay; otherwise recordings are screen-only."
+    }
+
     private func handleScreenRecordingTap() {
-        if permissions.screenRecordingPrompted {
+        if permissions.screenRecordingSettingsOpened {
             permissions.relaunchApp()
             return
         }
-        if permissions.screenRecording == .notDetermined {
+        if !permissions.screenRecordingPrompted {
             permissions.requestScreenRecording()
         } else {
             permissions.openScreenRecordingSettings()

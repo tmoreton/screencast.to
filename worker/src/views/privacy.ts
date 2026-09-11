@@ -1,4 +1,4 @@
-import { BRAND, FAVICON_HREF, GA_SNIPPET, PRIVACY_UPDATED, THEME_SCRIPT } from "./shared";
+import { BRAND, FAVICON_HREF, GITHUB_URL, PRIVACY_UPDATED, SUPPORT_EMAIL, THEME_SCRIPT } from "./shared";
 
 /** Privacy policy page at GET /privacy. */
 export function renderPrivacy(): string {
@@ -10,11 +10,10 @@ export function renderPrivacy(): string {
 <meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0d0f" media="(prefers-color-scheme: dark)">
 <title>Privacy — ${BRAND}</title>
-<meta name="description" content="Screencast.to's privacy policy. Plain language, no tricks.">
+<meta name="description" content="How Screencast.to handles local recordings, optional uploads, purchase verification, and network data.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://screencast.to/privacy">
 <link rel="icon" href="${FAVICON_HREF}">
-${GA_SNIPPET}
 ${THEME_SCRIPT}
 <style>
   :root {
@@ -27,6 +26,7 @@ ${THEME_SCRIPT}
     --text-2: #4e463e;
     --muted: #756b61;
     --accent: #e9363f;
+    --link: #b51f29;
     --nav-bg: rgba(247,244,239,0.84);
   }
   @media (prefers-color-scheme: dark) {
@@ -40,6 +40,7 @@ ${THEME_SCRIPT}
       --text-2: #d0c8bd;
       --muted: #9b9389;
       --accent: #ff4b55;
+      --link: #ff727a;
       --nav-bg: rgba(12,13,15,0.78);
     }
   }
@@ -53,6 +54,7 @@ ${THEME_SCRIPT}
     --text-2: #d0c8bd;
     --muted: #9b9389;
     --accent: #ff4b55;
+    --link: #ff727a;
     --nav-bg: rgba(12,13,15,0.78);
   }
   :root[data-theme="light"] {
@@ -65,6 +67,7 @@ ${THEME_SCRIPT}
     --text-2: #4e463e;
     --muted: #756b61;
     --accent: #e9363f;
+    --link: #b51f29;
     --nav-bg: rgba(247,244,239,0.84);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -74,7 +77,7 @@ ${THEME_SCRIPT}
     font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  a { color: var(--accent); text-decoration: none; }
+  a { color: var(--link); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .sr-only {
     position: absolute;
@@ -140,6 +143,7 @@ ${THEME_SCRIPT}
     box-shadow: 0 5px 0 currentColor, 0 -5px 0 currentColor;
   }
   main { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
+  main a { text-decoration: underline; text-underline-offset: 0.14em; }
   h1 { font-size: 36px; letter-spacing: 0; margin-bottom: 8px; }
   .lede { color: var(--text-2); margin-bottom: 8px; font-size: 17px; }
   .updated { color: var(--muted); font-size: 12px; margin-bottom: 40px; }
@@ -191,6 +195,7 @@ ${THEME_SCRIPT}
   </button>
   <div class="nav-actions" id="site-menu" data-nav-actions>
     <button class="theme-toggle" type="button" data-theme-toggle><span data-theme-label>Theme</span></button>
+    <a class="home-link" href="/support">Support</a>
     <a class="home-link" href="/">&larr; Home</a>
   </div>
 </nav>
@@ -201,48 +206,53 @@ ${THEME_SCRIPT}
 
   <div class="tldr">
     <h2>TL;DR</h2>
-    <p>${BRAND} records your screen locally on your Mac. If you choose to upload a recording, we store that file long enough to give you a 24-hour share link. Anyone with the link can watch until it expires. We don't watch, mine, or sell your recordings. Shared recording pages do not load analytics.</p>
+    <p>${BRAND} records to your Mac. Nothing is uploaded unless you choose to create a temporary share link. There are no app accounts, analytics, advertising, tracking, or data sales. Optional uploads are normally deleted within 24–48 hours.</p>
   </div>
 
-  <h2>What we collect</h2>
+  <h2>What stays on your Mac</h2>
+  <p>Recordings are created and kept locally by default. App preferences, including recording choices and saved local state, remain on your Mac. The website can save a light-or-dark theme preference in your browser's local storage; it is not sent to us.</p>
+
+  <h2>What the service processes</h2>
   <ul>
-    <li><strong>Your screen recordings</strong>, stored locally on your Mac by default. If you choose to upload one, the file is stored on Cloudflare R2 (encrypted at rest) and accessible via a randomly-generated link.</li>
-    <li><strong>Website analytics</strong> — Google Analytics measures visits and interactions on the public marketing and privacy pages. Shared recording pages do not load analytics.</li>
-    <li><strong>IP address</strong> on each recording-upload request, used only for short-window rate limiting (10 uploads / minute / IP). Not persisted.</li>
+    <li><strong>An optional uploaded recording.</strong> When you explicitly choose to share, the recording is sent to Cloudflare R2 and made available at a randomly generated link until deletion.</li>
+    <li><strong>Anonymous purchase proof for official sharing.</strong> The App Store build sends an Apple-signed AppTransaction proof so the service can confirm that the app is entitled to use the optional hosted sharing service. The raw proof and Apple transaction identifiers are used only during verification; the ${BRAND} service does not store or log them.</li>
+    <li><strong>Your network IP address for rate limiting.</strong> The upload and entitlement endpoints use it in a short-window rate limiter to reduce abuse. The ${BRAND} application does not add it to an account, analytics profile, or permanent database. Cloudflare may process network metadata as the infrastructure provider.</li>
+    <li><strong>Support correspondence you choose to send.</strong> If you email support, the operator and email-delivery providers process your sender address, message, and any attachments only to answer the request, investigate abuse or security concerns, or remove a recording.</li>
   </ul>
-  <p>That's it. We don't collect your name, email, or any account info — there are no accounts.</p>
+  <p>The recorder and sharing service do not request or maintain a name, email address, or account profile. There are no ${BRAND} accounts. An email address is processed only when someone voluntarily contacts support.</p>
 
-  <h2>Where your recordings live</h2>
-  <p>Local recordings stay on your Mac until you upload them. Uploaded recordings are stored in a Cloudflare R2 bucket controlled by ${BRAND}. They are NOT publicly listed — only someone who has your specific share URL (which contains a random 10-character ID) can access the recording.</p>
+  <h2>Optional sharing</h2>
+  <p>Uploaded recordings are stored in a Cloudflare R2 bucket operated for ${BRAND}. They are not listed in a public library, but anyone who has the specific share URL can watch the recording while it exists. Treat that URL like a secret and share it only with intended viewers.</p>
 
-  <h2>Auto-deletion</h2>
-  <p>Every recording is deleted automatically <strong>within 24–48 hours</strong> of upload via a Cloudflare R2 lifecycle rule. After that, the share link returns a "Not Found" page. We can't recover deleted recordings.</p>
+  <h2>Retention and deletion</h2>
+  <p>A Cloudflare R2 lifecycle rule automatically deletes optional uploads, typically within <strong>24–48 hours</strong>. Lifecycle processing is not instantaneous, so deletion time can vary within that window. Once deleted, a recording cannot be recovered and its share link stops working.</p>
+  <p>Purchase proofs are verified in transit and are not retained by the ${BRAND} service. The rate limiter retains only the short-lived state required to enforce its current window. Local recordings remain under your control until you delete them.</p>
+  <p>Support correspondence is kept only while needed to resolve the request and is deleted within 90 days after resolution, unless a longer record is reasonably required for security, fraud prevention, or law. You can request earlier deletion by replying to the support conversation.</p>
 
-  <h2>Who can see your recording</h2>
-  <p>Anyone who has the share URL can watch the recording until it auto-deletes. Treat the URL like a password — if it's shared publicly (e.g., on Twitter), the recording is effectively public. The viewer page doesn't require login.</p>
+  <h2>No analytics, cookies, or tracking</h2>
+  <p>The Mac app, marketing site, privacy page, support page, and shared-recording viewer do not load analytics or advertising scripts. We do not use cookies or track you across sites. A theme choice may be saved locally in your browser so the site remembers light or dark mode; that preference never leaves your browser through our code.</p>
 
   <h2>Third parties</h2>
   <ul>
-    <li><strong>Cloudflare</strong> — hosts the upload/share worker, stores recordings on R2, terminates TLS. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Their privacy policy</a>.</li>
-    <li><strong>GitHub</strong> — hosts the static marketing pages and downloadable release assets. GitHub may log visitor IP addresses for security. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Their privacy statement</a>.</li>
-    <li><strong>Google Analytics</strong> — measures visits and interactions on the public marketing and privacy pages. It is not loaded on shared recording pages. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a>.</li>
+    <li><strong>Apple</strong> distributes the paid app and signs the AppTransaction proof used for anonymous entitlement verification. Apple handles App Store purchases under <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer">Apple's Privacy Policy</a>.</li>
+    <li><strong>Cloudflare</strong> runs the upload and entitlement worker, delivers shared recordings, stores optional uploads in R2, and applies network-level protections. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare's Privacy Policy</a>.</li>
+    <li><strong>Email-delivery providers</strong> route support messages to the operator's private mailbox and process only correspondence a person chooses to send. The public support alias currently uses <a href="https://www.namecheap.com/legal/general/privacy-policy/" target="_blank" rel="noopener noreferrer">Namecheap's email-forwarding infrastructure</a>; the destination mailbox provider also processes the message and must be identified here before launch.</li>
+    <li><strong>GitHub</strong> hosts the public source repository and issue tracker and may host a static copy of this website. If you visit GitHub or open an issue, GitHub processes that interaction under <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub's Privacy Statement</a>.</li>
   </ul>
-  <p>We don't share recordings with anyone else or sell personal data.</p>
+  <p>When we share data with a service provider, we require it to use the data only for the purposes described here and to provide the same or equal protection promised by this policy and required by the App Store Review Guidelines.</p>
+  <p>We do not sell personal data or provide uploaded recordings to advertisers or data brokers.</p>
 
-  <h2>Cookies</h2>
-  <p>Google Analytics may set analytics cookies on the public marketing and privacy pages. Shared recording pages do not load those cookies. The Mac app itself uses no cookies.</p>
+  <h2>Your choices</h2>
+  <p>You can use the recorder without the hosted sharing service. You can delete local files at any time, avoid uploading recordings, and wait for any existing upload to expire automatically. Because there is no account or service-side profile, there is no profile to close.</p>
 
-  <h2>Your rights</h2>
-  <p>You can delete local recordings from your Mac at any time. Uploaded recordings expire automatically within 24–48 hours of upload. Since we don't have accounts, there's no profile to delete.</p>
-
-  <h2>Abuse</h2>
-  <p>If you find a recording that should be removed (illegal content, harassment, etc.), email the operator. Recordings can be deleted manually within the bucket — they will be removed within 24 hours regardless.</p>
+  <h2>Support, privacy questions, and urgent removal</h2>
+  <p>Email <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> for support, privacy questions, consent withdrawal, or deletion requests. To request early deletion of an optional upload, include its temporary share URL so the recording can be located. Do not post a live private recording URL, purchase proof, or other sensitive information in a public GitHub issue.</p>
 
   <h2>Changes</h2>
   <p>This policy may be updated as the product evolves. The "Last updated" date at the top reflects the current version.</p>
 </main>
 <footer>
-  <a href="/">${BRAND}</a> · <a href="/privacy">Privacy</a>
+  <a href="/">${BRAND}</a> · <a href="/privacy">Privacy</a> · <a href="/support">Support</a> · <a href="mailto:${SUPPORT_EMAIL}">Email</a> · <a href="/third-party-licenses.txt">Licenses</a> · <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">Source</a>
 </footer>
 </body>
 </html>`;

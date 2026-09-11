@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AppKit
 
 struct MenuBarView: View {
     @Bindable var state: AppState
@@ -11,6 +12,10 @@ struct MenuBarView: View {
 
             if state.lastError != nil {
                 errorBanner
+            }
+
+            if !state.captureInputIssues.isEmpty {
+                captureInputBanner
             }
 
             primary
@@ -34,6 +39,22 @@ struct MenuBarView: View {
         }
         .frame(width: 320)
         .background(.background)
+        .onAppear { state.refreshOptionalInputAvailability() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            state.refreshOptionalInputAvailability()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasConnectedNotification)) { _ in
+            state.refreshOptionalInputAvailability()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasDisconnectedNotification)) { _ in
+            state.refreshOptionalInputAvailability()
+        }
+        .onChange(of: state.options.cameraDeviceID) {
+            state.refreshOptionalInputAvailability()
+        }
+        .onChange(of: state.options.microphone) {
+            state.refreshOptionalInputAvailability()
+        }
     }
 
     // MARK: - Header
@@ -97,6 +118,47 @@ struct MenuBarView: View {
         }
         .padding(10)
         .background(Color.gray.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private var captureInputBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Optional input unavailable")
+                    .font(.system(size: 12, weight: .semibold))
+                ForEach(state.captureInputIssues, id: \.self) { issue in
+                    Text(inputIssueMessage(issue))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 10) {
+                    if state.captureInputIssues.contains(where: cameraIssueHasSettings) {
+                        Button("Camera Settings") { state.openCameraPrivacySettings() }
+                            .buttonStyle(.link)
+                            .font(.caption)
+                    }
+                    if state.captureInputIssues.contains(where: microphoneIssueHasSettings) {
+                        Button("Microphone Settings") { state.openMicrophonePrivacySettings() }
+                            .buttonStyle(.link)
+                            .font(.caption)
+                    }
+                }
+            }
+            Spacer()
+            Button { state.dismissCaptureInputIssues() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Dismiss")
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -177,9 +239,12 @@ struct MenuBarView: View {
                 systemImage: "video",
                 devices: state.devices.cameras,
                 selection: $state.options.cameraDeviceID,
-                enabled: state.options.format.usesCamera
+                enabled: state.options.format.usesCamera && state.canSelectCamera
             )
+            cameraAvailabilityHelp
+            systemAudioToggle
             microphonePicker
+            microphoneAvailabilityHelp
         }
         .toggleStyle(.switch)
         .controlSize(.small)
@@ -237,8 +302,12 @@ struct MenuBarView: View {
             Spacer()
             Picker("", selection: $state.options.format) {
                 Text("Screen only").tag(CaptureFormat.screenOnly)
-                Text("Screen + Camera").tag(CaptureFormat.screenAndCamera)
-                Text("Camera only").tag(CaptureFormat.cameraOnly)
+                Text("Screen + Camera")
+                    .tag(CaptureFormat.screenAndCamera)
+                    .disabled(!state.canSelectCamera)
+                Text("Camera only")
+                    .tag(CaptureFormat.cameraOnly)
+                    .disabled(!state.canSelectCamera)
             }
             .labelsHidden()
             .pickerStyle(.menu)
@@ -257,16 +326,85 @@ struct MenuBarView: View {
             Spacer()
             Picker("", selection: $state.options.microphone) {
                 Text("None").tag(MicrophoneSelection.off)
-                Text("System default").tag(MicrophoneSelection.systemDefault)
+                Text("System default")
+                    .tag(MicrophoneSelection.systemDefault)
+                    .disabled(!state.canSelectMicrophone)
                 if !state.devices.microphones.isEmpty { Divider() }
                 ForEach(state.devices.microphones, id: \.uniqueID) { device in
-                    Text(device.localizedName).tag(MicrophoneSelection.device(device.uniqueID))
+                    Text(device.localizedName)
+                        .tag(MicrophoneSelection.device(device.uniqueID))
+                        .disabled(!state.canSelectMicrophone)
                 }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(maxWidth: 180, alignment: .trailing)
         }
+    }
+
+    @ViewBuilder
+    private var cameraAvailabilityHelp: some View {
+        switch state.cameraInputAvailability {
+        case .denied:
+            inputAvailabilityHelp(
+                "Camera access is off. Screen-only recording is still available.",
+                settingsAction: state.openCameraPrivacySettings
+            )
+        case .restricted:
+            inputAvailabilityHelp("Camera access is restricted by this Mac's policy.")
+        case .unavailable:
+            inputAvailabilityHelp("No selected camera is currently available.")
+        case .available, .requestable:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var microphoneAvailabilityHelp: some View {
+        switch state.microphoneInputAvailability {
+        case .denied:
+            inputAvailabilityHelp(
+                "Microphone access is off. Recording can continue without your voice.",
+                settingsAction: state.openMicrophonePrivacySettings
+            )
+        case .restricted:
+            inputAvailabilityHelp("Microphone access is restricted by this Mac's policy.")
+        case .unavailable:
+            inputAvailabilityHelp("No selected microphone is currently available.")
+        case .available, .requestable:
+            EmptyView()
+        }
+    }
+
+    private func inputAvailabilityHelp(
+        _ message: String,
+        settingsAction: (() -> Void)? = nil
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(message)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 2)
+            if let settingsAction {
+                Button("Settings", action: settingsAction)
+                    .buttonStyle(.link)
+            }
+        }
+        .font(.system(size: 10))
+        .padding(.leading, 20)
+    }
+
+    private var systemAudioToggle: some View {
+        HStack(spacing: 6) {
+            Image(systemName: state.options.systemAudio ? "speaker.wave.2" : "speaker.slash")
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            Toggle("System audio", isOn: $state.options.systemAudio)
+                .font(.system(size: 12))
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func devicePicker(
@@ -295,6 +433,36 @@ struct MenuBarView: View {
             .frame(maxWidth: 180, alignment: .trailing)
         }
         .opacity(enabled ? 1.0 : 0.45)
+        .disabled(!enabled)
+    }
+
+    private func inputIssueMessage(_ issue: CaptureInputIssue) -> String {
+        switch issue {
+        case .cameraPermissionRequired:
+            return "Camera was not added while recording. Stop, choose a camera format, and press Record to allow access."
+        case .cameraDenied:
+            return "Camera access was denied. Camera capture was disabled; screen-only recording remains available."
+        case .cameraRestricted:
+            return "Camera access is restricted. Camera capture was disabled; screen-only recording remains available."
+        case .cameraUnavailable:
+            return "The selected camera was unavailable, so camera capture was disabled."
+        case .microphonePermissionRequired:
+            return "Microphone access must be granted when starting a new recording."
+        case .microphoneDenied:
+            return "Microphone access was denied, so voice capture was disabled."
+        case .microphoneRestricted:
+            return "Microphone access is restricted, so voice capture was disabled."
+        case .microphoneUnavailable:
+            return "The selected microphone was unavailable, so voice capture was disabled."
+        }
+    }
+
+    private func cameraIssueHasSettings(_ issue: CaptureInputIssue) -> Bool {
+        issue == .cameraDenied
+    }
+
+    private func microphoneIssueHasSettings(_ issue: CaptureInputIssue) -> Bool {
+        issue == .microphoneDenied
     }
 
     // MARK: - Teleprompter
@@ -410,11 +578,17 @@ struct MenuBarView: View {
     private func uploadControl(url: URL) -> some View {
         switch state.uploadState(for: url) {
         case .idle:
-            Button { state.uploadRecording(url) } label: {
-                Image(systemName: "icloud.and.arrow.up")
+            if UploadConfig.isUploadConfigured {
+                Button { state.uploadRecording(url) } label: {
+                    Image(systemName: "icloud.and.arrow.up")
+                }
+                .help("Upload & copy a temporary link")
+                .buttonStyle(.borderless)
+            } else {
+                Image(systemName: "icloud.slash")
+                    .foregroundStyle(.secondary)
+                    .help("Hosted sharing is disabled in this build")
             }
-            .help("Upload & copy a 24-hour link")
-            .buttonStyle(.borderless)
         case .uploading(let progress):
             ProgressView(value: progress)
                 .progressViewStyle(.circular)
@@ -427,7 +601,7 @@ struct MenuBarView: View {
                     Image(systemName: "checkmark.icloud")
                         .foregroundStyle(.green)
                 }
-                .help("Copy link · expires in \(expiryText(at))")
+                .help("Copy link · hidden here in \(rememberedLinkText(at))")
                 .buttonStyle(.borderless)
 
                 Button { state.copyIssueNote(for: url, link: link, sharedAt: at) } label: {
@@ -446,8 +620,8 @@ struct MenuBarView: View {
         }
     }
 
-    private func expiryText(_ at: Date) -> String {
-        let remaining = AppState.linkLifetime - Date().timeIntervalSince(at)
+    private func rememberedLinkText(_ at: Date) -> String {
+        let remaining = AppState.rememberedLinkLifetime - Date().timeIntervalSince(at)
         guard remaining > 0 else { return "0m" }
         let hours = Int(remaining / 3600)
         if hours > 0 { return "\(hours)h" }
@@ -465,6 +639,16 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             Spacer()
+            Button("Privacy") { state.openPrivacyPolicy() }
+                .buttonStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .disabled(ProductLinks.privacyURL == nil)
+            Button("Support") { state.openSupport() }
+                .buttonStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .disabled(ProductLinks.supportURL == nil)
             Button { state.quit() } label: {
                 Text("⌘Q Quit")
                     .font(.system(size: 12))

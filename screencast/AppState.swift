@@ -1,6 +1,8 @@
 import Foundation
 import AppKit
+import AVFoundation
 import Carbon.HIToolbox
+import CoreGraphics
 import Observation
 
 enum AppPhase: Equatable {
@@ -9,6 +11,36 @@ enum AppPhase: Equatable {
     case recording
     case paused
     case saving
+}
+
+enum OptionalInputAvailability: Equatable {
+    case available
+    case requestable
+    case denied
+    case restricted
+    case unavailable
+}
+
+enum CaptureInputIssue: Hashable {
+    case cameraPermissionRequired
+    case cameraDenied
+    case cameraRestricted
+    case cameraUnavailable
+    case microphonePermissionRequired
+    case microphoneDenied
+    case microphoneRestricted
+    case microphoneUnavailable
+
+    var isCameraIssue: Bool {
+        switch self {
+        case .cameraPermissionRequired, .cameraDenied, .cameraRestricted, .cameraUnavailable:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var isMicrophoneIssue: Bool { !isCameraIssue }
 }
 
 /// On-demand upload state for a single recording.
@@ -29,6 +61,9 @@ final class AppState {
     /// Sticky error banner: set when a recording fails, cleared only when the
     /// user explicitly dismisses it (survives across phase changes).
     var lastError: String?
+    /// Optional inputs that were disabled because permission or hardware was
+    /// unavailable. Screen-only recording remains usable in every case.
+    var captureInputIssues: [CaptureInputIssue] = []
 
     /// Teleprompter script (persisted) and whether to show it while recording.
     /// The teleprompter window is excluded from the recording.
@@ -41,11 +76,14 @@ final class AppState {
     private static let scriptKey = "screencast.teleprompter.script"
     private static let enabledKey = "screencast.teleprompter.enabled"
 
-    /// Per-recording upload state, keyed by local file path. Links live 24h.
+    /// Per-recording upload state, keyed by local file path. Saved links are
+    /// presented as fresh for one day; lifecycle deletion may take another day.
     var uploads: [String: UploadState] = [:]
     private static let uploadsKey = "screencast.uploads.v1"
-    /// Uploaded links expire server-side after this (R2 lifecycle rule).
-    static let linkLifetime: TimeInterval = 24 * 60 * 60
+    /// The app forgets a shared link after one day. The R2 lifecycle starts
+    /// deletion around then, but physical deletion may take another day.
+    static let rememberedLinkLifetime: TimeInterval = 24 * 60 * 60
+    private static let maximumDeletionWindow: TimeInterval = 48 * 60 * 60
     private static let cameraPreflightCountdownSeconds = 3
 
     let devices = DeviceCatalog()
@@ -70,8 +108,16 @@ final class AppState {
     /// Teleprompter scroll hotkey (⌘⇧Space), registered only while recording.
     private var teleprompterHotkeyID: UInt32?
     /// Live filming format during a recording (starts from `options.format`).
-    private var currentFormat: CaptureFormat = .screenAndCamera
+    private var currentFormat: CaptureFormat = .screenOnly
     private var startTask: Task<Void, Never>?
+    /// When true, the cancelled startup task owns recorder shutdown and the
+    /// final transition back to idle; callers must leave any safety curtain up.
+    private var deferredStartCancellation = false
+    private var formatTransitionTask: Task<Void, Never>?
+    private var formatTransitionTarget: CaptureFormat?
+    private var formatTransitionGeneration = 0
+    private var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+    private var microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
     /// Re-entry guard for `stopRecording()`. The popover and the floating
     /// controls window each have a Stop button, and on long recordings
@@ -85,6 +131,10 @@ final class AppState {
         teleprompterEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         loadUploads()
         refreshRecordings()
+        refreshOptionalInputAvailability()
+        bubble.onCaptureFailure = { [weak self] in
+            self?.handleCameraCaptureFailure()
+        }
     }
 
     var isRecording: Bool {
@@ -145,10 +195,15 @@ final class AppState {
 
     private func startRecording() {
         guard case .idle = phase else { return }
+        guard CGPreflightScreenCaptureAccess() else {
+            OnboardingManager.shared.show()
+            return
+        }
 
         // Dismiss the menu popover so it isn't caught in the first frames.
         dismissMenuPopover()
 
+        deferredStartCancellation = false
         phase = .starting(nil)
         currentFormat = options.format
         let captureRect = captureRectGlobal()
@@ -171,22 +226,52 @@ final class AppState {
         startTask = Task { [weak self] in
             guard let self else { return }
             do {
+                let canStart = try await self.prepareSelectedOptionalInputs()
+                try Task.checkCancellation()
+                guard canStart else {
+                    self.finishStartingRecording()
+                    self.showIdleRegionOverlayIfNeeded()
+                    return
+                }
+                self.currentFormat = self.options.format
                 if self.currentFormat.usesCamera {
                     // Warm up the camera and wait for a live frame before
                     // the visible countdown, so auto-exposure/focus settle
                     // before ScreenCaptureKit starts writing frames.
-                    await self.bubble.apply(format: self.currentFormat,
-                                            deviceID: self.options.cameraDeviceID,
-                                            region: self.options.captureRegion)
-                    try Task.checkCancellation()
-                    self.activeControls?.showControls(
-                        onStop: { [weak self] in self?.stopRecording() },
-                        onPauseResume: { [weak self] in self?.togglePauseResume() },
-                        onCycleFormat: { [weak self] in self?.cycleFormat() }
+                    let requestedFormat = self.currentFormat
+                    let cameraReady = await self.bubble.apply(
+                        format: requestedFormat,
+                        deviceID: self.options.cameraDeviceID,
+                        region: self.options.captureRegion
                     )
-                    self.activeControls?.setFormat(self.currentFormat)
-                    self.activeControls?.beginCountdown(seconds: Self.cameraPreflightCountdownSeconds)
-                    try await self.runCameraPreflightCountdown()
+                    try Task.checkCancellation()
+                    if cameraReady {
+                        self.activeControls?.showControls(
+                            onStop: { [weak self] in self?.stopRecording() },
+                            onPauseResume: { [weak self] in self?.togglePauseResume() },
+                            onCycleFormat: { [weak self] in self?.cycleFormat() }
+                        )
+                        self.activeControls?.setFormat(self.currentFormat)
+                        self.activeControls?.beginCountdown(seconds: Self.cameraPreflightCountdownSeconds)
+                        try await self.runCameraPreflightCountdown()
+                    } else {
+                        self.reportCameraUnavailable()
+                        self.options.format = .screenOnly
+                        self.currentFormat = .screenOnly
+
+                        // Camera-only is implemented as an opaque camera window
+                        // over ScreenCaptureKit. Never start ScreenCaptureKit if
+                        // that window has no confirmed frame: doing so would save
+                        // an unintended desktop recording.
+                        guard requestedFormat != .cameraOnly else {
+                            self.finishStartingRecording()
+                            self.showIdleRegionOverlayIfNeeded()
+                            return
+                        }
+
+                        // Screen + Camera can safely degrade to Screen Only.
+                        try await Task.sleep(for: .milliseconds(250))
+                    }
                 } else {
                     self.bubble.hide()
                     // Give the dismissed popover a beat to disappear.
@@ -209,37 +294,118 @@ final class AppState {
                     self.activeControls?.setFormat(self.currentFormat)
                 }
                 self.activeControls?.beginRecording()
+                self.deferredStartCancellation = false
                 self.startTask = nil
             } catch is CancellationError {
-                _ = try? await self.recorder.stop()
-                self.finishStartingRecording()
-                self.showIdleRegionOverlayIfNeeded()
+                await self.unwindCancelledStart()
             } catch {
+                if Task.isCancelled {
+                    await self.unwindCancelledStart()
+                    return
+                }
                 self.lastError = error.localizedDescription
                 self.finishStartingRecording()
             }
         }
     }
 
+    /// Request only the optional inputs selected for this recording. A denied,
+    /// restricted, or disconnected input is turned off and reported. A
+    /// screen-and-camera recording can safely fall back to screen-only; a
+    /// camera-only start is cancelled so it never records the desktop instead.
+    private func prepareSelectedOptionalInputs() async throws -> Bool {
+        devices.refresh()
+        refreshAuthorizationStatuses()
+        var issues: [CaptureInputIssue] = []
+        let requestedCameraOnly = options.format == .cameraOnly
+
+        if options.format.usesCamera {
+            var availability = cameraInputAvailability
+            if availability == .requestable {
+                let granted = await AVCaptureDevice.requestAccess(for: .video)
+                try Task.checkCancellation()
+                devices.refresh()
+                refreshAuthorizationStatuses()
+                availability = cameraInputAvailability
+                if !granted, availability == .requestable {
+                    availability = .denied
+                }
+            }
+            if let issue = cameraIssue(for: availability) {
+                options.format = .screenOnly
+                issues.append(issue)
+                if requestedCameraOnly {
+                    captureInputIssues = issues
+                    return false
+                }
+            }
+        }
+
+        if options.microphone.isOn {
+            var availability = microphoneInputAvailability
+            if availability == .requestable {
+                let granted = await AVCaptureDevice.requestAccess(for: .audio)
+                try Task.checkCancellation()
+                devices.refresh()
+                refreshAuthorizationStatuses()
+                availability = microphoneInputAvailability
+                if !granted, availability == .requestable {
+                    availability = .denied
+                }
+            }
+            if let issue = microphoneIssue(for: availability) {
+                options.microphone = .off
+                issues.append(issue)
+            }
+        }
+
+        captureInputIssues = issues
+        return true
+    }
+
     private func runCameraPreflightCountdown() async throws {
         for remaining in stride(from: Self.cameraPreflightCountdownSeconds, through: 1, by: -1) {
+            try Task.checkCancellation()
             phase = .starting(remaining)
             activeControls?.updateCountdown(seconds: remaining)
             try await Task.sleep(for: .seconds(1))
         }
+        try Task.checkCancellation()
         phase = .starting(nil)
         activeControls?.updateCountdown(seconds: 0)
     }
 
     private func cancelStartingRecording() {
         guard isStarting else { return }
+        beginDeferredStartCancellation(preserveCameraCurtain: currentFormat == .cameraOnly)
+    }
+
+    /// Cancel startup without making the app idle while ScreenCaptureKit may
+    /// still be inside startCapture(). The startup task's cancellation handler
+    /// is the sole owner of recorder stop + final cleanup.
+    private func beginDeferredStartCancellation(preserveCameraCurtain: Bool) {
+        guard isStarting else { return }
+        deferredStartCancellation = true
+        if preserveCameraCurtain {
+            bubble.showSafetyCurtain()
+        } else {
+            bubble.hide()
+        }
+        activeControls?.hideControls()
+        phase = .saving
         startTask?.cancel()
-        startTask = nil
+    }
+
+    private func unwindCancelledStart() async {
+        _ = try? await recorder.stop()
+        guard deferredStartCancellation else { return }
+        deferredStartCancellation = false
         finishStartingRecording()
         showIdleRegionOverlayIfNeeded()
     }
 
     private func finishStartingRecording() {
+        deferredStartCancellation = false
         startTask = nil
         activeControls?.hideControls()
         activeControls = nil
@@ -256,16 +422,105 @@ final class AppState {
     /// Cycle Screen → Screen+Camera → Camera, applied live during recording.
     func cycleFormat() {
         guard isActive else { return }
-        currentFormat = currentFormat.next
-        activeControls?.setFormat(currentFormat)
-        Task {
-            await bubble.apply(format: currentFormat,
-                               deviceID: options.cameraDeviceID,
-                               region: options.captureRegion)
+        // Camera transitions are atomic: wait for the in-flight first-frame
+        // preflight instead of starting overlapping AVCaptureSession work.
+        guard formatTransitionTask == nil else { return }
+        let nextFormat = currentFormat.next
+        if nextFormat.usesCamera, cameraInputAvailability != .available {
+            if let issue = cameraIssue(for: cameraInputAvailability, permissionRequiredWhenRequestable: true) {
+                captureInputIssues.removeAll(where: \.isCameraIssue)
+                captureInputIssues.append(issue)
+            }
+            return
+        }
+        if nextFormat == .screenOnly {
+            cancelFormatTransition()
+            currentFormat = .screenOnly
+            activeControls?.setFormat(.screenOnly)
+            // Hide and relinquish the capture session synchronously with the
+            // user's format change; stopRunning itself remains off-main-thread.
+            bubble.hide()
+            return
+        }
+
+        formatTransitionGeneration &+= 1
+        let generation = formatTransitionGeneration
+        formatTransitionTarget = nextFormat
+        formatTransitionTask = Task { [weak self] in
+            guard let self else { return }
+            let cameraReady = await self.bubble.apply(
+                format: nextFormat,
+                deviceID: self.options.cameraDeviceID,
+                region: self.options.captureRegion
+            )
+            guard !Task.isCancelled, generation == self.formatTransitionGeneration else { return }
+            self.formatTransitionTask = nil
+            self.formatTransitionTarget = nil
+
+            if cameraReady {
+                self.currentFormat = nextFormat
+                self.activeControls?.setFormat(nextFormat)
+                return
+            }
+
+            self.reportCameraUnavailable()
+            if nextFormat == .cameraOnly {
+                // A failed camera-only transition must not continue saving the
+                // desktop beneath an absent full-frame camera presentation.
+                self.bubble.showSafetyCurtain()
+                self.stopRecording(preserveCameraCurtain: true)
+                return
+            }
+
+            // Screen + Camera can safely remain Screen Only on camera failure.
+            self.currentFormat = .screenOnly
+            self.activeControls?.setFormat(.screenOnly)
+            self.bubble.hide()
         }
     }
 
-    private func stopRecording() {
+    private func cancelFormatTransition() {
+        formatTransitionGeneration &+= 1
+        formatTransitionTask?.cancel()
+        formatTransitionTask = nil
+        formatTransitionTarget = nil
+    }
+
+    private func reportCameraUnavailable() {
+        captureInputIssues.removeAll(where: \.isCameraIssue)
+        captureInputIssues.append(.cameraUnavailable)
+    }
+
+    /// Fail closed if a live camera session is interrupted or reports a runtime
+    /// error. Screen + Camera may safely continue without the bubble, while a
+    /// camera-only recording must stop before it can expose the desktop.
+    private func handleCameraCaptureFailure() {
+        reportCameraUnavailable()
+        if isStarting {
+            // Do not attempt to rewrite options while recorder.start may have
+            // taken its snapshot. Cancel atomically; camera-only keeps the full
+            // black curtain until the cancelled task has stopped capture.
+            beginDeferredStartCancellation(preserveCameraCurtain: currentFormat == .cameraOnly)
+            return
+        }
+        guard isActive else { return }
+
+        let failedFormat = formatTransitionTarget ?? currentFormat
+        cancelFormatTransition()
+        if failedFormat == .cameraOnly {
+            bubble.showSafetyCurtain()
+            stopRecording(preserveCameraCurtain: true)
+            return
+        }
+
+        if failedFormat == .screenAndCamera {
+            currentFormat = .screenOnly
+            activeControls?.setFormat(.screenOnly)
+            bubble.hide()
+        }
+    }
+
+    private func stopRecording(preserveCameraCurtain: Bool = false) {
         if isStarting {
             cancelStartingRecording()
             return
@@ -274,9 +529,15 @@ final class AppState {
         guard !isStopping, isActive else { return }
         isStopping = true
 
+        cancelFormatTransition()
         activeControls?.hideControls()
         regionOverlay.hide()
-        bubble.hide()
+        let keepCurtainUntilCaptureStops = preserveCameraCurtain || currentFormat == .cameraOnly
+        if keepCurtainUntilCaptureStops {
+            bubble.showSafetyCurtain()
+        } else {
+            bubble.hide()
+        }
         zoom.stop()
         teleprompter.hide()
         unregisterZoomHotkey()
@@ -290,11 +551,13 @@ final class AppState {
             guard let self else { return }
             do {
                 _ = try await self.recorder.stop()
+                self.bubble.hide()
                 self.isStopping = false
                 self.phase = .idle
                 self.refreshRecordings()
                 self.showIdleRegionOverlayIfNeeded()
             } catch {
+                self.bubble.hide()
                 self.isStopping = false
                 self.lastError = error.localizedDescription
                 self.phase = .idle
@@ -346,19 +609,173 @@ final class AppState {
         lastError = nil
     }
 
+    // MARK: - Optional capture inputs
+
+    var cameraInputAvailability: OptionalInputAvailability {
+        inputAvailability(
+            authorization: cameraAuthorizationStatus,
+            hasSelectedDevice: hasSelectedCamera
+        )
+    }
+
+    var microphoneInputAvailability: OptionalInputAvailability {
+        inputAvailability(
+            authorization: microphoneAuthorizationStatus,
+            hasSelectedDevice: hasSelectedMicrophone
+        )
+    }
+
+    var canSelectCamera: Bool {
+        switch cameraAuthorizationStatus {
+        case .denied, .restricted:
+            return false
+        case .authorized, .notDetermined:
+            return hasAnyCamera
+        @unknown default:
+            return false
+        }
+    }
+
+    var canSelectMicrophone: Bool {
+        switch microphoneAuthorizationStatus {
+        case .denied, .restricted:
+            return false
+        case .authorized, .notDetermined:
+            return hasAnyMicrophone
+        @unknown default:
+            return false
+        }
+    }
+
+    /// Re-check after returning from System Settings or connecting a device.
+    func refreshOptionalInputAvailability() {
+        devices.refresh()
+        refreshAuthorizationStatuses()
+        captureInputIssues.removeAll { issue in
+            switch issue {
+            case .cameraPermissionRequired:
+                return cameraAuthorizationStatus == .authorized
+            case .cameraDenied:
+                return cameraAuthorizationStatus != .denied
+            case .cameraRestricted:
+                return cameraAuthorizationStatus != .restricted
+            case .cameraUnavailable:
+                return false
+            case .microphonePermissionRequired:
+                return microphoneAuthorizationStatus == .authorized
+            case .microphoneDenied:
+                return microphoneAuthorizationStatus != .denied
+            case .microphoneRestricted:
+                return microphoneAuthorizationStatus != .restricted
+            case .microphoneUnavailable:
+                return false
+            }
+        }
+    }
+
+    func dismissCaptureInputIssues() {
+        captureInputIssues = []
+    }
+
+    func openCameraPrivacySettings() {
+        openPrivacySettings(pane: "Privacy_Camera")
+    }
+
+    func openMicrophonePrivacySettings() {
+        openPrivacySettings(pane: "Privacy_Microphone")
+    }
+
+    private var hasSelectedCamera: Bool {
+        if let id = options.cameraDeviceID {
+            return AVCaptureDevice(uniqueID: id) != nil
+        }
+        return AVCaptureDevice.default(for: .video) != nil || !devices.cameras.isEmpty
+    }
+
+    private var hasAnyCamera: Bool {
+        AVCaptureDevice.default(for: .video) != nil || !devices.cameras.isEmpty
+    }
+
+    private var hasSelectedMicrophone: Bool {
+        if let id = options.microphone.deviceID {
+            return AVCaptureDevice(uniqueID: id) != nil
+        }
+        return AVCaptureDevice.default(for: .audio) != nil || !devices.microphones.isEmpty
+    }
+
+    private var hasAnyMicrophone: Bool {
+        AVCaptureDevice.default(for: .audio) != nil || !devices.microphones.isEmpty
+    }
+
+    private func refreshAuthorizationStatuses() {
+        cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    }
+
+    private func inputAvailability(
+        authorization: AVAuthorizationStatus,
+        hasSelectedDevice: Bool
+    ) -> OptionalInputAvailability {
+        switch authorization {
+        case .authorized:
+            return hasSelectedDevice ? .available : .unavailable
+        case .notDetermined:
+            return hasSelectedDevice ? .requestable : .unavailable
+        case .denied:
+            return .denied
+        case .restricted:
+            return .restricted
+        @unknown default:
+            return .restricted
+        }
+    }
+
+    private func cameraIssue(
+        for availability: OptionalInputAvailability,
+        permissionRequiredWhenRequestable: Bool = false
+    ) -> CaptureInputIssue? {
+        switch availability {
+        case .available: return nil
+        case .requestable: return permissionRequiredWhenRequestable ? .cameraPermissionRequired : nil
+        case .denied: return .cameraDenied
+        case .restricted: return .cameraRestricted
+        case .unavailable: return .cameraUnavailable
+        }
+    }
+
+    private func microphoneIssue(
+        for availability: OptionalInputAvailability,
+        permissionRequiredWhenRequestable: Bool = false
+    ) -> CaptureInputIssue? {
+        switch availability {
+        case .available: return nil
+        case .requestable: return permissionRequiredWhenRequestable ? .microphonePermissionRequired : nil
+        case .denied: return .microphoneDenied
+        case .restricted: return .microphoneRestricted
+        case .unavailable: return .microphoneUnavailable
+        }
+    }
+
+    private func openPrivacySettings(pane: String) {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?\(pane)"
+        ) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     // MARK: - Upload (on-demand, background)
 
-    /// Current upload state for a recording, treating links older than 24h as
-    /// expired (they're gone server-side).
+    /// Stop presenting a saved link as fresh after its advertised one-day
+    /// window. Physical lifecycle deletion can complete during the next day.
     func uploadState(for url: URL) -> UploadState {
         let state = uploads[url.path] ?? .idle
-        if case .done(_, let at) = state, Date().timeIntervalSince(at) > Self.linkLifetime {
+        if case .done(_, let at) = state, Date().timeIntervalSince(at) > Self.rememberedLinkLifetime {
             return .idle
         }
         return state
     }
 
-    /// Upload a recording to R2 in the background and produce a 24h link.
+    /// Upload a recording to the optional service and produce a temporary link.
     /// Non-blocking: runs on its own URLSession so it never interferes with
     /// recording. The link is copied to the clipboard on success.
     func uploadRecording(_ url: URL) {
@@ -402,6 +819,14 @@ final class AppState {
         NSWorkspace.shared.open(url)
     }
 
+    func openPrivacyPolicy() {
+        if let url = ProductLinks.privacyURL { NSWorkspace.shared.open(url) }
+    }
+
+    func openSupport() {
+        if let url = ProductLinks.supportURL { NSWorkspace.shared.open(url) }
+    }
+
     private struct PersistedUpload: Codable {
         let url: URL
         let at: Date
@@ -411,7 +836,7 @@ final class AppState {
         var store: [String: PersistedUpload] = [:]
         for (path, state) in uploads {
             if case .done(let url, let at) = state,
-               Date().timeIntervalSince(at) <= Self.linkLifetime {
+               Date().timeIntervalSince(at) <= Self.rememberedLinkLifetime {
                 store[path] = PersistedUpload(url: url, at: at)
             }
         }
@@ -426,13 +851,14 @@ final class AppState {
             return
         }
         let now = Date()
-        for (path, item) in store where now.timeIntervalSince(item.at) <= Self.linkLifetime {
+        for (path, item) in store where now.timeIntervalSince(item.at) <= Self.rememberedLinkLifetime {
             uploads[path] = .done(url: item.url, at: item.at)
         }
     }
 
     private func issueNote(for recording: URL, link: URL, sharedAt: Date) -> String {
-        let expiresAt = sharedAt.addingTimeInterval(Self.linkLifetime)
+        let deletionStartsAt = sharedAt.addingTimeInterval(Self.rememberedLinkLifetime)
+        let deletionExpectedBy = sharedAt.addingTimeInterval(Self.maximumDeletionWindow)
         let dateFormatter = ISO8601DateFormatter()
         let createdAt = (try? recording.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
         let bytes = (try? recording.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
@@ -444,7 +870,7 @@ final class AppState {
 
         \(link.absoluteString)
 
-        Expires: \(dateFormatter.string(from: expiresAt))
+        Deletion window: \(dateFormatter.string(from: deletionStartsAt)) to \(dateFormatter.string(from: deletionExpectedBy))
         Recording: \(recording.lastPathComponent) (\(size))
         Created: \(dateFormatter.string(from: createdAt))
         Environment: \(ProcessInfo.processInfo.operatingSystemVersionString), Screencast \(version) (\(build))

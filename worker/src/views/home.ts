@@ -1,4 +1,4 @@
-import { BRAND, DOWNLOAD_URL, FAVICON_HREF, GA_SNIPPET, GITHUB_URL, OG_IMAGE_URL, THEME_SCRIPT } from "./shared";
+import { BRAND, FAVICON_HREF, GITHUB_URL, OG_IMAGE_URL, THEME_SCRIPT } from "./shared";
 
 /** Landing page at GET /. */
 export function renderHome(): string {
@@ -10,8 +10,8 @@ export function renderHome(): string {
 <meta name="theme-color" content="#fbfaee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)">
 <title>${BRAND} - Local-first Mac screen recorder</title>
-<meta name="description" content="Screencast.to is an open-source macOS menu-bar recorder. Record locally, then share an optional expiring link. No accounts, no permanent video library.">
-<meta name="keywords" content="screen recorder, mac screen recording, loom alternative, free screen recorder, open source screen recorder, macOS, temporary video link">
+<meta name="description" content="Screencast.to is a paid, local-first Mac screen recorder. One purchase, no account, no subscription, with optional expiring share links and inspectable source.">
+<meta name="keywords" content="screen recorder, mac screen recording, local-first screen recorder, source available screen recorder, macOS, temporary video link">
 <meta name="author" content="Screencast.to">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://screencast.to/">
@@ -19,7 +19,7 @@ export function renderHome(): string {
 
 <meta property="og:site_name" content="Screencast.to">
 <meta property="og:title" content="Screencast.to - Local-first Mac screen recorder">
-<meta property="og:description" content="Record on your Mac. Share an expiring link only when you choose. Open source, local first, no accounts.">
+<meta property="og:description" content="Useful software without another subscription. Record locally, share only when you choose, and use the app without an account.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://screencast.to/">
 <meta property="og:image" content="${OG_IMAGE_URL}">
@@ -30,10 +30,9 @@ export function renderHome(): string {
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Screencast.to - Local-first Mac screen recorder">
-<meta name="twitter:description" content="A tiny open-source Mac recorder for local captures and optional expiring share links.">
+<meta name="twitter:description" content="A paid, local-first Mac recorder with no account, no subscription, and optional expiring share links.">
 <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
-${GA_SNIPPET}
 ${THEME_SCRIPT}
 <style>
   :root {
@@ -239,6 +238,17 @@ ${THEME_SCRIPT}
   .button.primary:hover {
     background: var(--accent-strong);
   }
+  .button.disabled {
+    border-color: var(--line);
+    background: var(--surface-soft);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: default;
+  }
+  .button.disabled:hover {
+    border-color: var(--line);
+    background: var(--surface-soft);
+  }
   .theme-icon {
     width: 19px;
     height: 19px;
@@ -437,7 +447,7 @@ ${THEME_SCRIPT}
   }
   .proof-kicker {
     margin: 0 0 12px;
-    color: var(--accent-strong);
+    color: #ff7a73;
     font-size: 12px;
     font-weight: 820;
     text-transform: uppercase;
@@ -494,7 +504,11 @@ ${THEME_SCRIPT}
     gap: 14px;
     flex-wrap: wrap;
   }
-  footer a { color: var(--ink-soft); }
+  footer a {
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
   footer a:hover { color: var(--ink); text-decoration: underline; }
 
   @keyframes floatCard {
@@ -572,7 +586,7 @@ ${THEME_SCRIPT}
 
 <nav>
   <div class="wrap nav-inner">
-    <a class="brand" href="/">
+    <a class="brand" href="/" aria-label="${BRAND} home">
       <img src="/assets/icon.png" alt="">
       <span>${BRAND}</span>
     </a>
@@ -599,7 +613,7 @@ ${THEME_SCRIPT}
           <path d="M8 0C3.58 0 0 3.67 0 8.19c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.39 0-.19-.01-.84-.01-1.53-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.16-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.83.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.09-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.2-.08-.21-.36-1.04.08-2.17 0 0 .67-.22 2.2.84A7.38 7.38 0 0 1 8 3.95c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.13.16 1.96.08 2.17.51.58.82 1.31.82 2.2 0 3.13-1.87 3.82-3.65 4.03.29.26.54.75.54 1.52 0 1.09-.01 1.97-.01 2.24 0 .21.15.47.55.39A8.13 8.13 0 0 0 16 8.19C16 3.67 12.42 0 8 0Z"/>
         </svg>
       </a>
-      <a class="button primary" href="${DOWNLOAD_URL}" download>Download</a>
+      <span class="button primary disabled" aria-disabled="true">Mac App Store &middot; $29 &middot; Coming soon</span>
     </div>
   </div>
 </nav>
@@ -608,16 +622,18 @@ ${THEME_SCRIPT}
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy-block">
-        <div class="eyebrow">Open source &middot; local first &middot; no account &middot; Mac screen recorder</div>
-        <h1>Record locally. Share only if needed.</h1>
-        <p class="hero-copy">An open-source Mac recorder for demos and bug reports. Files stay on your Mac unless you choose to upload a temporary link.</p>
+        <div class="eyebrow">One purchase &middot; local first &middot; no account &middot; Mac screen recorder</div>
+        <h1>Useful software without another subscription.</h1>
+        <p class="hero-copy">A focused Mac recorder for demos and bug reports. Your files stay on your Mac unless you choose to create a temporary share link.</p>
         <div class="cta-row">
-          <a class="button primary" href="${DOWNLOAD_URL}" download>Download for Mac</a>
+          <span class="button primary disabled" aria-disabled="true">Get on the Mac App Store &middot; $29 &middot; Coming soon</span>
+          <span class="button disabled" aria-disabled="true">Productivity Bundle &middot; Coming soon</span>
+          <a class="button" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">Inspect the source</a>
         </div>
-        <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; Apache-2.0</p>
+        <p class="fine-print">macOS 15+ &middot; Apple Silicon and Intel &middot; $29 one-time purchase &middot; No account</p>
       </div>
 
-      <div class="demo-stage" aria-label="Screencast.to recording workflow preview">
+      <div class="demo-stage" role="img" aria-label="Screencast.to recording workflow preview">
         <div class="recorder-card">
           <div class="card-top">
             <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
@@ -652,14 +668,14 @@ ${THEME_SCRIPT}
     <div class="wrap proof-layout">
       <div class="proof-copy">
         <p class="proof-kicker">Why Screencast.to</p>
-        <h2>Screen recording without the black box.</h2>
+        <h2>A recorder you can understand and own.</h2>
         <p>Capture from the menu bar, keep the file locally, and create a browser link only when sharing actually helps.</p>
       </div>
       <div class="proof-grid">
         <div class="proof-item"><span>Local first</span><p>Recordings are files on your Mac before anything leaves the machine.</p></div>
-        <div class="proof-item"><span>Open source</span><p>The macOS app and Cloudflare worker are public, inspectable, and Apache-2.0 licensed.</p></div>
-        <div class="proof-item"><span>Optional links</span><p>Upload only when needed. Shared videos are short-lived instead of becoming a permanent library.</p></div>
-        <div class="proof-item"><span>No account wall</span><p>Viewers can open the link in a browser without signing in or joining a workspace.</p></div>
+        <div class="proof-item"><span>One purchase</span><p>Buy the app once. There is no recurring subscription and no account to maintain.</p></div>
+        <div class="proof-item"><span>Inspectable source</span><p>The macOS app and optional sharing service are published on GitHub so you can review how they work.</p></div>
+        <div class="proof-item"><span>Optional links</span><p>Upload only when needed. Shared videos are short-lived, and viewers do not need an account.</p></div>
       </div>
     </div>
   </section>
@@ -668,7 +684,7 @@ ${THEME_SCRIPT}
 <footer>
   <div class="wrap foot">
     <span>&copy; ${new Date().getFullYear()} ${BRAND}</span>
-    <span>Local first &middot; Open source &middot; Optional sharing &middot; <a href="/privacy">Privacy</a> &middot; <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    <span>Local first &middot; One purchase &middot; No subscription &middot; <a href="/privacy">Privacy</a> &middot; <a href="/support">Support</a> &middot; <a href="/third-party-licenses.txt">Licenses</a> &middot; <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">Source on GitHub</a></span>
   </div>
 </footer>
 

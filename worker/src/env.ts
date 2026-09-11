@@ -3,12 +3,15 @@
  * (which calls `wrangler secret bulk`) — see `wrangler.toml` for the names.
  */
 export interface Env {
+  UPLOAD_AUTH_MODE: "app-store" | "self-hosted";
   R2_ACCOUNT_ID: string;
   R2_BUCKET: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
   R2_PUB_HOST: string;
-  APP_SECRET: string;
+  APP_APPLE_ID: string;
+  SERVICE_TOKEN_SECRET: string;
+  SELF_HOSTED_UPLOAD_TOKEN?: string;
   MAX_UPLOAD_BYTES?: string;
   SIGN_LIMITER: { limit: (opts: { key: string }) => Promise<{ success: boolean }> };
 }

@@ -1,90 +1,111 @@
 # Screencast.to
 
-A tiny macOS menu-bar screen recorder. Hit record, capture exactly what you
-want — pause/resume, live zoom, camera layouts, teleprompter — and keep the
-recording local by default. When you choose to upload, Screencast.to creates a
-temporary share link that expires after 24 hours. Always free.
+Useful software without another subscription. Screencast.to is a paid,
+local-first macOS menu-bar recorder: record a screen or region, mix optional
+camera and audio, pause and zoom live, and keep the resulting movie on your
+Mac. One purchase, no Screencast account, no ads or tracking, and source you
+can inspect.
 
 ![Screencast.to website](.github/assets/website.png)
 
-## Download
+## Distribution
 
-Grab the latest signed and notarized build from **[GitHub Releases](https://github.com/tmoreton/screencast.to/releases/latest/download/screencast.dmg)**.
+Version 3.0.0 begins the paid, source-available generation. The official Mac
+App Store build provides the easiest installation, automatic updates, product
+branding, support, and optional first-party temporary sharing. App Store and
+Productivity Bundle links will be added after their records exist. The planned
+standalone price is a one-time $29 purchase.
 
-Requires macOS 15+ (Apple Silicon and Intel).
+Existing GitHub binaries through v2.0.2 remain available as legacy releases,
+but new signed production binaries are not published there. Developers can
+clone and build the source under the applicable license.
 
-## Hosting
+Requires macOS 15 or later on Apple silicon or Intel.
 
-- **Marketing/privacy site**: static HTML exported from `worker/src/views/*` and deployed to GitHub Pages by `.github/workflows/pages.yml`.
-- **Upload/share service**: Cloudflare Worker on `share.screencast.to`, which mints presigned R2 upload URLs and serves temporary viewer pages.
-- **Downloads**: GitHub Releases are the canonical public download channel.
+## Local and hosted boundaries
 
-## Repo layout
+Screen capture, camera/microphone/system-audio capture, recording, playback,
+and local file access through Finder run on the Mac. Nothing is uploaded unless
+the user clicks the upload control.
 
-- **`screencast/`** — the Xcode project for the Mac app (menu-bar UI, screen
-  recording engine, upload client).
-- **`worker/`** — the Cloudflare Worker and shared HTML views. The Worker backs
-  upload signing and share playback; the same views export the static GitHub
-  Pages site. See [`worker/README.md`](worker/README.md) for setup and deploy
-  instructions.
-- **`worker/scripts/export-static-site.ts`** — exports the marketing and
-  privacy pages for GitHub Pages.
-- **`scripts/release.sh`** — builds, signs, notarizes, and packages the Mac
-  app into a DMG. Maintainer builds can also mirror the DMG to R2 for legacy
-  links, but GitHub Releases are canonical.
+The optional official sharing path uses existing Cloudflare Worker and R2
+infrastructure. The App Store build sends an Apple-signed StoreKit 2
+`AppTransaction` to the Worker, which verifies the production app identity and
+returns a short-lived anonymous upload token. The service does not create an
+account or retain the proof or Apple transaction identifiers. Uploaded files
+are accessible to anyone with their random link and are normally deleted by an
+R2 lifecycle rule within 24–48 hours.
+
+Public source builds have hosted sharing disabled by default. Developers can
+deploy the Worker and configure their own endpoint and token; cloning the
+source does not grant access to the paid first-party service. See
+[`worker/README.md`](worker/README.md).
+
+## Repository layout
+
+- `screencast/` — macOS application.
+- `worker/` — optional Cloudflare Worker/R2 sharing service and website views.
+- `scripts/app-store-release.sh` — App Store Connect archive/export path.
+- `scripts/release.sh` — local-only Developer ID artifact for development and
+  migration testing; it does not publish anything.
+- `docs/BUNDLE.md` — product, App Store bundle, privacy, dependency, cost, and
+  launch-blocker record.
 
 ## Development
 
-Build the app locally without signing:
+Build both configurations without signing:
 
 ```sh
-xcodebuild \
-  -project screencast.xcodeproj \
-  -scheme screencast \
-  -configuration Debug \
-  -destination 'platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO \
-  build
+xcodebuild -project screencast.xcodeproj -scheme screencast \
+  -configuration Debug -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO build
+
+xcodebuild -project screencast.xcodeproj -scheme screencast \
+  -configuration Release -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO build
 ```
 
-Public/dev builds compile with upload sharing disabled. Official builds inject
-the upload secret and `UPLOAD_WORKER_ENDPOINT=https://share.screencast.to/sign`
-through `scripts/release.sh`.
-
-Check the Worker and static site export:
+Check the Worker and exported site:
 
 ```sh
 cd worker
 npm ci
 npm run check
+npm test
 npm run build:site
+npx wrangler deploy --dry-run
 ```
 
-For the canonical GitHub Pages deployment, the workflow sets
-`SITE_CNAME=screencast.to` so the generated artifact includes a `CNAME` file.
-Local exports omit that file unless you set `SITE_CNAME` yourself.
+To test a private Worker, copy `scripts/Sharing.local.xcconfig.example` to a
+gitignored `.local.xcconfig` file, fill in that deployment's values, and pass
+it to `xcodebuild -xcconfig`. Never use the first-party production service
+configuration in a public build.
 
-## Releasing a new build
+## Releases
+
+Official production archives require an Apple team and App Store Connect app
+record:
 
 ```sh
-scripts/release.sh              # reads MARKETING_VERSION from the Xcode project
-scripts/release.sh 2.1          # or pass a version explicitly
+APPLE_TEAM_ID=YOUR_TEAM_ID BUILD_NUMBER=5 scripts/app-store-release.sh 3.0.0
 ```
 
-This produces a notarized `build/screencast-<version>.dmg` when Apple
-Developer ID credentials are configured in `scripts/.env`. To publish or
-replace the GitHub release assets:
+The script embeds `app-store` sharing mode and the public Worker base URL, but
+no production credential. It exports locally for review and manual upload via
+Xcode Organizer or Transporter.
+
+For a local Developer ID migration-test artifact:
 
 ```sh
-ditto build/screencast-<version>.dmg /tmp/screencast.dmg
-gh release create v<version> /tmp/screencast.dmg build/screencast-<version>.dmg \
-  --title "Screencast.to v<version>" \
-  --notes "..."
-
-# For an existing release:
-gh release upload v<version> /tmp/screencast.dmg build/screencast-<version>.dmg --clobber
+scripts/release.sh
 ```
+
+That script never uploads to R2 or GitHub Releases.
 
 ## License
 
-Screencast.to is released under the Apache License 2.0. See [LICENSE](LICENSE).
+Screencast.to 3.0.0 and later are source-available under PolyForm Shield 1.0.0.
+Earlier MIT and Apache-2.0 grants remain available for the historical snapshots
+and code they covered; those grants are not revoked. See [`LICENSE`](LICENSE),
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), and
+[`TRADEMARKS.md`](TRADEMARKS.md).

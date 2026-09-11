@@ -5,10 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   mac-app:
-    name: macOS app
+    name: macOS app (${{ matrix.configuration }})
     runs-on: macos-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
     steps:
       - uses: actions/checkout@v7
       - name: Build unsigned app
@@ -16,10 +22,20 @@ jobs:
           xcodebuild \
             -project screencast.xcodeproj \
             -scheme screencast \
-            -configuration Debug \
+            -configuration "${{ matrix.configuration }}" \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
             build
+      - name: Static analysis
+        if: matrix.configuration == 'Release'
+        run: |
+          xcodebuild \
+            -project screencast.xcodeproj \
+            -scheme screencast \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            analyze
 
   worker:
     name: Worker
@@ -36,5 +52,7 @@ jobs:
           cache-dependency-path: worker/package-lock.json
       - run: npm ci
       - run: npm run check
+      - run: npm test
+      - run: npm run smoke
       - run: npm audit --audit-level=high
       - run: npm run build:site
