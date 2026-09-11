@@ -37,6 +37,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             analyze
 
+  mac-app-required:
+    name: macOS app
+    needs: mac-app
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Debug and Release macOS checks passed."
+
   worker:
     name: Worker
     runs-on: ubuntu-latest
