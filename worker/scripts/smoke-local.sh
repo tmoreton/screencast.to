@@ -77,7 +77,7 @@ oversized_status="$(node -e 'process.stdout.write(JSON.stringify({appTransaction
 [[ "$app_icon_status" == 200 ]]
 [[ "$licenses_status" == 200 ]]
 cmp -s THIRD_PARTY_LICENSES.txt "$smoke_tmp_dir/third-party-licenses.txt"
-rg -qi '^referrer-policy: no-referrer' "$smoke_tmp_dir/viewer-headers.txt"
+grep -Eqi '^referrer-policy: no-referrer' "$smoke_tmp_dir/viewer-headers.txt"
 [[ "$sign_status" == 401 ]]
 [[ "$entitlement_status" == 401 ]]
 [[ "$oversized_status" == 413 ]]
