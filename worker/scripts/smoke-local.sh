@@ -54,6 +54,9 @@ fi
 
 privacy_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/privacy")"
 support_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/support")"
+share_home_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/")"
+share_privacy_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/privacy")"
+share_support_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/support")"
 website_image_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/assets/website.png")"
 app_icon_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/assets/icon.png")"
 licenses_status="$(curl -sS -o "$smoke_tmp_dir/third-party-licenses.txt" -w '%{http_code}' \
@@ -71,8 +74,11 @@ oversized_status="$(node -e 'process.stdout.write(JSON.stringify({appTransaction
     -X POST -H 'Content-Type: application/json' --data-binary @- \
     "$smoke_base_url/entitlements/token")"
 
-[[ "$privacy_status" == 200 ]]
-[[ "$support_status" == 200 ]]
+[[ "$privacy_status" == 308 ]]
+[[ "$support_status" == 308 ]]
+[[ "$share_home_status" == 200 ]]
+[[ "$share_privacy_status" == 200 ]]
+[[ "$share_support_status" == 200 ]]
 [[ "$website_image_status" == 200 ]]
 [[ "$app_icon_status" == 200 ]]
 [[ "$licenses_status" == 200 ]]
@@ -82,4 +88,4 @@ grep -Eqi '^referrer-policy: no-referrer' "$smoke_tmp_dir/viewer-headers.txt"
 [[ "$entitlement_status" == 401 ]]
 [[ "$oversized_status" == 413 ]]
 
-echo "Worker runtime smoke passed (pages/assets/notices 200, private viewer referrer blocked, auth failures 401, oversized body 413)."
+echo "Worker runtime smoke passed (commerce redirects, sharing pages/assets/notices, private viewer, auth failures, oversized body)."
