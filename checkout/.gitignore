@@ -1,6 +1,5 @@
 .env.local
 .env.production.local
-.vercel
 node_modules
 public
 .env*

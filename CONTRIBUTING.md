@@ -22,7 +22,7 @@ Requirements:
 
 - macOS 15+
 - Xcode 26+
-- Node.js 22+
+- Node.js 24+
 
 Build both app configurations without signing:
 
@@ -48,14 +48,13 @@ for configuration in Debug Release; do
 done
 ```
 
-Check the Worker and checkout service:
+Check the Worker and product site:
 
 ```sh
 cd worker
 npm ci
 npm run check
 npm test
-npm run build:site
 npx wrangler deploy --dry-run
 
 cd ../checkout
@@ -84,5 +83,6 @@ xcconfig with a Worker and token they control; see
 `scripts/app-store-release.sh` creates the Mac App Store export and contains no
 self-updater. `scripts/release.sh` creates the separate Sparkle-enabled,
 Developer ID artifact. Only the tag-triggered `Private Standalone Release`
-workflow should publish that artifact and its signed appcast to private Vercel
-Blob storage. GitHub Releases are not part of the standalone delivery path.
+workflow should publish that artifact and its signed appcast to private
+Cloudflare R2 storage through the authenticated Worker route. GitHub Releases
+are not part of the standalone delivery path.

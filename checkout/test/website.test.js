@@ -33,6 +33,15 @@ test('public website has checkout CTAs but no installer or GitHub release downlo
   assert.match(index, /action="\/api\/checkout"/);
   assert.doesNotMatch(index, /href="[^"]+\.dmg/);
   assert.doesNotMatch(index, /github\.com\/[^" ]+\/releases/);
-  assert.match(index, /Productivity Bundle/);
-  assert.match(index, /Yaprflow/);
+  assert.match(index, /href="\/bundle\/"/);
+  assert.doesNotMatch(index, /id="bundle"/);
+});
+
+test('bundle preview lives on a dedicated page with real product branding and no premature sale claim', async () => {
+  const bundle = await readFile(new URL('../bundle/index.html', import.meta.url), 'utf8');
+  assert.match(bundle, /Productivity Bundle/);
+  assert.match(bundle, /YAPRFLOW/);
+  assert.match(bundle, /yaprflow-mark\.svg/);
+  assert.match(bundle, /NOT FOR SALE YET/);
+  assert.doesNotMatch(bundle, /action="\/api\/checkout"/);
 });

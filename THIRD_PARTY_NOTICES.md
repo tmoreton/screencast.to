@@ -1,10 +1,10 @@
 # Third-party notices
 
-Screencast.to's own license does not replace the licenses below. Versions are
-locked in `worker/package-lock.json` and `checkout/package-lock.json`;
-package-level license files remain the authoritative terms. The Mac App Store
-target links only Apple system frameworks. The standalone macOS target
-additionally bundles Sparkle 2.10.0;
+Screencast.to's own license does not replace the licenses below. Worker
+versions are locked in `worker/package-lock.json`; package-level license files
+remain the authoritative terms. The website uses no production npm dependency.
+The Mac App Store target links only Apple system frameworks. The standalone
+macOS target additionally bundles Sparkle 2.10.0;
 its complete license and incorporated third-party notices are preserved in
 `LICENSES/Sparkle.txt` and copied into the standalone app bundle.
 
@@ -15,10 +15,8 @@ Wrangler-injected runtime shim are preserved at
 text module and serves it at `/third-party-licenses.txt`. Worker dependencies
 are not included in the macOS app bundle.
 
-The unified Worker uses Stripe's server SDK 22.6.2 (MIT). The checkout folder
-retains the previous `@vercel/blob` 2.8.0 (Apache-2.0) adapter only as a
-short-term rollback implementation; neither package is included in a macOS
-app target.
+The unified Worker uses Stripe's server SDK 22.6.2 (MIT). Worker packages are
+not included in either macOS app target.
 
 ## Standalone macOS updater
 
@@ -49,13 +47,6 @@ notarization.
 | `ecdsa-sig-formatter` | 1.0.11 | Apache-2.0 |
 | `semver` | 7.8.5 | ISC |
 | `webidl-conversions` | 3.0.1 | BSD-2-Clause |
-
-## Checkout production dependencies
-
-| Package | Version | License |
-|---|---:|---|
-| `stripe` | 22.6.2 | MIT |
-| `@vercel/blob` | 2.8.0 | Apache-2.0 |
 
 ## Wrangler-injected production runtime
 

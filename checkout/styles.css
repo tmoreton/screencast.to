@@ -83,7 +83,7 @@ button { font: inherit; }
 
 .demo-section, .features, .privacy, .buy-section, .faq { padding-block: 90px; }
 .section-heading { max-width: 980px; margin-bottom: 42px; }
-.section-heading h2, .math-section h2, .privacy h2, .bundle-section h2, .buy-section h2, .faq h2 { margin: 10px 0 0; font-family: var(--display); font-size: clamp(46px, 6.8vw, 90px); line-height: .9; letter-spacing: -.035em; text-transform: uppercase; }
+.section-heading h2, .math-section h2, .privacy h2, .buy-section h2, .faq h2 { margin: 10px 0 0; font-family: var(--display); font-size: clamp(46px, 6.8vw, 90px); line-height: .9; letter-spacing: -.035em; text-transform: uppercase; }
 .section-heading--split { display: grid; grid-template-columns: .36fr 1fr; max-width: none; gap: 38px; align-items: start; }
 .section-heading--split h2 { margin: 0; }
 
@@ -120,7 +120,7 @@ button { font: inherit; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 2px solid var(--ink); border-left: 2px solid var(--ink); }
 .feature-grid article { min-height: 280px; padding: 28px; border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); background: rgba(255,253,248,.64); }
 .feature-grid article > span { font: 900 12px/1 var(--mono); }
-.feature-grid h3 { margin: 68px 0 12px; font-family: var(--display); font-size: 32px; line-height: .95; letter-spacing: -.02em; }
+.feature-grid h3 { margin: 34px 0 12px; font-family: var(--display); font-size: 32px; line-height: .95; letter-spacing: -.02em; }
 .feature-grid p { margin: 0; color: var(--ink-soft); }
 .feature-grid__accent { background: var(--blue-soft) !important; }
 
@@ -142,15 +142,27 @@ button { font: inherit; }
 .privacy-flow span { font-weight: 850; }
 .privacy-flow small { font: 800 10px/1 var(--mono); }
 
-.bundle-section { padding-block: 90px; border-bottom: 2px solid var(--ink); background: var(--blue-soft); }
-.bundle-grid { display: grid; grid-template-columns: 1fr .8fr; gap: 70px; align-items: center; }
-.bundle-grid > div:first-child > p:last-child { max-width: 660px; font-size: 18px; }
+.bundle-section { padding-block: clamp(72px, 9vw, 130px); border-bottom: 2px solid var(--ink); background: var(--blue-soft); }
+.bundle-hero { min-height: calc(100vh - 72px); display: flex; align-items: center; }
+.bundle-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(420px, .92fr); gap: 70px; align-items: center; }
+.bundle-copy h1 { margin: 20px 0 28px; font-family: var(--display); font-size: clamp(62px, 6.8vw, 132px); line-height: .83; letter-spacing: -.045em; text-transform: uppercase; }
+.bundle-lede { max-width: 720px; margin: 0; font-size: clamp(18px, 1.7vw, 23px); line-height: 1.45; }
+.bundle-status { display: inline-block; margin-top: 24px; padding: 8px 11px; border: 2px solid var(--ink); background: var(--mint); box-shadow: 3px 3px 0 var(--ink); font: 900 11px/1 var(--mono); letter-spacing: .06em; }
+.bundle-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 22px; margin-top: 32px; }
 .bundle-stack { display: grid; gap: 12px; transform: rotate(1deg); }
 .bundle-stack > div { min-height: 96px; display: flex; align-items: center; gap: 18px; padding: 16px 20px; border: 3px solid var(--ink); background: var(--white); box-shadow: 6px 6px 0 var(--ink); font-weight: 950; }
 .bundle-stack > div:nth-child(2) { margin-left: 28px; background: #ffd3c8; }
 .bundle-stack > div:nth-child(3) { margin-left: 56px; background: var(--mint); }
-.bundle-stack img, .wave-mark, .bundle-stack .mystery > span:first-child { width: 58px; height: 58px; display: grid; place-items: center; font: 900 30px/1 var(--mono); }
+.bundle-stack img, .bundle-stack .mystery > span:first-child { width: 58px; height: 58px; display: grid; flex: 0 0 58px; place-items: center; object-fit: contain; font: 900 30px/1 var(--mono); }
 .bundle-stack small { display: block; color: var(--ink-soft); font: 800 10px/1.5 var(--mono); }
+.bundle-details { padding-block: 90px; border-bottom: 2px solid var(--ink); }
+.bundle-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.bundle-detail-grid article { min-height: 280px; padding: 26px; border: 2px solid var(--ink); background: var(--white); box-shadow: 6px 6px 0 var(--ink); }
+.bundle-detail-grid article:nth-child(2) { background: #ffd3c8; }
+.bundle-detail-grid article:nth-child(3) { background: var(--mint); }
+.bundle-detail-grid span { font: 900 12px/1 var(--mono); }
+.bundle-detail-grid h3 { margin: 76px 0 12px; font-size: 26px; line-height: 1; }
+.bundle-detail-grid p { margin: 0; color: var(--ink-soft); }
 
 .buy-section { display: grid; grid-template-columns: 1fr .78fr; gap: 72px; align-items: start; border-bottom: 2px solid var(--ink); }
 .buy-copy { position: sticky; top: 110px; }
@@ -208,6 +220,11 @@ footer { border-top: 2px solid var(--ink); background: var(--ink); color: var(--
 @media (max-width: 900px) {
   .nav-links > a:not(.button) { display: none; }
   .hero-lower, .math-grid, .privacy, .bundle-grid, .buy-section { grid-template-columns: 1fr; }
+  .bundle-hero { min-height: auto; }
+  .bundle-stack { max-width: 720px; }
+  .bundle-detail-grid { grid-template-columns: 1fr; }
+  .bundle-detail-grid article { min-height: 220px; }
+  .bundle-detail-grid h3 { margin-top: 48px; }
   .price-slate { max-width: 560px; }
   .section-heading--split { grid-template-columns: 1fr; }
   .feature-grid { grid-template-columns: repeat(2, 1fr); }
@@ -238,9 +255,12 @@ footer { border-top: 2px solid var(--ink); background: var(--ink); color: var(--
   .control-bar button { width: 40px; height: 40px; }
   .feature-grid { grid-template-columns: 1fr; }
   .feature-grid article { min-height: 230px; }
-  .feature-grid h3 { margin-top: 42px; }
+  .feature-grid h3 { margin-top: 30px; }
   .privacy-flow li { grid-template-columns: 44px 1fr; }
   .privacy-flow small { grid-column: 2; }
+  .bundle-section, .bundle-details { padding-block: 64px; }
+  .bundle-copy h1 { font-size: clamp(58px, 19vw, 92px); }
+  .bundle-stack > div { min-height: 88px; padding: 14px 16px; }
   .bundle-stack > div:nth-child(2), .bundle-stack > div:nth-child(3) { margin-left: 0; }
   .support-grid { grid-template-columns: 1fr; }
   .footer-grid { align-items: flex-start; flex-direction: column; justify-content: center; padding-block: 42px; }

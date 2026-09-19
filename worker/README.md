@@ -148,8 +148,9 @@ rejection, and signed `Content-Length` behavior.
 ## Static site
 
 `npm run build:checkout` exports the canonical product site from `checkout/`
-and packages it with the Worker as Cloudflare static assets. `npm run
-build:site` keeps the older sharing-site export available for reference.
+and packages it with the Worker as Cloudflare static assets. The sharing
+hostname's home, privacy, support, and viewer pages are rendered directly by
+the Worker.
 
 ## Retention and operational dependency
 
@@ -160,5 +161,5 @@ requests per minute per IP for each entitlement/signing route, and the default
 upload maximum is 1 GiB.
 
 The service depends on Cloudflare Workers, R2, DNS/custom-domain service, and
-Apple's certificate/StoreKit infrastructure. See `docs/BUNDLE.md` for the
-remaining App Store decisions and expected operating costs.
+Apple's certificate/StoreKit infrastructure. See `docs/ARCHITECTURE.md` for
+the complete production topology and distribution boundaries.
