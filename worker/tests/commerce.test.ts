@@ -165,3 +165,28 @@ test("checkout carries the Screencast brand and returns to the private delivery 
     "https://screencast.to/api/complete?session_id={CHECKOUT_SESSION_ID}");
   assert.equal(checkoutParams?.cancel_url, "https://screencast.to/?checkout=cancelled");
 });
+
+test("Sparkle serves only the current named update through its clean release URL", async () => {
+  const { env, objects } = fakeEnv();
+  const dmg = new Uint8Array([1, 2, 3]);
+  const manifest = {
+    product: "screencast-mac", version: "3.0.0", pathname: "releases/screencast-3.0.0.dmg",
+    appcastPath: "releases/appcast-3.0.0.xml", size: dmg.byteLength, sha256,
+  };
+  objects.set("releases/current.json", {
+    bytes: new TextEncoder().encode(JSON.stringify(manifest)),
+  });
+  objects.set(manifest.pathname, { bytes: dmg, customMetadata: { sha256 } });
+
+  const authorized = { Authorization: `Bearer ${updateToken}` };
+  let response = await handleCommerce(new Request(
+    "https://screencast.to/api/update/screencast-3.0.0.dmg", { headers: authorized }), env);
+  assert.equal(response?.status, 200);
+  assert.equal(response?.headers.get("Content-Type"), "application/x-apple-diskimage");
+
+  response = await handleCommerce(new Request(
+    "https://screencast.to/api/update/screencast-2.0.0.dmg", { headers: authorized }), env);
+  assert.equal(response?.status, 404);
+  assert.equal((await handleCommerce(new Request(
+    "https://screencast.to/api/update/screencast-3.0.0.dmg"), env))?.status, 401);
+});

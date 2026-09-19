@@ -29,7 +29,7 @@ bucket_name = "screencast-releases"
 [vars]
 UPLOAD_AUTH_MODE = "app-store"
 CHECKOUT_BASE_URL = "https://screencast.to"
-CHECKOUT_ENABLED = "false"
+CHECKOUT_ENABLED = "true"
 STRIPE_PRICE_ID = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 STRIPE_ALLOWED_PRICE_IDS = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 RELEASE_MANIFEST_PATH = "releases/current.json"
