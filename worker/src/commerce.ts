@@ -268,6 +268,7 @@ export async function handleCommerce(request: Request, env: Env,
       if (!price || !release) return privateResponse("Checkout is not ready.", { status: 503 });
       const session = await stripe.checkout.sessions.create({
         mode: "payment", line_items: [{ price: env.STRIPE_PRICE_ID, quantity: 1 }],
+        managed_payments: { enabled: false },
         customer_creation: "always",
         submit_type: "pay",
         branding_settings: {

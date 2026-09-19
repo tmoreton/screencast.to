@@ -144,6 +144,7 @@ test("checkout carries the Screencast brand and returns to the private delivery 
   assert.equal(response?.status, 303);
   assert.equal(response?.headers.get("Location"), "https://checkout.stripe.com/c/pay/cs_test_screencast");
   assert.equal(checkoutParams?.mode, "payment");
+  assert.deepEqual(checkoutParams?.managed_payments, { enabled: false });
   assert.equal(checkoutParams?.customer_creation, "always");
   assert.equal(checkoutParams?.submit_type, "pay");
   assert.deepEqual(checkoutParams?.line_items, [{ price: "price_current", quantity: 1 }]);
