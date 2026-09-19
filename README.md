@@ -13,7 +13,7 @@ distribution channels. The Mac App Store build is updated only by Apple and
 includes optional first-party temporary sharing. The separately distributed,
 Developer ID-signed build is sold as a one-time purchase and checks a private,
 Sparkle-signed update feed. Its installer, appcast, and release manifest live
-in private Vercel Blob storage rather than GitHub Releases. Both builds use the
+in a private Cloudflare R2 bucket rather than GitHub Releases. Both builds use the
 same bundle identifier and local data layout. The planned standalone price is
 a one-time $29 purchase.
 
@@ -45,16 +45,16 @@ source does not grant access to the paid first-party service. See
 ## Repository layout
 
 - `screencast/` — macOS application.
-- `checkout/` — product site, Stripe Checkout, purchaser download, and private
-  Sparkle delivery endpoints.
-- `worker/` — optional Cloudflare Worker/R2 sharing service and website views.
+- `checkout/` — source and build output for the static product site.
+- `worker/` — the unified Cloudflare Worker for the product site, Stripe
+  checkout, private releases, Sparkle, and optional recording sharing.
 - `scripts/app-store-release.sh` — App Store Connect archive/export path.
 - `scripts/release.sh` — Developer ID standalone artifact used by the private
   release workflow; the script itself does not publish anything.
 - `docs/BUNDLE.md` — product, App Store bundle, privacy, dependency, cost, and
   launch-blocker record.
-- `docs/CLOUDFLARE_MIGRATION.md` — staged plan for moving the commerce site,
-  private releases, and Sparkle delivery from Vercel to Workers and R2.
+- `docs/CLOUDFLARE_MIGRATION.md` — deployed Cloudflare architecture, cutover
+  checklist, and rollback notes.
 
 ## Development
 
@@ -128,7 +128,7 @@ pushing a three-part version tag such as `v3.0.0`; the tag supplies the
 standalone artifact's marketing and monotonically increasing internal version.
 The `Private Standalone Release` workflow builds and notarizes the DMG,
 generates a Sparkle-signed `appcast.xml`, and uploads the installer, appcast,
-and current-release manifest to private Vercel Blob storage. It does not create
+and current-release manifest to private Cloudflare R2 storage. It does not create
 a GitHub Release. Always publish a version higher than the prior standalone
 release.
 
@@ -142,8 +142,8 @@ The workflow requires these repository secrets:
 - `SPARKLE_UPDATE_TOKEN`, a random value of at least 32 characters shared by
   official standalone builds and the private update endpoints.
 - `RELEASE_PUBLISH_TOKEN`, a random value of at least 32 characters shared only
-  between GitHub Actions and the checkout project's release-publishing route.
-  Vercel keeps `BLOB_READ_WRITE_TOKEN`; it is not copied into GitHub.
+  between GitHub Actions and the Worker's release-publishing route. The R2
+  bucket is never given a public development URL.
 
 Keep the Sparkle private key backed up and never commit it. Mac App Store
 archives continue to use `scripts/app-store-release.sh`; they do not contain

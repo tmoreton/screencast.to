@@ -1,31 +1,38 @@
 name = "screencast"
 main = "src/worker.ts"
-compatibility_date = "2026-09-11"
+compatibility_date = "2026-09-19"
 compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "screencast.to", custom_domain = true },
+  { pattern = "www.screencast.to", custom_domain = true },
+  { pattern = "share.screencast.to", custom_domain = true },
+]
 
 [[rules]]
 type = "Data"
 globs = ["**/*.png"]
 fallthrough = true
 
-# Bind the Worker only to the sharing-service domain. The marketing, checkout,
-# paid-download, and Sparkle endpoints at screencast.to are hosted by Vercel.
-# Keeping the apex out of this file prevents a later sharing-service deploy
-# from reclaiming the production website's custom domain.
-# Prerequisites:
-#   1. screencast.to is added as a zone in your Cloudflare account
-#   2. Cloudflare is set as the authoritative nameservers for it
-# Until both are true, comment this route out and the Worker stays reachable
-# at https://screencast.<your-subdomain>.workers.dev.
-routes = [
-  { pattern = "share.screencast.to", custom_domain = true },
-]
+[assets]
+directory = "../checkout/public"
+binding = "ASSETS"
+run_worker_first = true
+
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "screencast-releases"
 
 # The canonical service accepts only StoreKit-derived short-lived tokens.
 # A private fork may deliberately change this to "self-hosted" and configure
 # SELF_HOSTED_UPLOAD_TOKEN after replacing the Worker name and routes.
 [vars]
 UPLOAD_AUTH_MODE = "app-store"
+CHECKOUT_BASE_URL = "https://screencast.to"
+CHECKOUT_ENABLED = "false"
+STRIPE_PRICE_ID = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
+STRIPE_ALLOWED_PRICE_IDS = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
+RELEASE_MANIFEST_PATH = "releases/current.json"
 
 # Per-IP rate limit on /sign (10 requests / 60s).
 # `namespace_id` is an arbitrary unique integer per limiter in your account.
@@ -45,3 +52,6 @@ simple = { limit = 10, period = 60 }
 #   SERVICE_TOKEN_SECRET  — random secret used only to sign 15-minute tokens
 #   SELF_HOSTED_UPLOAD_TOKEN — private forks only; canonical deploy refuses it
 #   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB
+#   STRIPE_SECRET_KEY     — restricted live key; Checkout/Customers write, Prices/Products read
+#   SPARKLE_UPDATE_TOKEN  — bearer token embedded only in official standalone builds
+#   RELEASE_PUBLISH_TOKEN — GitHub Actions release-upload bearer token

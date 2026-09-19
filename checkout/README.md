@@ -1,8 +1,8 @@
 # Screencast.to checkout
 
-This directory contains the public product site and the server-side direct-sale
-path for the standalone Mac app. It mirrors Yaprflow's purchase flow without
-sharing its visual identity:
+This directory contains the public product site and the release-publishing
+client for the standalone Mac app. The production API routes now run in the
+unified Cloudflare Worker under `../worker`:
 
 1. `/api/checkout` creates a one-time Stripe Checkout session for the exact
    configured price.
@@ -10,8 +10,8 @@ sharing its visual identity:
    secure, host-only, HttpOnly cookie.
 3. `/api/status` and `/api/download` recheck the session, product marker,
    quantity, mode, payment status, and allowed price with Stripe.
-4. A verified customer receives a five-minute signed URL for the current DMG
-   in a private Vercel Blob store.
+4. A verified customer receives the current DMG streamed from a private
+   Cloudflare R2 bucket.
 5. Official standalone builds use the token-gated `/api/appcast` and
    `/api/update` endpoints for Sparkle updates. The Mac App Store build has no
    Sparkle dependency and continues to update through Apple.
@@ -32,13 +32,13 @@ npm start
 
 The site intentionally shows checkout as unavailable until valid test-mode
 values from `.env.example` are placed in a gitignored `.env.local` file and a
-private release manifest exists. Never put live Stripe keys, Blob credentials,
+private release manifest exists. Never put live Stripe keys, R2 credentials,
 or the Sparkle update token in source control.
 
-## Vercel setup
+## Cloudflare setup
 
-Create or link a Vercel project whose root directory is `checkout`, attach a
-private Blob store, and configure these production values:
+Build the static files with `npm run build`; Wrangler packages `public/` with
+the Worker. Configure these production values as Worker bindings/secrets:
 
 - `STRIPE_SECRET_KEY` — the live secret key for the intended seller account.
 - `STRIPE_PRICE_ID` — one active, per-unit, one-time Stripe price.
@@ -48,16 +48,16 @@ private Blob store, and configure these production values:
   account, signed release, and custom domain are being prepared; change this
   to `true` only after the production preflight passes.
 - `CHECKOUT_BASE_URL=https://screencast.to`
-- `BLOB_READ_WRITE_TOKEN` — supplied by the linked private Blob store.
+- `RELEASES` — the private `screencast-releases` R2 bucket binding.
 - `RELEASE_MANIFEST_PATH=releases/current.json`
 - `SPARKLE_UPDATE_TOKEN` — a random value of at least 32 characters; use the
   same GitHub Actions secret when building official standalone releases.
 - `RELEASE_PUBLISH_TOKEN` — a separate random value of at least 32 characters;
-  store the same value in GitHub Actions. The release workflow exchanges it
-  for short-lived, pathname-restricted upload authorization, so the master
-  Blob credential never leaves Vercel.
+  store the same value in GitHub Actions. The release workflow uploads only
+  the versioned DMG/appcast and current manifest through the authenticated
+  Worker route, so no R2 credential leaves Cloudflare.
 
-Preview deployments should use Stripe test-mode credentials and keep
+Non-production deployments should use Stripe test-mode credentials and keep
 `CHECKOUT_ENABLED=false` until a test release has been uploaded. Stripe test
 and live objects are distinct, so do not mix a test secret key with a live
 price ID.

@@ -10,11 +10,13 @@
     "smoke": "bash scripts/smoke-local.sh",
     "build:site": "tsx scripts/export-static-site.ts",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "build:checkout": "npm --prefix ../checkout run build",
+    "deploy": "npm run build:checkout && wrangler deploy"
   },
   "dependencies": {
     "@apple/app-store-server-library": "^3.1.0",
-    "aws4fetch": "^1.0.20"
+    "aws4fetch": "^1.0.20",
+    "stripe": "22.6.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260813.1",
