@@ -10,10 +10,11 @@ permissions:
 
 jobs:
   mac-app:
-    name: macOS app (${{ matrix.configuration }})
+    name: macOS app (${{ matrix.scheme }}, ${{ matrix.configuration }})
     runs-on: macos-latest
     strategy:
       matrix:
+        scheme: [screencast, screencast-standalone]
         configuration: [Debug, Release]
     steps:
       - uses: actions/checkout@v7
@@ -21,7 +22,7 @@ jobs:
         run: |
           xcodebuild \
             -project screencast.xcodeproj \
-            -scheme screencast \
+            -scheme "${{ matrix.scheme }}" \
             -configuration "${{ matrix.configuration }}" \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
@@ -31,7 +32,7 @@ jobs:
         run: |
           xcodebuild \
             -project screencast.xcodeproj \
-            -scheme screencast \
+            -scheme "${{ matrix.scheme }}" \
             -configuration Release \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
@@ -63,3 +64,21 @@ jobs:
       - run: npm run smoke
       - run: npm audit --audit-level=high
       - run: npm run build:site
+
+  checkout:
+    name: Checkout and private releases
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: checkout
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: checkout/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npm run build

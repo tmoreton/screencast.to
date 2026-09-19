@@ -12,6 +12,15 @@
 		B10000062FC0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */; };
 		B10000092FC0000000000001 /* Apache-2.0.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000072FC0000000000001 /* Apache-2.0.txt */; };
 		B100000A2FC0000000000001 /* MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000082FC0000000000001 /* MIT.txt */; };
+		B20000042FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md in Resources */ = {isa = PBXBuildFile; fileRef = B20000022FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md */; };
+		B20000052FD0000000000001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = B10000012FC0000000000001 /* LICENSE */; };
+		B20000062FD0000000000001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000022FC0000000000001 /* THIRD_PARTY_NOTICES.md */; };
+		B20000072FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md in Resources */ = {isa = PBXBuildFile; fileRef = B20000022FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md */; };
+		B20000082FD0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */; };
+		B20000092FD0000000000001 /* Apache-2.0.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000072FC0000000000001 /* Apache-2.0.txt */; };
+		B200000A2FD0000000000001 /* MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = B10000082FC0000000000001 /* MIT.txt */; };
+		B200000B2FD0000000000001 /* Sparkle.txt in Resources */ = {isa = PBXBuildFile; fileRef = B20000032FD0000000000001 /* Sparkle.txt */; };
+		B200000C2FD0000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B20000162FD0000000000001 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,15 +30,27 @@
 		B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "LICENSES/PolyForm-Shield-1.0.0.md"; sourceTree = SOURCE_ROOT; };
 		B10000072FC0000000000001 /* Apache-2.0.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSES/Apache-2.0.txt"; sourceTree = SOURCE_ROOT; };
 		B10000082FC0000000000001 /* MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSES/MIT.txt"; sourceTree = SOURCE_ROOT; };
+		B20000012FD0000000000001 /* screencast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = screencast.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B20000022FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "LICENSES/PolyForm-Noncommercial-1.0.0.md"; sourceTree = SOURCE_ROOT; };
+		B20000032FD0000000000001 /* Sparkle.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSES/Sparkle.txt"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		AF9F0C842FB240E800FCA627 /* Exceptions for "screencast" folder in "screencast" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Info-Standalone.plist",
 				Info.plist,
 			);
 			target = AF9F0C752FB240E700FCA627 /* screencast */;
+		};
+		B200000D2FD0000000000001 /* Exceptions for "screencast" folder in "screencast-standalone" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Info-Standalone.plist",
+				Info.plist,
+			);
+			target = B20000112FD0000000000001 /* screencast-standalone */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -38,6 +59,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				AF9F0C842FB240E800FCA627 /* Exceptions for "screencast" folder in "screencast" target */,
+				B200000D2FD0000000000001 /* Exceptions for "screencast" folder in "screencast-standalone" target */,
 			);
 			path = screencast;
 			sourceTree = "<group>";
@@ -52,6 +74,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B200000E2FD0000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B200000C2FD0000000000001 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -61,9 +91,11 @@
 				AF9F0C782FB240E700FCA627 /* screencast */,
 				B10000012FC0000000000001 /* LICENSE */,
 				B10000022FC0000000000001 /* THIRD_PARTY_NOTICES.md */,
+				B20000022FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md */,
 				B10000032FC0000000000001 /* PolyForm-Shield-1.0.0.md */,
 				B10000072FC0000000000001 /* Apache-2.0.txt */,
 				B10000082FC0000000000001 /* MIT.txt */,
+				B20000032FD0000000000001 /* Sparkle.txt */,
 				AF9F0C772FB240E700FCA627 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -72,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				AF9F0C762FB240E700FCA627 /* screencast.app */,
+				B20000012FD0000000000001 /* screencast.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -101,6 +134,29 @@
 			productReference = AF9F0C762FB240E700FCA627 /* screencast.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B20000112FD0000000000001 /* screencast-standalone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B20000142FD0000000000001 /* Build configuration list for PBXNativeTarget "screencast-standalone" */;
+			buildPhases = (
+				B20000102FD0000000000001 /* Sources */,
+				B200000E2FD0000000000001 /* Frameworks */,
+				B200000F2FD0000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AF9F0C782FB240E700FCA627 /* screencast */,
+			);
+			name = "screencast-standalone";
+			packageProductDependencies = (
+				B20000162FD0000000000001 /* Sparkle */,
+			);
+			productName = screencast;
+			productReference = B20000012FD0000000000001 /* screencast.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -114,6 +170,9 @@
 					AF9F0C752FB240E700FCA627 = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
+					B20000112FD0000000000001 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
 				};
 			};
 			buildConfigurationList = AF9F0C712FB240E700FCA627 /* Build configuration list for PBXProject "screencast" */;
@@ -125,12 +184,16 @@
 			);
 			mainGroup = AF9F0C6D2FB240E700FCA627;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B20000152FD0000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AF9F0C772FB240E700FCA627 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				AF9F0C752FB240E700FCA627 /* screencast */,
+				B20000112FD0000000000001 /* screencast-standalone */,
 			);
 		};
 /* End PBXProject section */
@@ -145,6 +208,21 @@
 				B10000062FC0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */,
 				B10000092FC0000000000001 /* Apache-2.0.txt in Resources */,
 				B100000A2FC0000000000001 /* MIT.txt in Resources */,
+				B20000042FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B200000F2FD0000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B20000052FD0000000000001 /* LICENSE in Resources */,
+				B20000062FD0000000000001 /* THIRD_PARTY_NOTICES.md in Resources */,
+				B20000072FD0000000000001 /* PolyForm-Noncommercial-1.0.0.md in Resources */,
+				B20000082FD0000000000001 /* PolyForm-Shield-1.0.0.md in Resources */,
+				B20000092FD0000000000001 /* Apache-2.0.txt in Resources */,
+				B200000A2FD0000000000001 /* MIT.txt in Resources */,
+				B200000B2FD0000000000001 /* Sparkle.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +230,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		AF9F0C722FB240E700FCA627 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20000102FD0000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -347,6 +432,82 @@
 			};
 			name = Release;
 		};
+		B20000122FD0000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = screencast/standalone.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "screencast/Info-Standalone.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 3.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
+				PRODUCT_NAME = screencast;
+				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
+				SCREENCAST_SHARING_MODE = disabled;
+				SCREENCAST_WORKER_BASE_URL = "";
+				SPARKLE_FEED_URL = "https://screencast.to/api/appcast";
+				SPARKLE_PUBLIC_ED_KEY = "";
+				SPARKLE_UPDATE_TOKEN = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE_UPDATER $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B20000132FD0000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = screencast/standalone.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = "*.local.swift";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "screencast/Info-Standalone.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 3.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
+				PRODUCT_NAME = screencast;
+				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
+				SCREENCAST_SHARING_MODE = disabled;
+				SCREENCAST_WORKER_BASE_URL = "";
+				SPARKLE_FEED_URL = "https://screencast.to/api/appcast";
+				SPARKLE_PUBLIC_ED_KEY = "";
+				SPARKLE_UPDATE_TOKEN = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE_UPDATER $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -368,7 +529,35 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		B20000142FD0000000000001 /* Build configuration list for PBXNativeTarget "screencast-standalone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B20000122FD0000000000001 /* Debug */,
+				B20000132FD0000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B20000152FD0000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B20000162FD0000000000001 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B20000152FD0000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AF9F0C6E2FB240E700FCA627 /* Project object */;
 }

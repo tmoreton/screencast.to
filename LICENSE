@@ -4,12 +4,12 @@ Required Notice: Copyright 2026 Tim Moreton
 
 ## Current license
 
-The project-owned code and documentation in the Screencast.to 3.0.0 snapshot,
-beginning September 11, 2026, and later snapshots are offered under the
-PolyForm Shield License 1.0.0. The complete, unmodified terms are in
-`LICENSES/PolyForm-Shield-1.0.0.md` and at:
+Project-owned code and documentation in snapshots after commit
+`e1f237e01f6765c301f5220b4d884676786e978c` are offered under the PolyForm
+Noncommercial License 1.0.0. The complete, unmodified terms are in
+`LICENSES/PolyForm-Noncommercial-1.0.0.md` and at:
 
-https://polyformproject.org/licenses/shield/1.0.0
+https://polyformproject.org/licenses/noncommercial/1.0.0
 
 This license is source-available, not an open-source license as that term is
 commonly defined. Separate commercial terms may be available from the
@@ -21,6 +21,8 @@ Earlier public grants remain in force for the source snapshots to which they
 applied, including code that also appears in later snapshots. Nothing in the
 current license revokes or retroactively changes them.
 
+- Commit `e1f237e01f6765c301f5220b4d884676786e978c` was published under the
+  PolyForm Shield License 1.0.0. See `LICENSES/PolyForm-Shield-1.0.0.md`.
 - Commit `b9fff839faf04f1c45c60186f6aa90acc1de9c7d` was published under the
   MIT License. See `LICENSES/MIT.txt`.
 - Source from commit `9119df842f5e51c1e738d1d77cc1e85a15bb251c` through
@@ -34,6 +36,6 @@ current license revokes or retroactively changes them.
 
 Third-party software, public certificates, platform SDKs, service marks, and
 other separately identified materials remain governed by their own terms.
-See `THIRD_PARTY_NOTICES.md` and `TRADEMARKS.md`. The PolyForm Shield grant
-does not grant rights to Screencast.to branding beyond those required by law
-or expressly described in `TRADEMARKS.md`.
+See `THIRD_PARTY_NOTICES.md` and `TRADEMARKS.md`. The PolyForm Noncommercial
+grant does not grant rights to Screencast.to branding beyond those required by
+law or expressly described in `TRADEMARKS.md`.

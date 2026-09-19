@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Builds a local Developer ID artifact for development and migration testing.
-# It never uploads or publishes the artifact. Paid production builds use
-# scripts/app-store-release.sh instead.
+# Builds the Developer ID artifact distributed outside the Mac App Store.
+# It signs and notarizes the app and DMG, but never uploads them. The
+# tag-triggered private release workflow calls this script.
 #
 # Usage:
 #   scripts/release.sh                         # reads version/build from Xcode
@@ -44,7 +44,7 @@ done
 # ---- Config ------------------------------------------------------------------
 
 APP_NAME="screencast"
-SCHEME="screencast"
+SCHEME="screencast-standalone"
 PROJECT="screencast.xcodeproj"
 CONFIGURATION="Release"
 
@@ -54,6 +54,7 @@ EXPORT_DIR="$BUILD_DIR/export"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
 BUILD_SETTINGS_XCCONFIG="$BUILD_DIR/ReleaseBuildSettings.xcconfig"
+SOURCE_PACKAGES_DIR="$BUILD_DIR/SourcePackages"
 
 # Local release credentials. See scripts/.env.example.
 if [[ -f scripts/.env ]]; then
@@ -65,9 +66,13 @@ fi
 
 SELF_HOSTED_WORKER_BASE_URL="${SELF_HOSTED_WORKER_BASE_URL:-}"
 SELF_HOSTED_UPLOAD_TOKEN="${SELF_HOSTED_UPLOAD_TOKEN:-}"
+SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-https://screencast.to/api/appcast}"
+SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY:-}"
+SPARKLE_UPDATE_TOKEN="${SPARKLE_UPDATE_TOKEN:-}"
 
 read_marketing_version() {
     xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
+        -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_DIR" \
         -showBuildSettings 2>/dev/null \
         | grep -m1 -E '^[[:space:]]*MARKETING_VERSION = ' \
         | sed -E 's/^[[:space:]]*MARKETING_VERSION = //; s/[[:space:]]*$//'
@@ -75,6 +80,7 @@ read_marketing_version() {
 
 read_build_number() {
     xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
+        -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_DIR" \
         -showBuildSettings 2>/dev/null \
         | grep -m1 -E '^[[:space:]]*CURRENT_PROJECT_VERSION = ' \
         | sed -E 's/^[[:space:]]*CURRENT_PROJECT_VERSION = //; s/[[:space:]]*$//'
@@ -90,6 +96,14 @@ if [[ -z "$BUILD_NUMBER" ]]; then
 fi
 if [[ -z "$VERSION" ]]; then
     echo "error: could not determine version (pass it as the first argument)" >&2
+    exit 1
+fi
+if [[ ! "$VERSION" =~ ^[1-9][0-9]*\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    echo "error: version must contain exactly three dot-separated integers, start above zero, and have no leading zeroes" >&2
+    exit 1
+fi
+if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]{0,3}(\.(0|[1-9][0-9]?)){0,2}$ ]]; then
+    echo "error: BUILD_NUMBER must contain one to three dot-separated integers (4/2/2 digit limits), start above zero, and have no leading zeroes" >&2
     exit 1
 fi
 
@@ -127,6 +141,14 @@ if [[ "$NOTARIZE" == true && -z "${APPLE_TEAM_ID:-}" ]]; then
     echo "error: APPLE_TEAM_ID is required for notarized Developer ID export." >&2
     exit 1
 fi
+if [[ "$NOTARIZE" == true && -z "$SPARKLE_PUBLIC_ED_KEY" ]]; then
+    echo "error: SPARKLE_PUBLIC_ED_KEY is required for a distributable standalone build." >&2
+    exit 1
+fi
+if [[ "$NOTARIZE" == true && ${#SPARKLE_UPDATE_TOKEN} -lt 32 ]]; then
+    echo "error: SPARKLE_UPDATE_TOKEN must contain at least 32 characters for a distributable standalone build." >&2
+    exit 1
+fi
 
 CODESIGN_IDENTITY="${DEVELOPER_ID_APPLICATION:-Developer ID Application}"
 
@@ -140,6 +162,9 @@ write_release_xcconfig() {
     {
         printf 'MARKETING_VERSION = %s\n' "$(xcconfig_value "$VERSION")"
         printf 'CURRENT_PROJECT_VERSION = %s\n' "$(xcconfig_value "$BUILD_NUMBER")"
+        printf 'SPARKLE_FEED_URL = %s\n' "$(xcconfig_value "$SPARKLE_FEED_URL")"
+        printf 'SPARKLE_PUBLIC_ED_KEY = %s\n' "$(xcconfig_value "$SPARKLE_PUBLIC_ED_KEY")"
+        printf 'SPARKLE_UPDATE_TOKEN = %s\n' "$(xcconfig_value "$SPARKLE_UPDATE_TOKEN")"
         if [[ -n "$SELF_HOSTED_WORKER_BASE_URL" && -n "$SELF_HOSTED_UPLOAD_TOKEN" ]]; then
             printf 'SCREENCAST_SHARING_MODE = self-hosted\n'
             printf 'SCREENCAST_WORKER_BASE_URL = %s\n' "$(xcconfig_value "$SELF_HOSTED_WORKER_BASE_URL")"
@@ -173,6 +198,7 @@ xcodebuild \
     -configuration "$CONFIGURATION" \
     -archivePath "$ARCHIVE_PATH" \
     -destination "generic/platform=macOS" \
+    -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_DIR" \
     -xcconfig "$BUILD_SETTINGS_XCCONFIG" \
     archive
 
@@ -181,8 +207,16 @@ ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
 APP_PLIST="$ARCHIVE_APP_PATH/Contents/Info.plist"
 actual_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PLIST")"
 actual_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PLIST")"
-if [[ "$actual_version" != "$VERSION" || "$actual_build" != "$BUILD_NUMBER" ]]; then
+actual_feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP_PLIST")"
+actual_public_key="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$APP_PLIST")"
+actual_update_token="$(/usr/libexec/PlistBuddy -c 'Print :ScreencastUpdateToken' "$APP_PLIST")"
+if [[ "$actual_version" != "$VERSION" ||
+      "$actual_build" != "$BUILD_NUMBER" ||
+      "$actual_feed_url" != "$SPARKLE_FEED_URL" ||
+      "$actual_public_key" != "$SPARKLE_PUBLIC_ED_KEY" ||
+      "$actual_update_token" != "$SPARKLE_UPDATE_TOKEN" ]]; then
     echo "error: archived app is $actual_version ($actual_build), expected $VERSION ($BUILD_NUMBER)" >&2
+    echo "error: archived Sparkle configuration does not match the release settings" >&2
     exit 1
 fi
 
@@ -217,6 +251,43 @@ fi
 
 if [[ ! -d "$APP_PATH" ]]; then
     echo "error: $APP_PATH not found" >&2
+    exit 1
+fi
+
+RESOURCES_DIR="$APP_PATH/Contents/Resources"
+required_resources=(
+    "LICENSE"
+    "THIRD_PARTY_NOTICES.md"
+    "PolyForm-Noncommercial-1.0.0.md"
+    "PolyForm-Shield-1.0.0.md"
+    "Apache-2.0.txt"
+    "MIT.txt"
+    "Sparkle.txt"
+)
+for resource in "${required_resources[@]}"; do
+    if [[ ! -s "$RESOURCES_DIR/$resource" ]]; then
+        echo "error: standalone app is missing required resource: $resource" >&2
+        exit 1
+    fi
+done
+license_sources=(
+    "LICENSE"
+    "THIRD_PARTY_NOTICES.md"
+    "LICENSES/PolyForm-Noncommercial-1.0.0.md"
+    "LICENSES/PolyForm-Shield-1.0.0.md"
+    "LICENSES/Apache-2.0.txt"
+    "LICENSES/MIT.txt"
+    "LICENSES/Sparkle.txt"
+)
+for license_source in "${license_sources[@]}"; do
+    resource="${license_source##*/}"
+    if ! cmp -s "$license_source" "$RESOURCES_DIR/$resource"; then
+        echo "error: standalone license resource does not match $license_source" >&2
+        exit 1
+    fi
+done
+if [[ ! -d "$APP_PATH/Contents/Frameworks/Sparkle.framework" ]]; then
+    echo "error: standalone app does not contain Sparkle.framework" >&2
     exit 1
 fi
 
@@ -320,4 +391,4 @@ echo
 echo "==> Built: $DMG_PATH"
 ls -lh "$DMG_PATH"
 echo
-echo "Local-only artifact. Do not publish this Developer ID build as the paid App Store product."
+echo "Standalone artifact ready. Publish only through the private release workflow."
