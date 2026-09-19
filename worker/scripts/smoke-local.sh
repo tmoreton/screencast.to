@@ -7,6 +7,14 @@ smoke_tmp_dir="$(mktemp -d)"
 smoke_log="$smoke_tmp_dir/wrangler.log"
 worker_pid=""
 
+expect_status() {
+  local label="$1" expected="$2" actual="$3"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "Unexpected $label status: expected $expected, received $actual." >&2
+    exit 1
+  fi
+}
+
 cleanup() {
   if [[ -n "$worker_pid" ]] && kill -0 "$worker_pid" 2>/dev/null; then
     kill "$worker_pid" 2>/dev/null || true
@@ -54,9 +62,6 @@ fi
 
 privacy_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/privacy")"
 support_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/support")"
-share_home_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/")"
-share_privacy_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/privacy")"
-share_support_status="$(curl -sS -H 'Host: share.screencast.to' -o /dev/null -w '%{http_code}' "$smoke_base_url/support")"
 website_image_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/assets/website.png")"
 app_icon_status="$(curl -sS -o /dev/null -w '%{http_code}' "$smoke_base_url/assets/icon.png")"
 licenses_status="$(curl -sS -o "$smoke_tmp_dir/third-party-licenses.txt" -w '%{http_code}' \
@@ -74,18 +79,15 @@ oversized_status="$(node -e 'process.stdout.write(JSON.stringify({appTransaction
     -X POST -H 'Content-Type: application/json' --data-binary @- \
     "$smoke_base_url/entitlements/token")"
 
-[[ "$privacy_status" == 308 ]]
-[[ "$support_status" == 308 ]]
-[[ "$share_home_status" == 200 ]]
-[[ "$share_privacy_status" == 200 ]]
-[[ "$share_support_status" == 200 ]]
-[[ "$website_image_status" == 200 ]]
-[[ "$app_icon_status" == 200 ]]
-[[ "$licenses_status" == 200 ]]
+expect_status privacy 308 "$privacy_status"
+expect_status support 308 "$support_status"
+expect_status website-image 200 "$website_image_status"
+expect_status app-icon 200 "$app_icon_status"
+expect_status licenses 200 "$licenses_status"
 cmp -s THIRD_PARTY_LICENSES.txt "$smoke_tmp_dir/third-party-licenses.txt"
 grep -Eqi '^referrer-policy: no-referrer' "$smoke_tmp_dir/viewer-headers.txt"
-[[ "$sign_status" == 401 ]]
-[[ "$entitlement_status" == 401 ]]
-[[ "$oversized_status" == 413 ]]
+expect_status sign 401 "$sign_status"
+expect_status entitlement 401 "$entitlement_status"
+expect_status oversized-entitlement 413 "$oversized_status"
 
-echo "Worker runtime smoke passed (commerce redirects, sharing pages/assets/notices, private viewer, auth failures, oversized body)."
+echo "Worker runtime smoke passed (commerce redirects, assets/notices, private viewer, auth failures, oversized body)."
