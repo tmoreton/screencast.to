@@ -37,7 +37,7 @@ The Worker owns every server-side step:
 3. `/api/status` revalidates the product, price, quantity, mode, and payment.
 4. `/api/download` streams the current DMG from a private R2 bucket only after
    successful verification.
-5. `/api/appcast` and `/api/update` deliver token-gated Sparkle updates to
+5. `/api/appcast` and `/api/update/<file>` deliver token-gated Sparkle updates to
    official standalone builds.
 
 The Mac App Store build does not use these update routes; Apple supplies its

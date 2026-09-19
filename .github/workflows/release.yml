@@ -108,7 +108,7 @@ jobs:
 
           printf '%s\n' "$SPARKLE_PRIVATE_ED_KEY" | "$generate_appcast" \
             --ed-key-file - \
-            --download-url-prefix "https://screencast.to/api/update?file=" \
+            --download-url-prefix "https://screencast.to/api/update/" \
             --link "https://screencast.to" \
             --maximum-deltas 0 \
             -o "$updates_dir/appcast.xml" \

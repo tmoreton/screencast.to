@@ -332,10 +332,13 @@ export async function handleCommerce(request: Request, env: Env,
     const object = release ? await env.RELEASES.get(release.appcastPath) : null;
     return object ? objectResponse(object, "application/xml; charset=utf-8") : privateResponse("No update feed is available.", { status: 404 });
   }
-  if (url.pathname === "/api/update" && request.method === "GET") {
+  if ((url.pathname === "/api/update" || url.pathname.startsWith("/api/update/")) && request.method === "GET") {
     if (!tokenMatches(request, env.SPARKLE_UPDATE_TOKEN)) return privateResponse("Update authorization required.", { status: 401 });
     const release = await currentRelease(env);
-    if (!release || url.searchParams.get("file") !== release.pathname.slice("releases/".length)) return privateResponse("Update not found.", { status: 404 });
+    const requestedFile = url.pathname.startsWith("/api/update/")
+      ? url.pathname.slice("/api/update/".length)
+      : url.searchParams.get("file");
+    if (!release || requestedFile !== release.pathname.slice("releases/".length)) return privateResponse("Update not found.", { status: 404 });
     const object = await env.RELEASES.get(release.pathname);
     return object ? objectResponse(object, "application/x-apple-diskimage", release.pathname.slice("releases/".length)) :
       privateResponse("Update not found.", { status: 404 });

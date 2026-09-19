@@ -177,6 +177,13 @@ write_release_xcconfig() {
         if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
             printf 'DEVELOPMENT_TEAM = %s\n' "$(xcconfig_value "$APPLE_TEAM_ID")"
         fi
+        if [[ "$NOTARIZE" == true ]]; then
+            # CI imports only the Developer ID identity used for the final
+            # website build. Sign the archive with that identity directly so
+            # Xcode does not require a separate Mac Development certificate.
+            printf 'CODE_SIGN_STYLE = Manual\n'
+            printf 'CODE_SIGN_IDENTITY = %s\n' "$(xcconfig_value "$CODESIGN_IDENTITY")"
+        fi
         if [[ "$NOTARIZE" == false ]]; then
             printf 'CODE_SIGNING_ALLOWED = NO\n'
         fi
