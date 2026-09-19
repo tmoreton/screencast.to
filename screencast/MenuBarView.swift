@@ -4,6 +4,7 @@ import AppKit
 
 struct MenuBarView: View {
     @Bindable var state: AppState
+    @ObservedObject var updateManager: UpdateManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -71,6 +72,15 @@ struct MenuBarView: View {
             statusText
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
+            if updateManager.isEnabled {
+                Button(action: updateManager.checkForUpdates) {
+                    Image(systemName: "arrow.clockwise.circle")
+                }
+                .buttonStyle(.borderless)
+                .disabled(!updateManager.canCheckForUpdates)
+                .accessibilityLabel("Check for Updates")
+                .help("Check for Updates…")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

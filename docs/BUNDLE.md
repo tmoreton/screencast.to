@@ -1,6 +1,6 @@
 # Productivity Bundle readiness — Screencast.to
 
-Last audited: September 11, 2026
+Last audited: September 19, 2026
 
 ## Product record
 
@@ -16,7 +16,7 @@ Last audited: September 11, 2026
 | Support URL | `https://screencast.to/support` |
 | Commercial model | Paid once; no subscription and no Screencast account |
 | Planned standalone price | $29 USD |
-| License | PolyForm Shield 1.0.0 from 3.0.0; exact historical grants remain unchanged |
+| License | PolyForm Noncommercial 1.0.0 after commit `e1f237e`; exact historical grants remain unchanged |
 
 The bundle ID is intentionally unchanged so current preferences, permissions,
 and sandbox data can remain associated with the app. The product remains
@@ -41,22 +41,35 @@ selector, so marketing must not claim those capabilities.
 All core recording functionality is local. Recordings live under the app's
 Application Support `Screencast/Recordings` directory; preferences use the same
 bundle's `UserDefaults`. The app has no analytics SDK, advertising, account,
-database, App Group, iCloud container, cloud AI, bundled AI model, or updater.
+database, App Group, iCloud container, cloud AI, or bundled AI model. The App
+Store target has no updater; the standalone target uses Sparkle only for signed
+application updates.
 
-The sandbox entitlements are limited to outgoing network, camera, microphone,
-and screen/system-audio behavior supplied by Apple frameworks. Permission
-descriptions and a privacy manifest are included. Camera and microphone are
-optional; onboarding now requires only Screen Recording for the core feature.
+The App Store target's sandbox entitlements are limited to outgoing network,
+camera, microphone, and screen/system-audio behavior supplied by Apple
+frameworks. The standalone target adds only Sparkle's documented installer XPC
+mach-service exceptions. Permission descriptions and a privacy manifest are
+included. Camera and microphone are optional; onboarding now requires only
+Screen Recording for the core feature.
 New installs default to screen-only capture with the microphone off. Selecting
 an optional input requests its permission when Record is pressed; a denied or
 missing input shows recovery guidance without breaking local screen capture.
 
-The website stores only a local theme preference and contains no analytics,
-cookies, ads, or tracking code. The App Store privacy questionnaire should
+The website contains no analytics, ads, or tracking code. Its only first-party
+cookie records a recent direct-sale purchase so the customer can retrieve the
+installer. The App Store privacy questionnaire should
 disclose user-provided video/audio uploaded for app functionality as unlinked
 and not used for tracking. Purchase proof is processed transiently and is not
 retained by the first-party service; confirm the final answers in App Store
 Connect against Apple's then-current definitions before submission.
+
+The direct-sale site uses Stripe Checkout for a one-time purchase. After a
+successful return, it stores a secure, host-only purchaser cookie for 30 days;
+the server revalidates the paid Checkout session before returning a five-minute
+signed URL for the current installer. The installer, Sparkle appcast, and
+release manifest are kept in private Vercel Blob storage. The standalone app
+uses a build-time update-access token for its Sparkle requests. That token is
+an access gate, not unextractable DRM or a per-device license.
 
 ## First-party backend
 
@@ -110,7 +123,10 @@ copy of real 2.0.2 data before release.
 
 ## Third-party software and services
 
-The Mac app uses only Apple system SDKs/frameworks. The Worker runtime uses
+The Mac App Store target uses only Apple system SDKs/frameworks. The standalone
+target additionally bundles Sparkle 2.10.0 for Developer ID updates from a
+private, EdDSA-signed appcast. The checkout service uses Stripe's server SDK
+22.6.2 and `@vercel/blob` 2.8.0. The Worker runtime uses
 `@apple/app-store-server-library` 3.1.0 and `aws4fetch` 1.0.20 plus their locked
 transitive packages. Complete versions and license families are in
 `THIRD_PARTY_NOTICES.md` and `worker/package-lock.json`; complete Worker texts
@@ -133,8 +149,12 @@ Ongoing dependencies/costs are:
 - Cloudflare Workers requests/CPU, R2 storage and operations, data delivery as
   applicable, DNS, and the `screencast.to` domain. Certificate verification may
   require a paid Workers plan depending on measured CPU and traffic.
-- GitHub repository/Pages/Actions usage; currently no direct cost is required
-  for the public repository within hosted plan limits.
+- Stripe transaction fees and dispute/refund administration for direct sales.
+- Vercel Functions and private Blob storage/operations/data transfer for the
+  sales site, installer delivery, and standalone updates.
+- GitHub repository/Actions usage; currently no direct cost is required for the
+  public repository within hosted plan limits. GitHub Pages is no longer the
+  production website deployment path.
 - Abuse response and support time. Uploaded bytes and views are the primary
   variable service cost; the 1 GiB cap and lifecycle reduce exposure.
 
@@ -184,17 +204,25 @@ Code and release paths are prepared, but these owner/portal tasks remain:
    binary assets. Do not rewrite commits, tags, or their license history:
    `v2.0` predates the repository's license file and its artifacts were uploaded
    during the brief MIT window, so it must not be retroactively described as
-   Apache-2.0 or PolyForm Shield.
+   Apache-2.0, PolyForm Shield, or PolyForm Noncommercial.
 10. On real hardware, test every screen/camera/microphone/system-audio
     combination, camera permission denial, and a physical camera disconnect.
     In particular, confirm Camera Only remains opaque and stops without
     exposing desktop frames when the camera disappears; automated checks and
     this build environment cannot exercise those hardware failure paths.
-11. Publish and verify the prepared site and Worker before submission. As of
-    this audit, the live home/privacy pages still contain the previous
-    free/Apache and Google Analytics language, and the live `/support` route
-    returns 404. Deployment is intentionally not performed by this repository
-    preparation change.
+11. Publish and verify the prepared checkout site and Worker before submission.
+    Point `screencast.to` at the checkout project only after its Stripe and Blob
+    production settings are complete; also verify the live privacy and support
+    routes and remove the previous free/Apache and analytics language.
+12. In the intended Stripe account, create the one-time Screencast.to product
+    and price, link a private Vercel Blob store, and configure
+    `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `SPARKLE_UPDATE_TOKEN`, and
+    `BLOB_READ_WRITE_TOKEN`. Run a test-mode purchase, return, download, and
+    Sparkle update before switching the site and price to live mode. The
+    purchaser-only delivery code is prepared, but no financial account or live
+    product is created by this repository change. Decide and configure sales-tax
+    collection, receipt emails, the direct-sale refund window, and the support
+    process before enabling live checkout.
 
 ### Productivity Bundle portal checklist
 
@@ -202,6 +230,10 @@ After each eligible member app is approved and **Ready for Distribution**, an
 App Store Connect user with the required role can create the Productivity
 Bundle. Screencast.to requires no code-level coupling to Yaprflow or
 PaperDrawer; complete these App Store Connect steps instead:
+
+This Apple bundle is separate from direct Stripe purchases. A direct
+Screencast.to purchase does not confer Mac App Store ownership, and an App
+Store purchase does not create a Stripe purchaser session.
 
 | App | Positioning | Standalone price |
 |---|---|---:|

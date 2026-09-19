@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /confirmation.html
+
+Sitemap: https://screencast.to/sitemap.xml

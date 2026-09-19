@@ -1,0 +1,14 @@
+{
+  "name": "screencast-checkout",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env.local scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.8.0",
+    "stripe": "22.6.2"
+  }
+}

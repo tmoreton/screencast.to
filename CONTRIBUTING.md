@@ -36,9 +36,19 @@ for configuration in Debug Release; do
     CODE_SIGNING_ALLOWED=NO \
     build
 done
+
+for configuration in Debug Release; do
+  xcodebuild \
+    -project screencast.xcodeproj \
+    -scheme screencast-standalone \
+    -configuration "$configuration" \
+    -destination 'platform=macOS' \
+    CODE_SIGNING_ALLOWED=NO \
+    build
+done
 ```
 
-Check the Worker:
+Check the Worker and checkout service:
 
 ```sh
 cd worker
@@ -47,6 +57,11 @@ npm run check
 npm test
 npm run build:site
 npx wrangler deploy --dry-run
+
+cd ../checkout
+npm ci
+npm test
+npm run build
 ```
 
 Public builds keep sharing disabled. A developer can use a gitignored local
@@ -61,12 +76,13 @@ xcconfig with a Worker and token they control; see
   transaction proofs, service tokens, or private recording links.
 - For recording-engine changes, include the scenario tested: pause length,
   system/microphone audio state, capture mode, and macOS version.
-- Update `THIRD_PARTY_NOTICES.md` and `worker/package-lock.json` when adding a
+- Update `THIRD_PARTY_NOTICES.md` and the relevant package lock when adding a
   dependency.
 
 ## Release boundary
 
-`scripts/app-store-release.sh` is the paid production export path and never
-publishes automatically. `scripts/release.sh` creates a local-only Developer ID
-artifact. New signed production binaries must not be attached to public GitHub
-releases or mirrored to a public R2 download path.
+`scripts/app-store-release.sh` creates the Mac App Store export and contains no
+self-updater. `scripts/release.sh` creates the separate Sparkle-enabled,
+Developer ID artifact. Only the tag-triggered `Private Standalone Release`
+workflow should publish that artifact and its signed appcast to private Vercel
+Blob storage. GitHub Releases are not part of the standalone delivery path.

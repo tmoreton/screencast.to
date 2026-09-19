@@ -1,9 +1,12 @@
 # Third-party notices
 
 Screencast.to's own license does not replace the licenses below. Versions are
-locked in `worker/package-lock.json`; package-level license files remain the
-authoritative terms. The macOS app contains no third-party package manager
-dependencies and links only Apple system frameworks.
+locked in `worker/package-lock.json` and `checkout/package-lock.json`;
+package-level license files remain the authoritative terms. The Mac App Store
+target links only Apple system frameworks. The standalone macOS target
+additionally bundles Sparkle 2.10.0;
+its complete license and incorporated third-party notices are preserved in
+`LICENSES/Sparkle.txt` and copied into the standalone app bundle.
 
 For the separately deployed Worker, the complete copyright notices and license
 texts for its locked production dependency closure and observed
@@ -11,6 +14,19 @@ Wrangler-injected runtime shim are preserved at
 `worker/THIRD_PARTY_LICENSES.txt`. The Worker imports that file as a deployed
 text module and serves it at `/third-party-licenses.txt`. Worker dependencies
 are not included in the macOS app bundle.
+
+The separately deployed checkout service uses Stripe's server SDK 22.6.2
+(MIT) and `@vercel/blob` 2.8.0 (Apache-2.0). These packages run on the server
+and are not included in either macOS app target.
+
+## Standalone macOS updater
+
+The Developer ID build uses Sparkle 2.10.0 under its permissive license. It is
+linked only to the `screencast-standalone` target and is not present in the Mac
+App Store target. Sparkle's `Installer.xpc` service performs installations for
+the sandboxed standalone app. Release archives and the appcast are signed with
+a project-controlled EdDSA key in addition to Apple's Developer ID signing and
+notarization.
 
 ## Worker production dependency closure
 
@@ -31,6 +47,13 @@ are not included in the macOS app bundle.
 | `ecdsa-sig-formatter` | 1.0.11 | Apache-2.0 |
 | `semver` | 7.8.5 | ISC |
 | `webidl-conversions` | 3.0.1 | BSD-2-Clause |
+
+## Checkout production dependencies
+
+| Package | Version | License |
+|---|---:|---|
+| `stripe` | 22.6.2 | MIT |
+| `@vercel/blob` | 2.8.0 | Apache-2.0 |
 
 ## Wrangler-injected production runtime
 
@@ -98,9 +121,8 @@ tooling. Full package names, versions, integrity hashes, and declared licenses
 are recorded in `worker/package-lock.json` and the installed package license
 files.
 
-GitHub Actions used only in CI (`actions/checkout`, `actions/setup-node`,
-`actions/configure-pages`, `actions/upload-pages-artifact`, and
-`actions/deploy-pages`) are MIT-licensed and are not distributed with the app.
+GitHub Actions used only in CI (`actions/checkout` and `actions/setup-node`)
+are MIT-licensed and are not distributed with the app.
 
 ## Platform SDKs, services, assets, and marks
 
@@ -109,8 +131,9 @@ GitHub Actions used only in CI (`actions/checkout`, `actions/setup-node`,
 - Apple Inc. Root, Apple Root CA G2, and Apple Root CA G3 public certificates
   from Apple PKI are embedded in the Worker solely as
   signature-verification trust anchors and remain subject to Apple's terms.
-- Cloudflare Workers/R2, GitHub Pages, and App Store Connect are hosted service
-  dependencies; their software is not vendored here.
+- Cloudflare Workers/R2, Stripe Checkout, Vercel/Blob, GitHub Actions, and App
+  Store Connect are hosted service dependencies; their software is not
+  vendored here.
 - CSS uses system font stacks only. No font file or AI/ML model is bundled.
 - The application icon and website screenshot are project assets. Their
   provenance should be confirmed by the rights holder before third-party

@@ -125,6 +125,7 @@ required_resources=(
     "container-migration.plist"
     "LICENSE"
     "THIRD_PARTY_NOTICES.md"
+    "PolyForm-Noncommercial-1.0.0.md"
     "PolyForm-Shield-1.0.0.md"
     "Apache-2.0.txt"
     "MIT.txt"
@@ -138,6 +139,7 @@ done
 license_sources=(
     "LICENSE"
     "THIRD_PARTY_NOTICES.md"
+    "LICENSES/PolyForm-Noncommercial-1.0.0.md"
     "LICENSES/PolyForm-Shield-1.0.0.md"
     "LICENSES/Apache-2.0.txt"
     "LICENSES/MIT.txt"
@@ -153,6 +155,11 @@ if ! /usr/bin/plutil -lint \
     "$RESOURCES_DIR/PrivacyInfo.xcprivacy" \
     "$RESOURCES_DIR/container-migration.plist" >/dev/null; then
     echo "error: archived privacy or container migration manifest is invalid" >&2
+    exit 1
+fi
+if [[ -d "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework" ]] ||
+   /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$APP_PLIST" >/dev/null 2>&1; then
+    echo "error: App Store archive must not contain the standalone Sparkle updater" >&2
     exit 1
 fi
 

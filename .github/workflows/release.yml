@@ -1,0 +1,137 @@
+name: Private Standalone Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standalone-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: checkout/package-lock.json
+
+      - name: Validate release tag and secrets
+        env:
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          SPARKLE_PRIVATE_ED_KEY: ${{ secrets.SPARKLE_PRIVATE_ED_KEY }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+          SPARKLE_UPDATE_TOKEN: ${{ secrets.SPARKLE_UPDATE_TOKEN }}
+          RELEASE_PUBLISH_TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[1-9][0-9]{0,3}\.(0|[1-9][0-9]?)\.(0|[1-9][0-9]?)$ ]]; then
+            echo "Release tags must use vMAJOR.MINOR.PATCH and fit Apple's build-version limits." >&2
+            exit 1
+          fi
+          : "${APPLE_APP_PASSWORD:?Missing APPLE_APP_PASSWORD secret}"
+          : "${APPLE_ID:?Missing APPLE_ID secret}"
+          : "${APPLE_TEAM_ID:?Missing APPLE_TEAM_ID secret}"
+          : "${DEVELOPER_ID_P12_BASE64:?Missing DEVELOPER_ID_P12_BASE64 secret}"
+          : "${DEVELOPER_ID_P12_PASSWORD:?Missing DEVELOPER_ID_P12_PASSWORD secret}"
+          : "${SPARKLE_PRIVATE_ED_KEY:?Missing SPARKLE_PRIVATE_ED_KEY secret}"
+          : "${SPARKLE_PUBLIC_ED_KEY:?Missing SPARKLE_PUBLIC_ED_KEY secret}"
+          : "${SPARKLE_UPDATE_TOKEN:?Missing SPARKLE_UPDATE_TOKEN secret}"
+          : "${RELEASE_PUBLISH_TOKEN:?Missing RELEASE_PUBLISH_TOKEN secret}"
+          if [[ ${#SPARKLE_UPDATE_TOKEN} -lt 32 ]]; then
+            echo "SPARKLE_UPDATE_TOKEN must contain at least 32 characters." >&2
+            exit 1
+          fi
+          if [[ ${#RELEASE_PUBLISH_TOKEN} -lt 32 ]]; then
+            echo "RELEASE_PUBLISH_TOKEN must contain at least 32 characters." >&2
+            exit 1
+          fi
+
+      - name: Import Developer ID certificate
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          keychain_path="$RUNNER_TEMP/screencast-release.keychain-db"
+          keychain_password="$(uuidgen)"
+
+          printf '%s' "$DEVELOPER_ID_P12_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -P "$DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          echo "RELEASE_KEYCHAIN_PATH=$keychain_path" >> "$GITHUB_ENV"
+
+      - name: Build and notarize standalone app
+        env:
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+          SPARKLE_UPDATE_TOKEN: ${{ secrets.SPARKLE_UPDATE_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          BUILD_NUMBER="$version" scripts/release.sh "$version"
+
+      - name: Generate signed Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_ED_KEY: ${{ secrets.SPARKLE_PRIVATE_ED_KEY }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          dmg_path="build/screencast-$version.dmg"
+          updates_dir="build/updates"
+          mkdir -p "$updates_dir"
+          cp "$dmg_path" "$updates_dir/"
+
+          generate_appcast="$(find build/SourcePackages/artifacts -type f -path '*/Sparkle/bin/generate_appcast' -perm -111 -print -quit)"
+          if [[ -z "$generate_appcast" ]]; then
+            echo "Sparkle generate_appcast tool was not found." >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$SPARKLE_PRIVATE_ED_KEY" | "$generate_appcast" \
+            --ed-key-file - \
+            --download-url-prefix "https://screencast.to/api/update?file=" \
+            --link "https://screencast.to" \
+            --maximum-deltas 0 \
+            -o "$updates_dir/appcast.xml" \
+            "$updates_dir"
+
+      - name: Publish private release
+        env:
+          RELEASE_PUBLISH_TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          RELEASE_PUBLISH_URL: https://screencast.to/api/publish
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          npm ci --prefix checkout
+          node checkout/scripts/publish-release.mjs \
+            "$version" \
+            "build/screencast-$version.dmg" \
+            "build/updates/appcast.xml"
+
+      - name: Remove temporary signing keychain
+        if: always()
+        run: |
+          if [[ -n "${RELEASE_KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$RELEASE_KEYCHAIN_PATH" || true
+          fi
