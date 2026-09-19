@@ -1,12 +1,13 @@
-# Screencast.to sharing service
+# Screencast.to Cloudflare service
 
-This Cloudflare Worker provides optional, temporary recording links. Recording,
-audio capture, saving, playback, and local file access through Finder all happen
-in the Mac app without this service.
+This Cloudflare Worker is the single hosted service for the product website,
+Stripe checkout, private standalone releases, Sparkle updates, and optional
+temporary recording links. Recording, audio capture, saving, playback, and
+local file access through Finder still happen in the Mac app.
 
-The production split is:
+The production hostnames are:
 
-- `https://screencast.to` — Vercel-hosted marketing, Stripe checkout,
+- `https://screencast.to` — Cloudflare-hosted marketing, Stripe checkout,
   purchaser downloads, and Sparkle update delivery.
 - `https://share.screencast.to` — entitlement, upload-signing, and viewer routes.
 - An R2 bucket custom domain — short-lived recording media. Do not use an
@@ -58,7 +59,7 @@ install the self-hosted bypass token.
    npm ci
    ```
 
-2. Log in and create R2 credentials:
+2. Log in and create R2 credentials for temporary recording uploads:
 
    ```sh
    npx wrangler login
@@ -79,14 +80,16 @@ install the self-hosted bypass token.
    - Leave `SELF_HOSTED_UPLOAD_TOKEN` blank. It is deliberately rejected by
      the canonical deployment script.
 
-4. Deploy:
+4. Add the restricted Stripe key plus the Sparkle and release-publishing tokens
+   to the same `.env`, then deploy:
 
    ```sh
    ./deploy.sh
    ```
 
-The script creates or reuses the bucket, applies and verifies the
-`recordings/` lifecycle rule, pushes secrets, and deploys the Worker. A
+The script creates or reuses the recording and private-release buckets, applies
+and verifies the `recordings/` lifecycle rule, builds the product site, pushes
+secrets, and deploys the Worker. A
 lifecycle configuration failure stops deployment so the retention claim cannot
 silently drift.
 
@@ -144,10 +147,9 @@ rejection, and signed `Content-Length` behavior.
 
 ## Static site
 
-`npm run build:site` exports the marketing, privacy, and support pages to
-`../site` as a legacy/fallback export. The canonical product and checkout site
-is deployed from `checkout/` to Vercel; do not attach the apex domain to this
-Worker or a Pages project. Local exports omit `SITE_CNAME` by default.
+`npm run build:checkout` exports the canonical product site from `checkout/`
+and packages it with the Worker as Cloudflare static assets. `npm run
+build:site` keeps the older sharing-site export available for reference.
 
 ## Retention and operational dependency
 

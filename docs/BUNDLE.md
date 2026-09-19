@@ -65,16 +65,17 @@ Connect against Apple's then-current definitions before submission.
 
 The direct-sale site uses Stripe Checkout for a one-time purchase. After a
 successful return, it stores a secure, host-only purchaser cookie for 30 days;
-the server revalidates the paid Checkout session before returning a five-minute
-signed URL for the current installer. The installer, Sparkle appcast, and
-release manifest are kept in private Vercel Blob storage. The standalone app
+the server revalidates the paid Checkout session before streaming the current
+installer. The installer, Sparkle appcast, and release manifest are kept in a
+private Cloudflare R2 bucket. The standalone app
 uses a build-time update-access token for its Sparkle requests. That token is
 an access gate, not unextractable DRM or a per-device license.
 
 ## First-party backend
 
-Optional hosted sharing uses the existing Cloudflare Worker, R2 bucket, DNS,
-and media custom domain. The App Store build obtains a locally verified
+The product site, checkout APIs, private releases, and optional hosted sharing
+use one Cloudflare Worker, DNS, separate R2 buckets, and the media custom
+domain. The App Store build obtains a locally verified
 StoreKit 2 `AppTransaction`, refreshing StoreKit's cached proof after the
 user's explicit upload action when necessary, and sends its signed JWS to
 `/entitlements/token`. Apple's official server library verifies the signature,
@@ -125,8 +126,7 @@ copy of real 2.0.2 data before release.
 
 The Mac App Store target uses only Apple system SDKs/frameworks. The standalone
 target additionally bundles Sparkle 2.10.0 for Developer ID updates from a
-private, EdDSA-signed appcast. The checkout service uses Stripe's server SDK
-22.6.2 and `@vercel/blob` 2.8.0. The Worker runtime uses
+private, EdDSA-signed appcast. The Worker uses Stripe's server SDK 22.6.2,
 `@apple/app-store-server-library` 3.1.0 and `aws4fetch` 1.0.20 plus their locked
 transitive packages. Complete versions and license families are in
 `THIRD_PARTY_NOTICES.md` and `worker/package-lock.json`; complete Worker texts
@@ -150,8 +150,6 @@ Ongoing dependencies/costs are:
   applicable, DNS, and the `screencast.to` domain. Certificate verification may
   require a paid Workers plan depending on measured CPU and traffic.
 - Stripe transaction fees and dispute/refund administration for direct sales.
-- Vercel Functions and private Blob storage/operations/data transfer for the
-  sales site, installer delivery, and standalone updates.
 - GitHub repository/Actions usage; currently no direct cost is required for the
   public repository within hosted plan limits. GitHub Pages is no longer the
   production website deployment path.
@@ -211,13 +209,13 @@ Code and release paths are prepared, but these owner/portal tasks remain:
     exposing desktop frames when the camera disappears; automated checks and
     this build environment cannot exercise those hardware failure paths.
 11. Publish and verify the prepared checkout site and Worker before submission.
-    Point `screencast.to` at the checkout project only after its Stripe and Blob
+    Attach `screencast.to` to the Worker only after its Stripe and R2
     production settings are complete; also verify the live privacy and support
     routes and remove the previous free/Apache and analytics language.
 12. In the intended Stripe account, create the one-time Screencast.to product
-    and price, link a private Vercel Blob store, and configure
+    and price, bind the private `screencast-releases` R2 bucket, and configure
     `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `SPARKLE_UPDATE_TOKEN`, and
-    `BLOB_READ_WRITE_TOKEN`. Run a test-mode purchase, return, download, and
+    `RELEASE_PUBLISH_TOKEN`. Run a test-mode purchase, return, download, and
     Sparkle update before switching the site and price to live mode. The
     purchaser-only delivery code is prepared, but no financial account or live
     product is created by this repository change. Decide and configure sales-tax

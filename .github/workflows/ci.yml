@@ -59,6 +59,8 @@ jobs:
           cache: npm
           cache-dependency-path: worker/package-lock.json
       - run: npm ci
+      - run: npm --prefix ../checkout ci
+      - run: npm run build:checkout
       - run: npm run check
       - run: npm test
       - run: npm run smoke

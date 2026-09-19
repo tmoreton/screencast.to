@@ -18,9 +18,10 @@ chmod 600 .env
 # secret bulk endpoint over stdin below and must not leak into child processes.
 export -n R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY \
   R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET SELF_HOSTED_UPLOAD_TOKEN \
-  APP_SECRET MAX_UPLOAD_BYTES 2>/dev/null || true
+  APP_SECRET MAX_UPLOAD_BYTES STRIPE_SECRET_KEY SPARKLE_UPDATE_TOKEN \
+  RELEASE_PUBLISH_TOKEN 2>/dev/null || true
 
-required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET)
+required=(R2_ACCOUNT_ID R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUB_HOST APP_APPLE_ID SERVICE_TOKEN_SECRET STRIPE_SECRET_KEY SPARKLE_UPDATE_TOKEN RELEASE_PUBLISH_TOKEN)
 missing=()
 for v in "${required[@]}"; do
   if [ -z "${!v:-}" ]; then
@@ -37,9 +38,30 @@ if [ "${#SERVICE_TOKEN_SECRET}" -lt 32 ]; then
   exit 1
 fi
 
+if [ "${#SPARKLE_UPDATE_TOKEN}" -lt 32 ] || [ "${#RELEASE_PUBLISH_TOKEN}" -lt 32 ]; then
+  echo "✗ SPARKLE_UPDATE_TOKEN and RELEASE_PUBLISH_TOKEN must each contain at least 32 characters." >&2
+  exit 1
+fi
+
+if [[ ! "$STRIPE_SECRET_KEY" =~ ^(sk|rk)_(test|live)_[A-Za-z0-9]+$ ]]; then
+  echo "✗ STRIPE_SECRET_KEY is not a valid Stripe server key." >&2
+  exit 1
+fi
+
 if [[ ! "$APP_APPLE_ID" =~ ^[1-9][0-9]*$ ]] ||
    ! node -e 'const value = Number(process.argv[1]); if (!Number.isSafeInteger(value) || value <= 0) process.exit(1)' "$APP_APPLE_ID"; then
   echo "✗ APP_APPLE_ID must be a positive, safely representable decimal App Store ID." >&2
+  exit 1
+fi
+
+echo "▶ Ensuring private release bucket 'screencast-releases' exists..."
+set +e
+release_bucket_output="$(npx wrangler r2 bucket create screencast-releases 2>&1)"
+release_bucket_status=$?
+set -e
+if [ $release_bucket_status -ne 0 ] && ! echo "$release_bucket_output" | grep -qi "already exists\|10004"; then
+  echo "$release_bucket_output" >&2
+  echo "✗ Failed to create the private release bucket." >&2
   exit 1
 fi
 
@@ -102,11 +124,15 @@ npx wrangler secret bulk <<EOF
   "R2_PUB_HOST": "${R2_PUB_HOST}",
   "APP_APPLE_ID": "${APP_APPLE_ID}",
   "SERVICE_TOKEN_SECRET": "${SERVICE_TOKEN_SECRET}",
-  "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-1073741824}"
+  "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-1073741824}",
+  "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY}",
+  "SPARKLE_UPDATE_TOKEN": "${SPARKLE_UPDATE_TOKEN}",
+  "RELEASE_PUBLISH_TOKEN": "${RELEASE_PUBLISH_TOKEN}"
 }
 EOF
 
 echo "▶ Deploying Worker..."
+npm run build:checkout
 deploy_output="$(npx wrangler deploy 2>&1)"
 echo "$deploy_output"
 
@@ -125,6 +151,7 @@ else
   echo
 fi
 echo "Verify the production custom domain before creating an App Store archive:"
+echo "  https://screencast.to"
 echo "  https://share.screencast.to/sign"
 echo
 echo "Official App Store archives always use:"

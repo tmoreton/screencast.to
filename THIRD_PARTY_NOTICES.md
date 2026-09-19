@@ -15,9 +15,10 @@ Wrangler-injected runtime shim are preserved at
 text module and serves it at `/third-party-licenses.txt`. Worker dependencies
 are not included in the macOS app bundle.
 
-The separately deployed checkout service uses Stripe's server SDK 22.6.2
-(MIT) and `@vercel/blob` 2.8.0 (Apache-2.0). These packages run on the server
-and are not included in either macOS app target.
+The unified Worker uses Stripe's server SDK 22.6.2 (MIT). The checkout folder
+retains the previous `@vercel/blob` 2.8.0 (Apache-2.0) adapter only as a
+short-term rollback implementation; neither package is included in a macOS
+app target.
 
 ## Standalone macOS updater
 
@@ -34,6 +35,7 @@ notarization.
 |---|---:|---|
 | `@apple/app-store-server-library` | 3.1.0 | MIT |
 | `aws4fetch` | 1.0.20 | MIT |
+| `stripe` | 22.6.2 | MIT |
 | `@types/jsonwebtoken`, `@types/jsrsasign`, `@types/ms`, `@types/node`, `@types/node-fetch` | 9.0.10, 10.5.15, 2.1.0, 25.9.6, 2.6.13 | MIT |
 | `asynckit`, `base64url`, `call-bind-apply-helpers`, `combined-stream`, `delayed-stream` | 0.4.0, 3.0.1, 1.0.2, 1.0.8, 1.0.0 | MIT |
 | `dunder-proto`, `es-define-property`, `es-errors`, `es-object-atoms`, `es-set-tostringtag` | 1.0.1, 1.0.1, 1.3.0, 1.1.2, 2.1.0 | MIT |
@@ -131,7 +133,7 @@ are MIT-licensed and are not distributed with the app.
 - Apple Inc. Root, Apple Root CA G2, and Apple Root CA G3 public certificates
   from Apple PKI are embedded in the Worker solely as
   signature-verification trust anchors and remain subject to Apple's terms.
-- Cloudflare Workers/R2, Stripe Checkout, Vercel/Blob, GitHub Actions, and App
+- Cloudflare Workers/R2, Stripe Checkout, GitHub Actions, and App
   Store Connect are hosted service dependencies; their software is not
   vendored here.
 - CSS uses system font stacks only. No font file or AI/ML model is bundled.
