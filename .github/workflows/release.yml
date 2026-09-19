@@ -21,8 +21,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: checkout/package-lock.json
 
       - name: Validate release tag and secrets
         env:
@@ -123,7 +121,6 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
-          npm ci --prefix checkout
           node checkout/scripts/publish-release.mjs \
             "$version" \
             "build/screencast-$version.dmg" \

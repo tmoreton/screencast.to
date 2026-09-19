@@ -1,64 +1,70 @@
-# Screencast.to
+<p align="center">
+  <img src="checkout/assets/screencast-mark.svg" width="112" height="112" alt="Screencast.to logo">
+</p>
 
-Useful software without another subscription. Screencast.to is a paid,
-local-first macOS menu-bar recorder: record a screen or region, mix optional
-camera and audio, pause and zoom live, and keep the resulting movie on your
-Mac. One purchase, no Screencast account, no ads or tracking, and source you
-can inspect.
+<h1 align="center">Screencast.to</h1>
 
-## Distribution
+<p align="center">
+  A local-first Mac screen recorder for demos, walkthroughs, and bug reports.<br>
+  Record the work. Skip the monthly bill.
+</p>
 
-Version 3.0.0 begins the paid, source-available generation, with two official
-distribution channels. The Mac App Store build is updated only by Apple and
-includes optional first-party temporary sharing. The separately distributed,
-Developer ID-signed build is sold as a one-time purchase and checks a private,
-Sparkle-signed update feed. Its installer, appcast, and release manifest live
-in a private Cloudflare R2 bucket rather than GitHub Releases. Both builds use the
-same bundle identifier and local data layout. The planned standalone price is
-a one-time $29 purchase.
+<p align="center">
+  <a href="https://screencast.to">Website</a> ·
+  <a href="https://screencast.to/bundle/">Bundle preview</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-Developers can also clone and build the source for noncommercial use under the
-applicable license. App Store and Productivity Bundle links will be added after
-their records exist.
+![Screencast.to website and recorder preview](.github/assets/website.png)
+
+> **Release status:** the website, Cloudflare service, and both Mac distribution
+> targets are implemented. Direct checkout remains disabled until the first
+> Developer ID-signed, notarized DMG and Sparkle feed are published.
+
+## What it does
+
+- Records a full display or a selected region from the macOS menu bar.
+- Mixes optional camera, microphone, and system audio.
+- Supports pause/resume, live zoom, camera layouts, and a local teleprompter.
+- Saves a normal movie on the Mac for playback, Finder access, or deletion.
+- Uploads only after an explicit sharing action; core recording is local.
+- Uses no Screencast account, advertising SDK, or behavioral analytics.
 
 Requires macOS 15 or later on Apple silicon or Intel.
 
-## Local and hosted boundaries
+## Architecture
 
-Screen capture, camera/microphone/system-audio capture, recording, playback,
-and local file access through Finder run on the Mac. Nothing is uploaded unless
-the user clicks the upload control.
+| Area | Implementation |
+|---|---|
+| Mac app | Swift and SwiftUI, with ScreenCaptureKit and AVFoundation |
+| Product site | Static HTML, CSS, and JavaScript in `checkout/` |
+| Hosted service | One Cloudflare Worker in `worker/` |
+| Temporary sharing | StoreKit entitlement verification plus lifecycle-managed R2 storage |
+| Direct sales | Stripe Checkout with purchaser-only downloads from private R2 storage |
+| Standalone updates | Sparkle 2 with an EdDSA-signed, token-gated private feed |
+| App Store updates | Apple-managed; the App Store target contains no Sparkle framework |
 
-The optional official sharing path uses existing Cloudflare Worker and R2
-infrastructure. The App Store build sends an Apple-signed StoreKit 2
-`AppTransaction` to the Worker, which verifies the production app identity and
-returns a short-lived anonymous upload token. The service does not create an
-account or retain the proof or Apple transaction identifiers. Uploaded files
-are accessible to anyone with their random link and are normally deleted by an
-R2 lifecycle rule within 24–48 hours.
-
-Public source builds have hosted sharing disabled by default. Developers can
-deploy the Worker and configure their own endpoint and token; cloning the
-source does not grant access to the paid first-party service. See
-[`worker/README.md`](worker/README.md).
+Production uses `screencast.to`, `www.screencast.to`, and
+`share.screencast.to`. See [the architecture guide](docs/ARCHITECTURE.md) for
+the request flows and trust boundaries.
 
 ## Repository layout
 
-- `screencast/` — macOS application.
-- `checkout/` — source and build output for the static product site.
-- `worker/` — the unified Cloudflare Worker for the product site, Stripe
-  checkout, private releases, Sparkle, and optional recording sharing.
-- `scripts/app-store-release.sh` — App Store Connect archive/export path.
-- `scripts/release.sh` — Developer ID standalone artifact used by the private
-  release workflow; the script itself does not publish anything.
-- `docs/BUNDLE.md` — product, App Store bundle, privacy, dependency, cost, and
-  launch-blocker record.
-- `docs/CLOUDFLARE_MIGRATION.md` — deployed Cloudflare architecture, cutover
-  checklist, and rollback notes.
+- `screencast/` — macOS application source and resources.
+- `screencast.xcodeproj/` — App Store and standalone build targets.
+- `checkout/` — product site, policies, browser code, and private-release
+  publishing client.
+- `worker/` — Cloudflare APIs, sharing pages, commerce, and R2 access.
+- `scripts/` — App Store and Developer ID release scripts.
+- `LICENSES/` and `THIRD_PARTY_NOTICES.md` — current and historical license
+  records.
 
 ## Development
 
-Build both distribution targets in both configurations without signing:
+Requirements: macOS 15+, Xcode 26+, and Node.js 24+.
+
+Build the Mac targets without signing:
 
 ```sh
 xcodebuild -project screencast.xcodeproj -scheme screencast \
@@ -68,99 +74,69 @@ xcodebuild -project screencast.xcodeproj -scheme screencast \
 xcodebuild -project screencast.xcodeproj -scheme screencast-standalone \
   -configuration Debug -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO build
-
-xcodebuild -project screencast.xcodeproj -scheme screencast-standalone \
-  -configuration Release -destination 'platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO build
-
-xcodebuild -project screencast.xcodeproj -scheme screencast \
-  -configuration Release -destination 'platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO build
 ```
 
-Check the Worker and exported site:
+Check the website and Worker:
 
 ```sh
-cd worker
-npm ci
-npm run check
-npm test
-npm run build:site
-npx wrangler deploy --dry-run
+npm --prefix checkout ci
+npm --prefix checkout test
+npm --prefix checkout run build
+
+npm --prefix worker ci
+npm --prefix worker run check
+npm --prefix worker test
+npm --prefix worker run smoke
 ```
 
-Check the commerce site and purchaser-only delivery service:
+Run `npm --prefix checkout start` for a safe static preview. It deliberately
+keeps checkout disabled. Use `npm --prefix worker run dev` when testing the
+Cloudflare APIs and static assets together.
 
-```sh
-cd checkout
-npm ci
-npm test
-npm run build
-```
+## Distribution
 
-To test a private Worker, copy `scripts/Sharing.local.xcconfig.example` to a
-gitignored `.local.xcconfig` file, fill in that deployment's values, and pass
-it to `xcodebuild -xcconfig`. Never use the first-party production service
-configuration in a public build.
+Screencast.to has two independent release channels:
 
-## Releases
+- The **Mac App Store build** is sandboxed, uses Apple for purchases and
+  updates, and may use the first-party temporary-sharing service.
+- The **website build** is Developer ID-signed and notarized, is sold through
+  Stripe as a one-time purchase, and receives signed Sparkle updates.
 
-Official production archives require an Apple team and App Store Connect app
-record:
+Pushing a valid `vMAJOR.MINOR.PATCH` tag starts the private standalone release
+workflow. It builds and notarizes the DMG, generates the signed appcast, and
+publishes immutable release objects to private Cloudflare R2 storage. It does
+not create a public GitHub Release.
 
-```sh
-APPLE_TEAM_ID=YOUR_TEAM_ID BUILD_NUMBER=5 scripts/app-store-release.sh 3.0.0
-```
+Local release commands and required credentials are documented in
+[`scripts/.env.example`](scripts/.env.example),
+[`checkout/README.md`](checkout/README.md), and
+[`worker/README.md`](worker/README.md).
 
-The script embeds `app-store` sharing mode and the public Worker base URL, but
-no production credential. It exports locally for review and manual upload via
-Xcode Organizer or Transporter.
+## Privacy and security
 
-For a local Developer ID standalone artifact, configure Apple notarization,
-the Sparkle public key, and the update-access token in `scripts/.env`, then run:
+Recordings remain local unless the user chooses to upload one. Public source
+builds have first-party hosted sharing disabled by default. Self-hosted builds
+must use their own Worker, R2 bucket, routes, and credentials.
 
-```sh
-scripts/release.sh
-```
+Do not commit environment files, signing identities, App Store transaction
+proofs, service tokens, Stripe keys, Sparkle private keys, or private recording
+links. Report vulnerabilities through the process in [SECURITY.md](SECURITY.md).
 
-That script never uploads anything. Production private releases are created by
-pushing a three-part version tag such as `v3.0.0`; the tag supplies the
-standalone artifact's marketing and monotonically increasing internal version.
-The `Private Standalone Release` workflow builds and notarizes the DMG,
-generates a Sparkle-signed `appcast.xml`, and uploads the installer, appcast,
-and current-release manifest to private Cloudflare R2 storage. It does not create
-a GitHub Release. Always publish a version higher than the prior standalone
-release.
+## Contributing
 
-The workflow requires these repository secrets:
-
-- `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_PASSWORD` for notarization.
-- `DEVELOPER_ID_P12_BASE64` and `DEVELOPER_ID_P12_PASSWORD` for Developer ID
-  signing.
-- `SPARKLE_PRIVATE_ED_KEY` and `SPARKLE_PUBLIC_ED_KEY` from a one-time run of
-  Sparkle's `generate_keys` tool.
-- `SPARKLE_UPDATE_TOKEN`, a random value of at least 32 characters shared by
-  official standalone builds and the private update endpoints.
-- `RELEASE_PUBLISH_TOKEN`, a random value of at least 32 characters shared only
-  between GitHub Actions and the Worker's release-publishing route. The R2
-  bucket is never given a public development URL.
-
-Keep the Sparkle private key backed up and never commit it. Mac App Store
-archives continue to use `scripts/app-store-release.sh`; they do not contain
-Sparkle and receive updates through the App Store.
-
-The initial download is available only after the server verifies a paid Stripe
-Checkout session; its short-lived URL points to private storage. Sparkle uses a
-token-gated appcast and download endpoint. Because a token embedded in a desktop
-app can ultimately be extracted, this is an access gate for official binaries,
-not DRM or per-device activation. Source licensing remains the legal control on
-noncommercial use.
+Bug reports and focused pull requests are welcome. Contributions require the
+additional grant described in [CONTRIBUTING.md](CONTRIBUTING.md) so the project
+owner can continue distributing both public-source and paid builds.
 
 ## License
 
-New snapshots are source-available under PolyForm Noncommercial 1.0.0. The
-3.0.0 preparation snapshot used PolyForm Shield 1.0.0, and earlier MIT and
-Apache-2.0 grants remain available for the historical snapshots and code they
-covered; those grants are not revoked. See [`LICENSE`](LICENSE),
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), and
-[`TRADEMARKS.md`](TRADEMARKS.md).
+Current project-owned source is publicly available under
+[PolyForm Noncommercial 1.0.0](LICENSE). This is a source-available license,
+not an OSI-approved open-source license: personal and other permitted
+noncommercial uses are allowed, while commercial use requires separate
+permission.
+
+Earlier snapshots retain the licenses granted at the time; those historical
+MIT, Apache-2.0, and PolyForm Shield grants are not revoked. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+[TRADEMARKS.md](TRADEMARKS.md).
