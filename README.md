@@ -53,6 +53,8 @@ source does not grant access to the paid first-party service. See
   release workflow; the script itself does not publish anything.
 - `docs/BUNDLE.md` — product, App Store bundle, privacy, dependency, cost, and
   launch-blocker record.
+- `docs/CLOUDFLARE_MIGRATION.md` — staged plan for moving the commerce site,
+  private releases, and Sparkle delivery from Vercel to Workers and R2.
 
 ## Development
 

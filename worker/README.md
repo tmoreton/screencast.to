@@ -6,7 +6,8 @@ in the Mac app without this service.
 
 The production split is:
 
-- `https://screencast.to` — static marketing, privacy, and support pages.
+- `https://screencast.to` — Vercel-hosted marketing, Stripe checkout,
+  purchaser downloads, and Sparkle update delivery.
 - `https://share.screencast.to` — entitlement, upload-signing, and viewer routes.
 - An R2 bucket custom domain — short-lived recording media. Do not use an
   `r2.dev` Public Development URL in production.
@@ -144,8 +145,9 @@ rejection, and signed `Content-Length` behavior.
 ## Static site
 
 `npm run build:site` exports the marketing, privacy, and support pages to
-`../site` for GitHub Pages. The Pages workflow supplies `SITE_CNAME` in the
-canonical repository; local exports omit it by default.
+`../site` as a legacy/fallback export. The canonical product and checkout site
+is deployed from `checkout/` to Vercel; do not attach the apex domain to this
+Worker or a Pages project. Local exports omit `SITE_CNAME` by default.
 
 ## Retention and operational dependency
 

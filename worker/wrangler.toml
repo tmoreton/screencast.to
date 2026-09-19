@@ -8,19 +8,16 @@ type = "Data"
 globs = ["**/*.png"]
 fallthrough = true
 
-# Bind the Worker to the current Cloudflare-fronted domains.
-#
-# GitHub Pages is configured for the static marketing/privacy site, but the
-# apex domain still resolves through Cloudflare today. Keep screencast.to here
-# until DNS is moved to GitHub Pages, otherwise a Worker deploy removes the
-# live apex trigger and the public site returns Cloudflare 530.
+# Bind the Worker only to the sharing-service domain. The marketing, checkout,
+# paid-download, and Sparkle endpoints at screencast.to are hosted by Vercel.
+# Keeping the apex out of this file prevents a later sharing-service deploy
+# from reclaiming the production website's custom domain.
 # Prerequisites:
 #   1. screencast.to is added as a zone in your Cloudflare account
 #   2. Cloudflare is set as the authoritative nameservers for it
-# Until both are true, comment this block out and the Worker stays reachable
+# Until both are true, comment this route out and the Worker stays reachable
 # at https://screencast.<your-subdomain>.workers.dev.
 routes = [
-  { pattern = "screencast.to", custom_domain = true },
   { pattern = "share.screencast.to", custom_domain = true },
 ]
 
