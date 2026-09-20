@@ -88,6 +88,7 @@ xcodebuild \
     -archivePath "$ARCHIVE_PATH" \
     -destination "generic/platform=macOS" \
     -xcconfig "$BUILD_SETTINGS_XCCONFIG" \
+    -allowProvisioningUpdates \
     archive
 
 APP_BUNDLE="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
@@ -200,7 +201,8 @@ echo "==> Exporting for App Store Connect"
 xcodebuild -exportArchive \
     -archivePath "$ARCHIVE_PATH" \
     -exportPath "$EXPORT_DIR" \
-    -exportOptionsPlist "$EXPORT_OPTIONS"
+    -exportOptionsPlist "$EXPORT_OPTIONS" \
+    -allowProvisioningUpdates
 
 echo
 echo "==> App Store export ready: $EXPORT_DIR"

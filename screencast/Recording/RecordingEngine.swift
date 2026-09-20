@@ -75,51 +75,28 @@ final class RecordingEngine: NSObject {
         }
     }
 
-    /// Persistent on-disk location for recordings. Lives in Application Support
-    /// so macOS will not purge it under disk pressure (unlike `.cachesDirectory`).
-    nonisolated static func recordingsDirectory() throws -> URL {
+    /// Private working directory used only while a recording is being written
+    /// and before the user chooses its final location in the Save dialog.
+    nonisolated static func temporaryRecordingsDirectory() throws -> URL {
         let fm = FileManager.default
-        let appSupport = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dir = appSupport.appendingPathComponent("Screencast/Recordings", isDirectory: true)
+        let dir = fm.temporaryDirectory.appendingPathComponent("Screencast", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        migrateLegacyCacheRecordings(into: dir, fileManager: fm)
         return dir
     }
 
-    /// Versions before 2.0.1 wrote recordings to Caches. Move any surviving
-    /// files into Application Support once; name collisions are preserved by
-    /// assigning a new UUID. A still older, different bundle identifier has a
-    /// separate sandbox and must be imported manually by that user.
-    private nonisolated static func migrateLegacyCacheRecordings(into destination: URL, fileManager fm: FileManager) {
-        guard let caches = try? fm.url(
-            for: .cachesDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
+    /// Remove abandoned working files from an interrupted earlier launch.
+    nonisolated static func removeAbandonedTemporaryRecordings() {
+        guard let dir = try? temporaryRecordingsDirectory() else { return }
+        let fm = FileManager.default
+        guard let urls = try? fm.contentsOfDirectory(
+            at: dir,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
         ) else { return }
-        for directoryName in ["screencast", "notloom"] {
-            let legacyDirectory = caches.appendingPathComponent(directoryName, isDirectory: true)
-            guard fm.fileExists(atPath: legacyDirectory.path),
-                  let recordings = try? fm.contentsOfDirectory(
-                    at: legacyDirectory,
-                    includingPropertiesForKeys: [.isRegularFileKey],
-                    options: [.skipsHiddenFiles]
-                  ).filter({ url in
-                      guard url.pathExtension.lowercased() == "mov" else { return false }
-                      return (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
-                  }) else {
-                continue
-            }
-
-            for source in recordings {
-                var target = destination.appendingPathComponent(source.lastPathComponent)
-                if fm.fileExists(atPath: target.path) {
-                    target = destination.appendingPathComponent("\(UUID().uuidString).mov")
-                }
-                try? fm.moveItem(at: source, to: target)
-            }
+        for url in urls where url.pathExtension.lowercased() == "mov" {
+            try? fm.removeItem(at: url)
         }
     }
 }
@@ -188,11 +165,14 @@ private final class RecordingSession: NSObject, @unchecked Sendable {
         self.videoHeight = height
         self.zoomState = zoomState
 
-        let dir = try RecordingEngine.recordingsDirectory()
+        let dir = try RecordingEngine.temporaryRecordingsDirectory()
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd 'at' h.mm.ss a"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        self.outputURL = dir.appendingPathComponent("Screencast \(formatter.string(from: Date())).mov")
+        let filename = "Screencast \(formatter.string(from: Date()))"
+        self.outputURL = dir
+            .appendingPathComponent("\(filename)-\(UUID().uuidString)")
+            .appendingPathExtension("mov")
 
         self.writer = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
 

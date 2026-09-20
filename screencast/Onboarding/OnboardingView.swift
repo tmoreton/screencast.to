@@ -330,7 +330,7 @@ private struct PermissionRow: View {
                     .foregroundStyle(.green)
             }
         case .notDetermined:
-            Button(actionOverride ?? "Allow", action: onAction)
+            Button(actionOverride ?? "Continue", action: onAction)
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
                 .controlSize(.small)
