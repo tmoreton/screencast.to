@@ -536,7 +536,7 @@ struct MenuBarView: View {
             }
             if state.recordings.count > 3 {
                 Button { state.openRecordingsFolder() } label: {
-                    Text("Show all \(state.recordings.count) recordings…")
+                    Text("Show most recent folder…")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.accentColor)
                 }
@@ -642,12 +642,14 @@ struct MenuBarView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button { state.openRecordingsFolder() } label: {
-                Label("Show Recordings", systemImage: "folder")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+            if !state.recordings.isEmpty {
+                Button { state.openRecordingsFolder() } label: {
+                    Label("Recent Folder", systemImage: "folder")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Spacer()
             Button("Privacy") { state.openPrivacyPolicy() }
                 .buttonStyle(.plain)

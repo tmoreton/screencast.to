@@ -4,6 +4,7 @@ import AVFoundation
 import Carbon.HIToolbox
 import CoreGraphics
 import Observation
+import UniformTypeIdentifiers
 
 enum AppPhase: Equatable {
     case idle
@@ -56,7 +57,7 @@ enum UploadState: Equatable {
 final class AppState {
     var options = RecordingOptions()
     var phase: AppPhase = .idle
-    /// Local recordings on disk, newest first. Replaces the old upload history.
+    /// User-selected recording files, newest first.
     var recordings: [URL] = []
     /// Sticky error banner: set when a recording fails, cleared only when the
     /// user explicitly dismisses it (survives across phase changes).
@@ -75,6 +76,9 @@ final class AppState {
     }
     private static let scriptKey = "screencast.teleprompter.script"
     private static let enabledKey = "screencast.teleprompter.enabled"
+    private static let recordingBookmarksKey = "screencast.recording-bookmarks.v1"
+    private static let maximumRecentRecordings = 20
+    private var accessedSecurityScopedURLs: Set<URL> = []
 
     /// Per-recording upload state, keyed by local file path. Saved links are
     /// presented as fresh for one day; lifecycle deletion may take another day.
@@ -130,7 +134,8 @@ final class AppState {
         teleprompterScript = UserDefaults.standard.string(forKey: Self.scriptKey) ?? ""
         teleprompterEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         loadUploads()
-        refreshRecordings()
+        RecordingEngine.removeAbandonedTemporaryRecordings()
+        loadRecordingBookmarks()
         refreshOptionalInputAvailability()
         bubble.onCaptureFailure = { [weak self] in
             self?.handleCameraCaptureFailure()
@@ -550,18 +555,20 @@ final class AppState {
         Task { [weak self] in
             guard let self else { return }
             do {
-                _ = try await self.recorder.stop()
+                let temporaryURL = try await self.recorder.stop()
                 self.bubble.hide()
+                let savedURL = try await self.presentSavePanel(for: temporaryURL)
+                if let savedURL {
+                    self.rememberRecording(savedURL)
+                }
                 self.isStopping = false
                 self.phase = .idle
-                self.refreshRecordings()
                 self.showIdleRegionOverlayIfNeeded()
             } catch {
                 self.bubble.hide()
                 self.isStopping = false
                 self.lastError = error.localizedDescription
                 self.phase = .idle
-                self.refreshRecordings()
                 self.showIdleRegionOverlayIfNeeded()
             }
         }
@@ -569,24 +576,90 @@ final class AppState {
 
     // MARK: - Local recordings
 
-    /// Reload the on-disk recordings list (newest first).
-    func refreshRecordings() {
-        guard let dir = try? RecordingEngine.recordingsDirectory() else {
-            recordings = []
+    /// Ask the user where the finished movie should live. The private recording
+    /// is only a working file and is removed if the Save dialog is cancelled.
+    private func presentSavePanel(for temporaryURL: URL) async throws -> URL? {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.quickTimeMovie]
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.nameFieldStringValue = suggestedRecordingName(from: temporaryURL)
+        panel.message = "Choose where to save your recording."
+        panel.prompt = "Save Recording"
+        NSApp.activate(ignoringOtherApps: true)
+
+        let response = await withCheckedContinuation { continuation in
+            panel.begin { result in
+                continuation.resume(returning: result)
+            }
+        }
+        guard response == .OK, let destination = panel.url else {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            return nil
+        }
+
+        let fm = FileManager.default
+        if fm.fileExists(atPath: destination.path) {
+            _ = try fm.replaceItemAt(destination, withItemAt: temporaryURL)
+        } else {
+            try fm.moveItem(at: temporaryURL, to: destination)
+        }
+        return destination
+    }
+
+    private func suggestedRecordingName(from temporaryURL: URL) -> String {
+        let base = temporaryURL.deletingPathExtension().lastPathComponent
+        let uuidLength = UUID().uuidString.count + 1
+        let name = base.count > uuidLength ? String(base.dropLast(uuidLength)) : "Screencast"
+        return "\(name).mov"
+    }
+
+    private func rememberRecording(_ url: URL) {
+        if !accessedSecurityScopedURLs.contains(url), url.startAccessingSecurityScopedResource() {
+            accessedSecurityScopedURLs.insert(url)
+        }
+        recordings.removeAll { $0 == url }
+        recordings.insert(url, at: 0)
+        if recordings.count > Self.maximumRecentRecordings {
+            let removalCount = recordings.count - Self.maximumRecentRecordings
+            let removed = Array(recordings.suffix(removalCount))
+            recordings.removeLast(removalCount)
+            for url in removed where accessedSecurityScopedURLs.remove(url) != nil {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        persistRecordingBookmarks()
+    }
+
+    private func persistRecordingBookmarks() {
+        let bookmarks = recordings.compactMap { url in
+            try? url.bookmarkData(options: .withSecurityScope)
+        }
+        UserDefaults.standard.set(bookmarks, forKey: Self.recordingBookmarksKey)
+    }
+
+    private func loadRecordingBookmarks() {
+        guard let bookmarks = UserDefaults.standard.array(forKey: Self.recordingBookmarksKey) as? [Data] else {
             return
         }
-        let fm = FileManager.default
-        let urls = (try? fm.contentsOfDirectory(
-            at: dir,
-            includingPropertiesForKeys: [.contentModificationDateKey]
-        )) ?? []
-        recordings = urls
-            .filter { $0.pathExtension.lowercased() == "mov" }
-            .sorted { a, b in
-                let ad = (try? a.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                let bd = (try? b.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                return ad > bd
+        var resolved: [URL] = []
+        for data in bookmarks.prefix(Self.maximumRecentRecordings) {
+            var isStale = false
+            guard let url = try? URL(
+                resolvingBookmarkData: data,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ), FileManager.default.fileExists(atPath: url.path) else {
+                continue
             }
+            if url.startAccessingSecurityScopedResource() {
+                accessedSecurityScopedURLs.insert(url)
+            }
+            resolved.append(url)
+        }
+        recordings = resolved
+        persistRecordingBookmarks()
     }
 
     /// Open a recording in the default player (QuickTime).
@@ -600,8 +673,16 @@ final class AppState {
 
     /// Move a recording to the Trash and refresh the list.
     func deleteRecording(_ url: URL) {
-        try? FileManager.default.trashItem(at: url, resultingItemURL: nil)
-        refreshRecordings()
+        do {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+            recordings.removeAll { $0 == url }
+            if accessedSecurityScopedURLs.remove(url) != nil {
+                url.stopAccessingSecurityScopedResource()
+            }
+            persistRecordingBookmarks()
+        } catch {
+            lastError = "Could not move the recording to the Trash: \(error.localizedDescription)"
+        }
     }
 
     /// Clear the sticky error banner (user-initiated only).
@@ -883,9 +964,9 @@ final class AppState {
         """
     }
 
-    /// Reveal the local recordings folder in Finder.
+    /// Reveal the folder selected for the most recent recording in Finder.
     func openRecordingsFolder() {
-        guard let url = try? RecordingEngine.recordingsDirectory() else { return }
+        guard let url = recordings.first?.deletingLastPathComponent() else { return }
         NSWorkspace.shared.open(url)
     }
 

@@ -27,7 +27,7 @@
 - Records a full display or a selected region from the macOS menu bar.
 - Mixes optional camera, microphone, and system audio.
 - Supports pause/resume, live zoom, camera layouts, and a local teleprompter.
-- Saves a normal movie on the Mac for playback, Finder access, or deletion.
+- Saves a normal movie to a user-selected location through the standard macOS Save dialog.
 - Uploads only after an explicit sharing action; core recording is local.
 - Uses no Screencast account, advertising SDK, or behavioral analytics.
 
