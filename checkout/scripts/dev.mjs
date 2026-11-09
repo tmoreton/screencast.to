@@ -9,7 +9,7 @@ const port = Number(process.env.PORT || 4173);
 const host = '127.0.0.1';
 const publicPages = new Set([
   'index.html', 'confirmation.html', 'confirmation.js', 'checkout.js',
-  'connect-sharing.html', 'connect-sharing.js',
+  'connect-sharing.html', 'connect-sharing.js', 'sharing-pending.js',
   'styles.css', 'support.html', 'robots.txt', 'sitemap.xml',
   'bundle/index.html',
 ]);
