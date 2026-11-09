@@ -14,7 +14,8 @@ function fixture() {
   const env = {
     UPLOAD_AUTH_MODE: "app-store", SERVICE_TOKEN_SECRET: "private-test-secret-at-least-thirty-two-characters",
     CHECKOUT_BASE_URL: "https://screencast.to", STRIPE_SECRET_KEY: "sk_test_1234567890", STRIPE_PRICE_ID: "price_valid",
-    RESEND_API_KEY: "re_fake", PURCHASE_EMAIL_FROM: "Screencast <downloads@yaprflow.com>",
+    PURCHASE_EMAIL: { async send() { return { messageId: "test-only" }; } },
+    PURCHASE_EMAIL_ENABLED: "true", PURCHASE_EMAIL_FROM: "purchases@screencast.to",
     SIGN_LIMITER: { async limit() { return { success: true }; } },
     RELEASES: {
       async get(key: string) { const o = objects.get(key); return o ? { ...o, async json() { return JSON.parse(o.value); } } : null; },

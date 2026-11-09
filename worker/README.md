@@ -66,12 +66,14 @@ Connection and recovery tickets live under the private release bucket's
 conditional R2 write. Expired tickets are removed as new tickets are created.
 The renewable sharing credential expires after one year, encrypts the purchase
 reference with a purpose-specific derived key, and grants no release-publishing
-or update-feed access. The signing secret, Stripe key, and mail-provider key
-remain server-side. The app never contains a shared website upload password.
+or update-feed access. The signing secret and Stripe key remain server-side;
+the native email binding requires no separate mail-provider API key. The app
+never contains a shared website upload password.
 
 `UPLOAD_AUTH_MODE=app-store` retains its existing configuration name and accepts
 the short-lived upload tokens issued by both official purchase-verification
-paths. Website recovery additionally requires the Resend configuration below.
+paths. Website recovery additionally requires the Cloudflare Email Service
+configuration below.
 
 Complete license texts for application dependencies and the runtime shim
 observed in Wrangler's production bundle are imported as a deployed text module
@@ -132,35 +134,51 @@ silently drift.
 
 ### Website purchase recovery email
 
-Recovery uses the existing Resend account also used by Yaprflow. It sends only
-the transactional message requested by the buyer; it creates no newsletter
-contact or marketing subscription. Configure these server-only bindings:
+Recovery uses Cloudflare Email Service's outbound **Email Sending** feature
+through a native Worker binding. It sends only the transactional message
+requested by the buyer and creates no newsletter or marketing subscription.
+Email Routing alone sends only to verified destination addresses and is not
+sufficient for arbitrary customer recipients.
+
+Outbound sending to arbitrary recipients requires Workers Paid and an
+onboarded sending domain. The current allowance is 3,000 emails per account
+per month, then $0.35 per 1,000 emails; see
+[Cloudflare's pricing](https://developers.cloudflare.com/email-service/platform/pricing/).
+New accounts also have reputation-based daily limits. Review account
+entitlement and limits before enabling customer recovery.
+
+Configure the native binding with a sender restriction and no customer-address
+allowlist:
+
+```toml
+[[send_email]]
+name = "PURCHASE_EMAIL"
+allowed_sender_addresses = ["purchases@screencast.to"]
+```
+
+The application reads these settings:
 
 | Binding | Purpose |
 | --- | --- |
-| `RESEND_API_KEY` | Existing authorized Resend credential, preferably a send-only key scoped to the verified sender domain. |
-| `PURCHASE_EMAIL_FROM` | Verified sender, such as `Screencast.to <downloads@screencast.to>` after that domain is verified in Resend. |
+| `PURCHASE_EMAIL` | Native `send_email` binding; no API key is stored in the app or Worker secrets. |
+| `PURCHASE_EMAIL_ENABLED` | Exact value `true` enables recovery. Keep `false` until sending is onboarded and verified. |
+| `PURCHASE_EMAIL_FROM` | Plain verified sender address: `purchases@screencast.to`. The transport supplies the display name `Screencast.to`. |
 | `PURCHASE_EMAIL_REPLY_TO` | Support reply address; defaults to `support@screencast.to`. |
 
-Until `screencast.to` is verified in the same Resend account, an established
-verified Yaprflow sender may be used with the Screencast.to display name, for
-example `Screencast.to <downloads@yaprflow.com>`. Selecting a display name does
-not verify a new sender domain.
+Onboard `screencast.to` under **Email Service → Email Sending**, rather than
+Email Routing. Review the outbound authentication records Cloudflare proposes:
+`cf-bounce` subdomain MX/SPF records plus the sending DKIM and DMARC records.
+Preserve existing apex MX records and incoming-mail forwarding. See
+[domain configuration](https://developers.cloudflare.com/email-service/configuration/domains/).
+Only after the account and sending domain are ready should
+`PURCHASE_EMAIL_ENABLED` be set to `true`. A binding's presence alone does not
+make recovery available. Keep local development mocked; enabling a remote email
+binding can send real messages.
 
-Enter credentials through Wrangler's prompt or a private stdin stream, never a
-command-line value, tracked file, application plist, or build log:
-
-```sh
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put PURCHASE_EMAIL_FROM
-npx wrangler secret put PURCHASE_EMAIL_REPLY_TO
-```
-
-Yaprflow uses the same binding names in its Vercel project. Production values
-stored there as Secret/Sensitive variables cannot be recovered with
-`vercel env pull`. Use an authorized existing credential from secure storage or
-a deliberately scoped credential in the same account; do not rotate Yaprflow's
-working key merely to configure this service.
+Account administration requires the Email Sending permission in addition to
+ordinary Worker deployment permissions. An existing Wrangler login may lack
+that scope. Use an explicitly authorized scoped credential/profile for setup;
+the deployed binding itself needs no embedded API token.
 
 The Stripe credential must also permit the website connection flow to read
 Customers, Checkout Sessions, Payment Intents, and Charges. The last two are
@@ -170,9 +188,11 @@ price/product verification permissions remain necessary.
 
 Restore responses and email failures exclude addresses, provider responses, and
 private links from logs. The email transport validates the canonical recovery
-URL, escapes its HTML form, times out provider requests, and supplies a hashed
-idempotency key for identical delivery retries. Automated email tests replace
-`fetch` with a mock and never send a message.
+URL, escapes its HTML form, uses the structured native email builder, and
+requires a message-ID acknowledgement. Automated email tests replace the native
+binding with a mock and never send a message. Email Service's quota,
+suppression, sender-verification, and delivery errors become a redacted
+application error rather than exposing private addresses or links.
 
 ### Private self-hosted deployment
 
@@ -227,7 +247,8 @@ cover token lifetime, anonymous token contents, authorization, maximum-size
 rejection, and signed `Content-Length` behavior.
 Website sharing tests also cover purchase/refund checks, PKCE and ticket
 redemption, credential renewal, and recovery. `tests/email.test.ts` verifies the
-Resend request, URL validation, deduplication, and redaction with mocked delivery.
+native binding request, enable gate, URL validation, and redaction with mocked
+delivery.
 
 ## Static site
 
@@ -247,5 +268,5 @@ upload maximum is 1 GiB.
 The service depends on Cloudflare Workers, R2, and DNS/custom-domain service.
 App Store verification additionally uses Apple's certificate/StoreKit
 infrastructure; website purchase connection uses Stripe and recovery email uses
-Resend. See `docs/ARCHITECTURE.md` for the complete production topology and
-distribution boundaries.
+Cloudflare Email Service. See `docs/ARCHITECTURE.md` for the complete production
+topology and distribution boundaries.

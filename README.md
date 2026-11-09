@@ -51,6 +51,7 @@ removal runs on your Mac. Switch formats while recording with **⌘⇧C**.
 | Temporary sharing | Verified StoreKit or website purchases, 15-minute upload authorization, and lifecycle-managed R2 storage |
 | Direct sales | Stripe Checkout with purchaser-only downloads from private R2 storage |
 | Website purchase connection | Browser verification or email recovery, a one-use app callback, and an opaque grant stored in the Mac Keychain |
+| Purchase recovery email | Cloudflare Email Service through a native Worker binding and verified sending domain |
 | Standalone updates | Sparkle 2 with an EdDSA-signed, token-gated private feed |
 | App Store updates | Apple-managed; the App Store target contains no Sparkle framework |
 
@@ -135,6 +136,9 @@ The browser verifies the purchase cookie from Stripe checkout. If that cookie
 is missing, enter the checkout email to receive a short-lived, single-use
 purchase link. You can also [recover a website purchase](https://screencast.to/connect-sharing.html)
 to regain download access after changing browsers or clearing cookies.
+Recovery email uses Cloudflare Email Service and becomes available only after
+outbound sending is verified and explicitly enabled; see the
+[Worker setup](worker/README.md#website-purchase-recovery-email).
 
 After verification, choose **Connect sharing**, then **Open Screencast** to
 finish connecting the requesting Mac. A one-use code is bound to that app's

@@ -12,7 +12,8 @@ export interface Env {
   R2_PUB_HOST: string;
   APP_APPLE_ID: string;
   SERVICE_TOKEN_SECRET: string;
-  RESEND_API_KEY?: string;
+  PURCHASE_EMAIL?: SendEmail;
+  PURCHASE_EMAIL_ENABLED?: string;
   PURCHASE_EMAIL_FROM?: string;
   PURCHASE_EMAIL_REPLY_TO?: string;
   SELF_HOSTED_UPLOAD_TOKEN?: string;

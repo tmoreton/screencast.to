@@ -33,6 +33,13 @@ CHECKOUT_ENABLED = "true"
 STRIPE_PRICE_ID = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 STRIPE_ALLOWED_PRICE_IDS = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 RELEASE_MANIFEST_PATH = "releases/current.json"
+PURCHASE_EMAIL_ENABLED = "false"
+
+# Requires an onboarded Cloudflare Email Sending domain and Workers Paid.
+# Keep recovery disabled until setup is verified. Restrict sending to this address.
+[[send_email]]
+name = "PURCHASE_EMAIL"
+allowed_sender_addresses = ["purchases@screencast.to"]
 
 # Per-IP rate limit on /sign (10 requests / 60s).
 # `namespace_id` is an arbitrary unique integer per limiter in your account.
@@ -53,8 +60,7 @@ simple = { limit = 10, period = 60 }
 #   SELF_HOSTED_UPLOAD_TOKEN — private forks only; canonical deploy refuses it
 #   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB
 #   STRIPE_SECRET_KEY     — Checkout/Customers write+read/search, PaymentIntents read, Prices/Products read
-#   RESEND_API_KEY        — existing Resend account's email-sending key
-#   PURCHASE_EMAIL_FROM   — sender on a domain already verified in that Resend account
+#   PURCHASE_EMAIL_FROM   — purchases@screencast.to after Cloudflare sending-domain verification
 #   PURCHASE_EMAIL_REPLY_TO — optional support reply address
 #   SPARKLE_UPDATE_TOKEN  — bearer token embedded only in official standalone builds
 #   RELEASE_PUBLISH_TOKEN — GitHub Actions release-upload bearer token

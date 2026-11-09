@@ -10,88 +10,78 @@ const restoreURL = `https://screencast.to/connect-sharing.html?restore=${restore
 
 function fakeEnv(changes: Record<string, unknown> = {}): Env {
   return {
-    RESEND_API_KEY: "re_test_only_not_a_real_key",
-    PURCHASE_EMAIL_FROM: "Screencast.to <downloads@yaprflow.com>",
+    PURCHASE_EMAIL_ENABLED: "true",
+    PURCHASE_EMAIL: { async send() { throw new Error("Email delivery must be mocked explicitly."); } },
+    PURCHASE_EMAIL_FROM: "purchases@screencast.to",
     PURCHASE_EMAIL_REPLY_TO: "support@screencast.to",
     ...changes,
   } as unknown as Env;
 }
 
-test("purchase email requires the existing provider credential and a valid configured sender", () => {
+test("purchase recovery requires an explicit enable gate, native binding, and valid sender", () => {
   assert.equal(isPurchaseEmailConfigured(fakeEnv()), true);
   assert.equal(isPurchaseEmailConfigured(fakeEnv({ PURCHASE_EMAIL_REPLY_TO: undefined })), true);
-  assert.equal(isPurchaseEmailConfigured(fakeEnv({ PURCHASE_EMAIL_FROM: "downloads@yaprflow.com" })), true);
   for (const changes of [
-    { RESEND_API_KEY: undefined },
-    { RESEND_API_KEY: "wrong-provider-key" },
+    { PURCHASE_EMAIL_ENABLED: undefined },
+    { PURCHASE_EMAIL_ENABLED: "false" },
+    { PURCHASE_EMAIL_ENABLED: "TRUE" },
+    { PURCHASE_EMAIL: undefined },
+    { PURCHASE_EMAIL: {} },
     { PURCHASE_EMAIL_FROM: undefined },
     { PURCHASE_EMAIL_FROM: "invalid" },
-    { PURCHASE_EMAIL_FROM: "Screencast.to <downloads@yaprflow.com>\r\nBcc: another@example.com" },
+    { PURCHASE_EMAIL_FROM: "Screencast.to <purchases@screencast.to>" },
+    { PURCHASE_EMAIL_FROM: "purchases@screencast.to\r\nBcc: another@example.com" },
     { PURCHASE_EMAIL_REPLY_TO: "invalid" },
   ]) assert.equal(isPurchaseEmailConfigured(fakeEnv(changes)), false);
+  assert.equal(isPurchaseEmailConfigured(fakeEnv({ PURCHASE_EMAIL: undefined, RESEND_API_KEY: "unused-legacy-key" })), false);
 });
 
-test("restore delivery uses only Resend email sending and preserves the private restore link", async (t) => {
-  const calls: { target: unknown; options: RequestInit | undefined }[] = [];
-  t.mock.method(globalThis, "fetch", async (target: unknown, options?: RequestInit) => {
-    calls.push({ target, options });
-    return Response.json({ id: "mock_message_id" });
+test("restore delivery uses the Cloudflare binding with a named sender and exact private link", async (t) => {
+  // No HTTP provider fallback is allowed, even if a stale credential is present.
+  t.mock.method(globalThis, "fetch", async () => { throw new Error("must not use an external email API"); });
+  const calls: EmailMessageBuilder[] = [];
+  const env = fakeEnv({
+    RESEND_API_KEY: "unused-legacy-key",
+    PURCHASE_EMAIL: { async send(message: EmailMessageBuilder) {
+      calls.push(message);
+      return { messageId: "mock_message_id" };
+    } },
   });
-  await sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL);
+  await sendPurchaseRestoreEmail(env, "buyer@example.com", restoreURL);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].target, "https://api.resend.com/emails");
-  assert.equal(calls[0].options?.method, "POST");
-  assert.equal(calls[0].options?.redirect, "error");
-  assert.ok(calls[0].options?.signal instanceof AbortSignal);
-  const headers = new Headers(calls[0].options?.headers);
-  assert.equal(headers.get("Authorization"), "Bearer re_test_only_not_a_real_key");
-  assert.equal(headers.get("Content-Type"), "application/json");
-  const body = JSON.parse(String(calls[0].options?.body));
-  assert.equal(body.from, "Screencast.to <downloads@yaprflow.com>");
-  assert.deepEqual(body.to, ["buyer@example.com"]);
-  assert.equal(body.reply_to, "support@screencast.to");
-  assert.equal(body.subject, "Connect sharing in Screencast.to");
-  assert.ok(body.text.includes(restoreURL));
-  assert.ok(body.html.includes(restoreURL.replaceAll("&", "&amp;")));
-  assert.match(body.text, /If you did not request this email, you can ignore it/);
-  assert.equal(body.bcc, undefined);
-  assert.equal(body.cc, undefined);
-  assert.match(headers.get("Idempotency-Key")!, /^screencast-restore\/[a-f0-9]{64}$/);
+  const message = calls[0];
+  assert.deepEqual(message.from, { email: "purchases@screencast.to", name: "Screencast.to" });
+  assert.deepEqual(message.to, ["buyer@example.com"]);
+  assert.equal(message.replyTo, "support@screencast.to");
+  assert.equal(message.subject, "Connect sharing in Screencast.to");
+  assert.ok(message.text?.includes(restoreURL));
+  assert.ok(message.html?.includes(restoreURL.replaceAll("&", "&amp;")));
+  assert.match(message.text!, /If you did not request this email, you can ignore it/);
+  assert.equal(message.bcc, undefined);
+  assert.equal(message.cc, undefined);
+  assert.equal(message.headers, undefined);
 });
 
-test("identical restore requests are idempotent and different links have different request IDs", async (t) => {
-  const keys: (string | null)[] = [];
-  t.mock.method(globalThis, "fetch", async (_target: unknown, options?: RequestInit) => {
-    keys.push(new Headers(options?.headers).get("Idempotency-Key"));
-    return Response.json({ id: "mock_message_id" });
-  });
-  await sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL);
-  await sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL);
-  await sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL.replace(restoreToken, "q".repeat(43)));
-  assert.equal(keys[0], keys[1]);
-  assert.notEqual(keys[0], keys[2]);
-  assert.ok(keys.every((key) => !key!.includes("buyer") && !key!.includes(restoreToken)));
-});
-
-test("recovery without an app connection accepts the restore token alone", async (t) => {
-  let body: { text: string } | undefined;
-  t.mock.method(globalThis, "fetch", async (_target: unknown, options?: RequestInit) => {
-    body = JSON.parse(String(options?.body));
-    return Response.json({ id: "mock_message_id" });
-  });
+test("recovery without an app connection accepts the restore token alone", async () => {
+  let message: EmailMessageBuilder | undefined;
+  const env = fakeEnv({ PURCHASE_EMAIL: { async send(value: EmailMessageBuilder) {
+    message = value;
+    return { messageId: "mock_message_id" };
+  } } });
   const link = `https://screencast.to/connect-sharing.html?restore=${restoreToken}`;
-  await sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", link);
-  assert.ok(body?.text.includes(link));
+  await sendPurchaseRestoreEmail(env, "buyer@example.com", link);
+  assert.ok(message?.text?.includes(link));
 });
 
-test("invalid recipients and off-site or malformed restore links never contact the email provider", async (t) => {
+test("invalid inputs and disabled recovery never call the native email binding", async () => {
   let calls = 0;
-  t.mock.method(globalThis, "fetch", async () => {
+  const binding = { async send() {
     calls += 1;
     throw new Error("must not send");
-  });
+  } };
+  const env = fakeEnv({ PURCHASE_EMAIL: binding });
   for (const recipient of ["invalid", "buyer@example.com\r\nBcc: another@example.com", "one@example.com,two@example.com"]) {
-    await assert.rejects(sendPurchaseRestoreEmail(fakeEnv(), recipient, restoreURL), /Invalid purchase email recipient/);
+    await assert.rejects(sendPurchaseRestoreEmail(env, recipient, restoreURL), /Invalid purchase email recipient/);
   }
   for (const invalidURL of [
     restoreURL.replace("https:", "http:"),
@@ -108,33 +98,27 @@ test("invalid recipients and off-site or malformed restore links never contact t
     restoreURL.replace(`&code_challenge=${challenge}`, ""),
     "https://screencast.to/connect-sharing.html?restore=proof",
     "not a URL",
-  ]) await assert.rejects(sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", invalidURL), /Invalid purchase restore URL/);
-  await assert.rejects(sendPurchaseRestoreEmail(fakeEnv({ RESEND_API_KEY: undefined }), "buyer@example.com", restoreURL), /not configured/);
+  ]) await assert.rejects(sendPurchaseRestoreEmail(env, "buyer@example.com", invalidURL), /Invalid purchase restore URL/);
+  for (const changes of [{ PURCHASE_EMAIL_ENABLED: "false" }, { PURCHASE_EMAIL: undefined }]) {
+    await assert.rejects(sendPurchaseRestoreEmail(fakeEnv({ PURCHASE_EMAIL: binding, ...changes }), "buyer@example.com", restoreURL), /not configured/);
+  }
   assert.equal(calls, 0);
 });
 
-test("email-provider failures never expose provider bodies, addresses, or restore credentials", async (t) => {
-  const sensitive = `buyer@example.com ${restoreURL} re_test_only_not_a_real_key`;
-  for (const response of [
-    new Response(sensitive, { status: 403 }),
-    new Response(sensitive, { status: 429 }),
-    new Response(sensitive, { status: 500 }),
-    new Response(sensitive, { status: 200 }),
-    Response.json({ message: sensitive }),
-    Response.json({ id: "" }),
-  ]) {
-    const fetch = t.mock.method(globalThis, "fetch", async () => response);
-    await assert.rejects(sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL), (error: Error) => {
+test("native email errors and invalid acknowledgements never expose private delivery data", async () => {
+  const sensitive = `buyer@example.com ${restoreURL}`;
+  const cases = [
+    async () => { throw Object.assign(new Error(sensitive), { code: "E_SENDER_NOT_VERIFIED" }); },
+    async () => { throw Object.assign(new Error(sensitive), { code: "E_DAILY_LIMIT_EXCEEDED" }); },
+    async () => null,
+    async () => ({}),
+    async () => ({ messageId: "" }),
+  ];
+  for (const send of cases) {
+    await assert.rejects(sendPurchaseRestoreEmail(fakeEnv({ PURCHASE_EMAIL: { send } }), "buyer@example.com", restoreURL), (error: Error) => {
       assert.equal(error.message, "Purchase restore email could not be sent.");
       assert.equal(error.cause, undefined);
       return true;
     });
-    fetch.mock.restore();
   }
-  t.mock.method(globalThis, "fetch", async () => { throw new Error(sensitive); });
-  await assert.rejects(sendPurchaseRestoreEmail(fakeEnv(), "buyer@example.com", restoreURL), (error: Error) => {
-    assert.equal(error.message, "Purchase restore email could not be sent.");
-    assert.equal(error.cause, undefined);
-    return true;
-  });
 });

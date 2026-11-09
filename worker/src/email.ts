@@ -1,10 +1,9 @@
 import type { Env } from "./env";
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const DEFAULT_REPLY_TO = "support@screencast.to";
 
 interface PurchaseEmailConfiguration {
-  apiKey: string;
+  binding: SendEmail;
   from: string;
   replyTo: string;
 }
@@ -20,14 +19,12 @@ function validEmail(value: string | undefined): string | null {
 }
 
 function configuration(env: Env): PurchaseEmailConfiguration | null {
-  const apiKey = configuredValue(env.RESEND_API_KEY, 500);
-  const from = configuredValue(env.PURCHASE_EMAIL_FROM, 320);
+  if (env.PURCHASE_EMAIL_ENABLED !== "true" || typeof env.PURCHASE_EMAIL?.send !== "function") return null;
+  const from = validEmail(env.PURCHASE_EMAIL_FROM);
   const replyTo = env.PURCHASE_EMAIL_REPLY_TO?.trim()
     ? validEmail(env.PURCHASE_EMAIL_REPLY_TO) : DEFAULT_REPLY_TO;
-  if (!apiKey || !/^re_[A-Za-z0-9_-]+$/.test(apiKey) || !from || !replyTo) return null;
-  const sender = /^(?:[^<>,]+ <([^<>]+)>|([^<>]+))$/.exec(from);
-  if (!sender || !validEmail(sender[1] || sender[2])) return null;
-  return { apiKey, from, replyTo };
+  if (!from || !replyTo) return null;
+  return { binding: env.PURCHASE_EMAIL, from, replyTo };
 }
 
 export function isPurchaseEmailConfigured(env: Env): boolean {
@@ -71,10 +68,10 @@ export async function sendPurchaseRestoreEmail(env: Env, to: string, restoreURL:
   const url = validatedRestoreURL(restoreURL);
   const safeURL = htmlEscape(url);
   const safeReplyTo = htmlEscape(settings.replyTo);
-  const body = JSON.stringify({
-    from: settings.from,
+  const message = {
+    from: { email: settings.from, name: "Screencast.to" },
     to: [recipient],
-    reply_to: settings.replyTo,
+    replyTo: settings.replyTo,
     subject: "Connect sharing in Screencast.to",
     text: [
       "You requested access to temporary sharing for your Screencast.to website purchase.",
@@ -85,26 +82,10 @@ export async function sendPurchaseRestoreEmail(env: Env, to: string, restoreURL:
       `Need help? Reply to this email or contact ${settings.replyTo}.`,
     ].join("\n\n"),
     html: `<!doctype html><html><body style="margin:0;background:#f5f0e6;color:#181816;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"><div style="max-width:560px;margin:0 auto;padding:40px 24px"><div style="font-size:28px;font-weight:800">Screencast.to</div><h1 style="font-size:30px;line-height:1.15;margin:28px 0 16px">Connect temporary sharing</h1><p style="font-size:16px;line-height:1.6">You requested sharing access for your Screencast.to website purchase. Open this private link on the Mac where you made the request.</p><p style="margin:28px 0"><a href="${safeURL}" style="display:inline-block;background:#f0444d;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 20px">Connect sharing</a></p><p style="font-size:14px;line-height:1.6">This link expires shortly. Keep it private and do not forward it. If you did not request this email, you can ignore it.</p><p style="font-size:14px;line-height:1.6">Need help? Reply to this email or contact <a href="mailto:${safeReplyTo}">${safeReplyTo}</a>.</p></div></body></html>`,
-  });
-  // Deduplicate retries of this exact request without placing an address or
-  // private restore credential in the provider's idempotency metadata.
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
-  const requestID = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  };
   try {
-    const response = await fetch(RESEND_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${settings.apiKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": `screencast-restore/${requestID}`,
-      },
-      body,
-      redirect: "error",
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) throw new Error("Provider request failed.");
-    const result = await response.json() as { id?: unknown } | null;
-    if (!result || typeof result.id !== "string" || !result.id) throw new Error("Provider response was invalid.");
+    const result = await settings.binding.send(message);
+    if (!result || typeof result.messageId !== "string" || !result.messageId) throw new Error("Provider response was invalid.");
   } catch {
     // Provider responses and errors can contain the recipient or private link.
     // Never attach them as a cause or expose their body to application logging.

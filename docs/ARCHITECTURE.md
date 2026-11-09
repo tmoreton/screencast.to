@@ -16,9 +16,8 @@ updates.
 - A separate private `screencast-releases` R2 bucket stores versioned DMGs,
   appcasts, and `releases/current.json`. Short-lived connection and recovery
   tickets use its separate `sharing-auth/` prefix.
-- Resend delivers requested website-purchase recovery emails using the existing
-  provider account shared with Yaprflow and an explicitly configured verified
-  sender.
+- Cloudflare Email Service delivers requested website-purchase recovery emails
+  through a native Worker binding restricted to the configured sender.
 
 Cloudflare is authoritative for DNS. Static product-site assets are packaged
 with the Worker; release objects are never published as static assets.
@@ -72,7 +71,11 @@ The single-use recovery link restores the browser purchase cookie, after which
 the app completes its PKCE connection. Connection and recovery tickets expire
 after 15 minutes; expired records are removed as new tickets are created. Cookie
 expiry does not disconnect a Mac that already holds a valid Keychain credential.
-Recovery requires the Resend configuration documented in
+Recovery remains disabled until the Workers Paid account and outbound sending
+domain are ready and `PURCHASE_EMAIL_ENABLED=true`. It uses Email Sending for
+arbitrary customer recipients; Email Routing's verified-destination facility
+alone is insufficient. Domain setup adds outbound bounce/authentication records
+while preserving existing apex MX and incoming forwarding. Configuration is in
 [`worker/README.md`](../worker/README.md#website-purchase-recovery-email).
 
 Official standalone builds use Sparkle 2. The appcast and update archive require
