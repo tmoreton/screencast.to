@@ -1,5 +1,5 @@
 import AppKit
-import AVFoundation
+@preconcurrency import AVFoundation
 import CoreMedia
 import OSLog
 
@@ -11,6 +11,8 @@ final class CameraBubbleController {
     private var captureSession: ManagedCameraCaptureSession?
     private var captureObservers: [NSObjectProtocol] = []
     private var currentDeviceID: String?
+    private var presenterProcessor: PresenterFrameProcessor?
+    private var currentFormat: CaptureFormat = .screenOnly
     private var applyGeneration = 0
     private let log = Logger(subsystem: "to.screencast.app", category: "CameraBubble")
     private let diameter: CGFloat = 160
@@ -21,19 +23,27 @@ final class CameraBubbleController {
 
     /// Apply a filming format. Warms the camera (awaiting a live frame) when the
     /// format needs it, then sizes/styles the window: hidden, a bottom-right
-    /// bubble, or filling the captured area. `region` is the captured area in
-    /// display points (top-left origin) or nil for full screen.
+    /// bubble, a fixed presenter cutout, or filling the captured area. `region`
+    /// is the captured area in display points (top-left origin) or nil for full screen.
     @discardableResult
     func apply(format: CaptureFormat, deviceID: String? = nil, region: CGRect? = nil) async -> Bool {
         applyGeneration &+= 1
         let generation = applyGeneration
+        currentFormat = format
         currentRegion = region
+        presenterProcessor?.setActive(generation: nil)
+        (window?.contentView as? CameraBubbleView)?.presenterImage = nil
         guard format.usesCamera else {
             window?.orderOut(nil)
             await stopAndReleaseSession()
             return true
         }
         if window == nil { buildWindow() }
+        if format == .presenter {
+            // Never expose an unsegmented camera frame while Presenter warms up.
+            (window?.contentView as? CameraBubbleView)?.previewLayer?.isHidden = true
+            presenterProcessor?.setActive(generation: UInt64(truncatingIfNeeded: generation))
+        }
         let cameraReady = await ensureRunning(deviceID: deviceID, generation: generation)
         guard generation == applyGeneration else { return false }
         guard cameraReady else {
@@ -45,6 +55,10 @@ final class CameraBubbleController {
             return false
         }
 
+        host.presenterLayer.isHidden = format != .presenter
+        host.previewLayer?.isHidden = format == .presenter
+        window.hasShadow = format == .screenAndCamera
+        window.isMovableByWindowBackground = format == .screenAndCamera
         switch format {
         case .screenAndCamera:
             host.circular = true
@@ -52,6 +66,12 @@ final class CameraBubbleController {
             host.layer?.backgroundColor = NSColor.clear.cgColor
             window.ignoresMouseEvents = false
             window.setFrame(bubbleFrame(region: region), display: true)
+        case .presenter:
+            host.circular = false
+            host.layer?.borderWidth = 0
+            host.layer?.backgroundColor = NSColor.clear.cgColor
+            window.ignoresMouseEvents = true
+            window.setFrame(fillFrame(region: region), display: true)
         case .cameraOnly:
             host.circular = false
             host.layer?.borderWidth = 0
@@ -71,6 +91,7 @@ final class CameraBubbleController {
 
     func hide() {
         applyGeneration &+= 1
+        currentFormat = .screenOnly
         window?.orderOut(nil)
         (window?.contentView as? CameraBubbleView)?.layer?.backgroundColor = NSColor.clear.cgColor
         bubbleScale = 1
@@ -83,12 +104,15 @@ final class CameraBubbleController {
     /// being exposed when camera-only capture disappears.
     func showSafetyCurtain() {
         applyGeneration &+= 1
+        currentFormat = .screenOnly
         let shouldPresent = window?.isVisible == true
         if shouldPresent, let window,
            let host = window.contentView as? CameraBubbleView {
             host.circular = false
             host.layer?.borderWidth = 0
             host.layer?.backgroundColor = NSColor.black.cgColor
+            window.hasShadow = false
+            window.isMovableByWindowBackground = false
             window.ignoresMouseEvents = true
             window.setFrame(fillFrame(region: currentRegion), display: true)
             host.needsLayout = true
@@ -155,6 +179,13 @@ final class CameraBubbleController {
         host.onDoubleClick = { [weak self] in self?.toggleBubbleSize() }
         panel.contentView = host
         self.window = panel
+        presenterProcessor = PresenterFrameProcessor { [weak self] image, generation in
+            guard let self, self.currentFormat == .presenter,
+                  UInt64(truncatingIfNeeded: self.applyGeneration) == generation,
+                  let host = self.window?.contentView as? CameraBubbleView else { return }
+            host.presenterImage = image
+            host.layoutSubtreeIfNeeded()
+        }
     }
 
     private func bubbleFrame(region: CGRect?) -> NSRect {
@@ -198,7 +229,7 @@ final class CameraBubbleController {
 
         // Reuse a healthy session already running on the requested device.
         if let existing = captureSession, currentDeviceID == resolved?.uniqueID {
-            let started = await existing.start()
+            let started = await existing.start(presenterEnabled: currentFormat == .presenter)
             guard generation == applyGeneration else { return false }
             guard started else {
                 log.error("Camera capture session did not start")
@@ -218,7 +249,7 @@ final class CameraBubbleController {
         await stopAndReleaseSession()
         guard generation == applyGeneration, !Task.isCancelled else { return false }
 
-        guard let device = resolved else {
+        guard let device = resolved, let presenterProcessor else {
             log.error("No camera input available")
             return false
         }
@@ -226,7 +257,11 @@ final class CameraBubbleController {
         // A running AVCaptureSession is not enough to prove that the selected
         // camera is actually delivering video. Observe its first sample buffer
         // and do not expose the preview (or start recording) until one arrives.
-        let captureSession = ManagedCameraCaptureSession()
+        if currentFormat == .presenter {
+            // Detaching the previous session also deactivates its processor.
+            presenterProcessor.setActive(generation: UInt64(truncatingIfNeeded: generation))
+        }
+        let captureSession = ManagedCameraCaptureSession(presenterProcessor: presenterProcessor)
         guard await captureSession.configure(deviceID: device.uniqueID) else {
             log.error("Cannot configure camera capture")
             return false
@@ -236,13 +271,15 @@ final class CameraBubbleController {
         let preview = AVCaptureVideoPreviewLayer(session: captureSession.session)
         preview.videoGravity = .resizeAspectFill
         preview.frame = host.bounds
-        host.layer?.addSublayer(preview)
+        preview.isHidden = currentFormat == .presenter
+        host.layer?.insertSublayer(preview, at: 0)
         host.previewLayer = preview
+        captureSession.setVideoMirrored(preview.connection?.isVideoMirrored ?? false)
 
         self.captureSession = captureSession
         self.currentDeviceID = device.uniqueID
         observeUnexpectedFailure(of: captureSession)
-        let started = await captureSession.start()
+        let started = await captureSession.start(presenterEnabled: currentFormat == .presenter)
         guard generation == applyGeneration else { return false }
         guard started else {
             log.error("Camera capture session did not start")
@@ -291,11 +328,15 @@ final class CameraBubbleController {
     /// owned when the format switches to Screen Only.
     private func detachSession() -> ManagedCameraCaptureSession? {
         let detached = captureSession
+        detached?.disablePresenter()
+        presenterProcessor?.setActive(generation: nil)
         removeCaptureObservers()
         captureSession = nil
         currentDeviceID = nil
 
         if let host = window?.contentView as? CameraBubbleView {
+            host.presenterImage = nil
+            host.presenterLayer.isHidden = true
             host.previewLayer?.removeFromSuperlayer()
             host.previewLayer = nil
         }
@@ -352,8 +393,17 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
     let session = AVCaptureSession()
 
     private let frameOutput = AVCaptureVideoDataOutput()
-    private let frameProbe = CameraReadinessProbe()
-    private let outputQueue = DispatchQueue(label: "to.screencast.app.camera-readiness")
+    private let frameProbe: CameraReadinessProbe
+    private let outputQueue: DispatchQueue
+    /// Confined to sessionQueue. Readiness teardown must retain the output
+    /// while the latest requested mode needs continuous foreground frames.
+    private var presenterEnabled = false
+    private var videoMirrored = false
+
+    init(presenterProcessor: PresenterFrameProcessor) {
+        frameProbe = CameraReadinessProbe(presenterProcessor: presenterProcessor)
+        outputQueue = presenterProcessor.queue
+    }
 
     var hasReceivedFrame: Bool { frameProbe.hasReceivedFrame }
 
@@ -378,6 +428,7 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
                 }
                 session.addInput(input)
 
+                frameOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
                 frameOutput.alwaysDiscardsLateVideoFrames = true
                 frameOutput.setSampleBufferDelegate(frameProbe, queue: outputQueue)
                 guard session.canAddOutput(frameOutput) else {
@@ -393,15 +444,38 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
         }
     }
 
-    func start() async -> Bool {
+    func start(presenterEnabled: Bool) async -> Bool {
         await withCheckedContinuation { continuation in
             Self.sessionQueue.async { [self] in
+                self.presenterEnabled = presenterEnabled
+                frameProbe.setPresenterEnabled(presenterEnabled)
+                // Readiness removes this output in preview-only modes. Restore
+                // it for Presenter, or for a restarted session's fresh probe.
+                if presenterEnabled || !session.isRunning {
+                    guard attachFrameOutput() else {
+                        continuation.resume(returning: false)
+                        return
+                    }
+                }
                 if !session.isRunning {
                     frameProbe.reset()
                     session.startRunning()
                 }
                 continuation.resume(returning: session.isRunning)
             }
+        }
+    }
+
+    /// Close the forwarding gate synchronously before an old session is
+    /// detached, so its queued samples cannot enter a newer mode's generation.
+    func disablePresenter() {
+        frameProbe.stopForwarding()
+    }
+
+    func setVideoMirrored(_ mirrored: Bool) {
+        Self.sessionQueue.async { [self] in
+            videoMirrored = mirrored
+            applyVideoMirroring()
         }
     }
 
@@ -413,11 +487,15 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
         }
     }
 
-    /// Once readiness is established, remove the data output so it does not
-    /// keep converting full-resolution frames for the rest of the recording.
+    /// Keep continuous samples only for Presenter. Other modes use the preview
+    /// layer after readiness, avoiding full-resolution camera-buffer conversion.
     func finishReadinessProbe() async {
         await withCheckedContinuation { continuation in
             Self.sessionQueue.async { [self] in
+                guard !presenterEnabled else {
+                    continuation.resume()
+                    return
+                }
                 guard session.outputs.contains(where: { $0 === frameOutput }) else {
                     continuation.resume()
                     return
@@ -434,7 +512,9 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
     /// Enqueue a stop synchronously so callers can release their reference
     /// immediately without blocking AppKit's main actor.
     func stop() {
+        disablePresenter()
         Self.sessionQueue.async { [self] in
+            presenterEnabled = false
             if session.isRunning {
                 session.stopRunning()
             }
@@ -443,8 +523,10 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
     }
 
     func stopAndWait() async {
+        disablePresenter()
         await withCheckedContinuation { continuation in
             Self.sessionQueue.async { [self] in
+                presenterEnabled = false
                 if session.isRunning {
                     session.stopRunning()
                 }
@@ -453,6 +535,32 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
             }
         }
     }
+
+    /// Called only on sessionQueue, including when a preview-only session
+    /// switches to Presenter after its first-frame output has been removed.
+    private func attachFrameOutput() -> Bool {
+        guard !session.outputs.contains(where: { $0 === frameOutput }) else { return true }
+        frameOutput.setSampleBufferDelegate(frameProbe, queue: outputQueue)
+        session.beginConfiguration()
+        guard session.canAddOutput(frameOutput) else {
+            session.commitConfiguration()
+            frameOutput.setSampleBufferDelegate(nil, queue: nil)
+            return false
+        }
+        session.addOutput(frameOutput)
+        session.commitConfiguration()
+        applyVideoMirroring()
+        return true
+    }
+
+    /// Removing and reattaching an output creates a fresh connection, whose
+    /// mirroring must continue to match the camera preview.
+    private func applyVideoMirroring() {
+        guard let connection = frameOutput.connection(with: .video),
+              connection.isVideoMirroringSupported else { return }
+        connection.automaticallyAdjustsVideoMirroring = false
+        connection.isVideoMirrored = videoMirrored
+    }
 }
 
 /// Receives camera frames on AVFoundation's output queue and exposes only a
@@ -460,6 +568,26 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
 private nonisolated final class CameraReadinessProbe: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let lock = NSLock()
     private var receivedFrame = false
+    private var presenterEnabled = false
+    private var forwardingStopped = false
+    private let presenterProcessor: PresenterFrameProcessor
+
+    init(presenterProcessor: PresenterFrameProcessor) {
+        self.presenterProcessor = presenterProcessor
+    }
+
+    func setPresenterEnabled(_ enabled: Bool) {
+        lock.lock()
+        presenterEnabled = enabled && !forwardingStopped
+        lock.unlock()
+    }
+
+    func stopForwarding() {
+        lock.lock()
+        forwardingStopped = true
+        presenterEnabled = false
+        lock.unlock()
+    }
 
     var hasReceivedFrame: Bool {
         lock.lock()
@@ -481,19 +609,49 @@ private nonisolated final class CameraReadinessProbe: NSObject, AVCaptureVideoDa
         guard CMSampleBufferDataIsReady(sampleBuffer) else { return }
         lock.lock()
         receivedFrame = true
+        let forwardToPresenter = presenterEnabled
         lock.unlock()
+        if forwardToPresenter {
+            // The data output uses the processor's serial queue, preserving its
+            // Vision/request confinement while also proving camera readiness.
+            presenterProcessor.captureOutput(output, didOutput: sampleBuffer, from: connection)
+        }
     }
 }
 
 private final class CameraBubbleView: NSView {
     var previewLayer: AVCaptureVideoPreviewLayer?
-    /// Round the view into a circle (bubble) vs fill rectangularly (camera-only).
+    let presenterLayer = CALayer()
+    var presenterImage: CGImage? {
+        didSet {
+            presenterLayer.contents = presenterImage
+            needsLayout = true
+        }
+    }
+    /// Round the view into a circle (bubble) vs transparent/rectangular framing.
     var circular: Bool = true
     var onDoubleClick: (() -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        presenterLayer.isOpaque = false
+        presenterLayer.isHidden = true
+        presenterLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        layer?.addSublayer(presenterLayer)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     override func layout() {
         super.layout()
         previewLayer?.frame = bounds
+        if let image = presenterImage {
+            presenterLayer.frame = PresenterLayout.imageFrame(
+                imageSize: CGSize(width: image.width, height: image.height), in: bounds
+            )
+        }
         layer?.cornerRadius = circular ? bounds.width / 2 : 0
     }
 

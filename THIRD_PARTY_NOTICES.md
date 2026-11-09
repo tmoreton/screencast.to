@@ -50,10 +50,11 @@ notarization.
 
 ## Wrangler-injected production runtime
 
-Wrangler 4.131.0's dry-run output injects runtime code from
+Wrangler 4.159.0's dry-run output injects runtime code from
 `unenv@2.0.0-rc.24` (MIT), even though `unenv` enters the lock through the
 development toolchain. It is therefore treated as deployed code here. The
-dry-run output and source map must be re-audited after a Wrangler upgrade.
+dry-run output and source map were re-audited on 2026-11-09 and must be
+re-audited after a Wrangler upgrade.
 
 ### Apple App Store Server Library
 

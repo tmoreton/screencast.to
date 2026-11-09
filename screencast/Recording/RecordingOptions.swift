@@ -4,7 +4,7 @@ struct RecordingOptions: Sendable {
     /// What the recording shows. Switchable live while recording.
     var format: CaptureFormat = .screenOnly
 
-    /// `uniqueID` of the camera device for the bubble. `nil` = system default.
+    /// `uniqueID` of the camera device. `nil` = system default.
     var cameraDeviceID: String? = nil
 
     /// Microphone selection: off, system default, or a specific device.
@@ -55,10 +55,11 @@ enum CaptureAspect: String, CaseIterable, Sendable {
     }
 }
 
-/// The three filming formats, cycled live while recording.
+/// The filming formats, cycled live while recording.
 enum CaptureFormat: String, CaseIterable, Sendable {
     case screenOnly        // screen, no camera
     case screenAndCamera   // screen + camera bubble (bottom-right)
+    case presenter         // screen + background-free presenter at the bottom
     case cameraOnly        // camera fills the frame
 
     var usesCamera: Bool { self != .screenOnly }
@@ -66,7 +67,8 @@ enum CaptureFormat: String, CaseIterable, Sendable {
     var next: CaptureFormat {
         switch self {
         case .screenOnly: return .screenAndCamera
-        case .screenAndCamera: return .cameraOnly
+        case .screenAndCamera: return .presenter
+        case .presenter: return .cameraOnly
         case .cameraOnly: return .screenOnly
         }
     }
@@ -75,6 +77,7 @@ enum CaptureFormat: String, CaseIterable, Sendable {
         switch self {
         case .screenOnly: return "Screen only"
         case .screenAndCamera: return "Screen + Camera"
+        case .presenter: return "Presenter"
         case .cameraOnly: return "Camera only"
         }
     }
@@ -84,6 +87,7 @@ enum CaptureFormat: String, CaseIterable, Sendable {
         switch self {
         case .screenOnly: return "display"
         case .screenAndCamera: return "rectangle.inset.bottomright.filled"
+        case .presenter: return "person.fill"
         case .cameraOnly: return "person.crop.square.fill"
         }
     }

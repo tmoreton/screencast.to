@@ -33,7 +33,7 @@
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Screencast.to records system audio when you enable System Audio for a screen recording.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Screencast.to records your camera when you include the floating camera bubble.</string>
+	<string>Screencast.to records your camera for camera overlays, Presenter mode, and camera-only recordings.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Screencast.to records your microphone when you include it in a screen recording.</string>
 	<key>NSScreenCaptureUsageDescription</key>

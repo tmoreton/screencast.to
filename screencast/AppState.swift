@@ -274,7 +274,7 @@ final class AppState {
                             return
                         }
 
-                        // Screen + Camera can safely degrade to Screen Only.
+                        // Screen + Camera and Presenter can degrade to Screen Only.
                         try await Task.sleep(for: .milliseconds(250))
                     }
                 } else {
@@ -316,7 +316,7 @@ final class AppState {
 
     /// Request only the optional inputs selected for this recording. A denied,
     /// restricted, or disconnected input is turned off and reported. A
-    /// screen-and-camera recording can safely fall back to screen-only; a
+    /// Screen + Camera or Presenter recording can fall back to screen-only; a
     /// camera-only start is cancelled so it never records the desktop instead.
     private func prepareSelectedOptionalInputs() async throws -> Bool {
         devices.refresh()
@@ -424,7 +424,7 @@ final class AppState {
         unregisterTeleprompterHotkey()
     }
 
-    /// Cycle Screen → Screen+Camera → Camera, applied live during recording.
+    /// Cycle Screen → Screen+Camera → Presenter → Camera live during recording.
     func cycleFormat() {
         guard isActive else { return }
         // Camera transitions are atomic: wait for the in-flight first-frame
@@ -477,7 +477,7 @@ final class AppState {
                 return
             }
 
-            // Screen + Camera can safely remain Screen Only on camera failure.
+            // Screen + Camera and Presenter fall back to Screen Only on failure.
             self.currentFormat = .screenOnly
             self.activeControls?.setFormat(.screenOnly)
             self.bubble.hide()
@@ -497,7 +497,7 @@ final class AppState {
     }
 
     /// Fail closed if a live camera session is interrupted or reports a runtime
-    /// error. Screen + Camera may safely continue without the bubble, while a
+    /// error. Screen + Camera and Presenter can continue without the camera; a
     /// camera-only recording must stop before it can expose the desktop.
     private func handleCameraCaptureFailure() {
         reportCameraUnavailable()
@@ -518,7 +518,7 @@ final class AppState {
             return
         }
 
-        if failedFormat == .screenAndCamera {
+        if failedFormat == .screenAndCamera || failedFormat == .presenter {
             currentFormat = .screenOnly
             activeControls?.setFormat(.screenOnly)
             bubble.hide()
