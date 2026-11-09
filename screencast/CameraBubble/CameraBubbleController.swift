@@ -398,6 +398,7 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
     /// Confined to sessionQueue. Readiness teardown must retain the output
     /// while the latest requested mode needs continuous foreground frames.
     private var presenterEnabled = false
+    private var videoMirrored = false
 
     init(presenterProcessor: PresenterFrameProcessor) {
         frameProbe = CameraReadinessProbe(presenterProcessor: presenterProcessor)
@@ -468,15 +469,13 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
     /// Close the forwarding gate synchronously before an old session is
     /// detached, so its queued samples cannot enter a newer mode's generation.
     func disablePresenter() {
-        frameProbe.setPresenterEnabled(false)
+        frameProbe.stopForwarding()
     }
 
     func setVideoMirrored(_ mirrored: Bool) {
         Self.sessionQueue.async { [self] in
-            guard let connection = frameOutput.connection(with: .video),
-                  connection.isVideoMirroringSupported else { return }
-            connection.automaticallyAdjustsVideoMirroring = false
-            connection.isVideoMirrored = mirrored
+            videoMirrored = mirrored
+            applyVideoMirroring()
         }
     }
 
@@ -543,13 +542,24 @@ private nonisolated final class ManagedCameraCaptureSession: @unchecked Sendable
         guard !session.outputs.contains(where: { $0 === frameOutput }) else { return true }
         frameOutput.setSampleBufferDelegate(frameProbe, queue: outputQueue)
         session.beginConfiguration()
-        defer { session.commitConfiguration() }
         guard session.canAddOutput(frameOutput) else {
+            session.commitConfiguration()
             frameOutput.setSampleBufferDelegate(nil, queue: nil)
             return false
         }
         session.addOutput(frameOutput)
+        session.commitConfiguration()
+        applyVideoMirroring()
         return true
+    }
+
+    /// Removing and reattaching an output creates a fresh connection, whose
+    /// mirroring must continue to match the camera preview.
+    private func applyVideoMirroring() {
+        guard let connection = frameOutput.connection(with: .video),
+              connection.isVideoMirroringSupported else { return }
+        connection.automaticallyAdjustsVideoMirroring = false
+        connection.isVideoMirrored = videoMirrored
     }
 }
 
@@ -559,6 +569,7 @@ private nonisolated final class CameraReadinessProbe: NSObject, AVCaptureVideoDa
     private let lock = NSLock()
     private var receivedFrame = false
     private var presenterEnabled = false
+    private var forwardingStopped = false
     private let presenterProcessor: PresenterFrameProcessor
 
     init(presenterProcessor: PresenterFrameProcessor) {
@@ -567,7 +578,14 @@ private nonisolated final class CameraReadinessProbe: NSObject, AVCaptureVideoDa
 
     func setPresenterEnabled(_ enabled: Bool) {
         lock.lock()
-        presenterEnabled = enabled
+        presenterEnabled = enabled && !forwardingStopped
+        lock.unlock()
+    }
+
+    func stopForwarding() {
+        lock.lock()
+        forwardingStopped = true
+        presenterEnabled = false
         lock.unlock()
     }
 
