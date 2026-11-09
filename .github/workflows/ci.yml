@@ -18,6 +18,9 @@ jobs:
         configuration: [Debug, Release]
     steps:
       - uses: actions/checkout@v7
+      - name: Check Presenter compositing and framing
+        if: matrix.scheme == 'screencast' && matrix.configuration == 'Debug'
+        run: scripts/check-presenter.sh
       - name: Build unsigned app
         run: |
           xcodebuild \

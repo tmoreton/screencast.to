@@ -33,6 +33,13 @@
 
 Requires macOS 15 or later on Apple silicon or Intel.
 
+Choose **Presenter** in the recording Format menu to remove your camera
+background and place your cutout at the bottom center of the screen or selected
+region. The camera fits within the bottom half without cropping or stretching,
+in landscape or portrait (including 9:16 Shorts / Reels). Move naturally within
+your camera's view; the overlay stays fixed and clicks pass through it. Background
+removal runs on your Mac. Switch formats while recording with **⌘⇧C**.
+
 ## Architecture
 
 | Area | Implementation |
@@ -74,6 +81,12 @@ xcodebuild -project screencast.xcodeproj -scheme screencast \
 xcodebuild -project screencast.xcodeproj -scheme screencast-standalone \
   -configuration Debug -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO build
+```
+
+Check presenter transparency, framing, and format cycling without a camera:
+
+```sh
+scripts/check-presenter.sh
 ```
 
 Check the website and Worker:

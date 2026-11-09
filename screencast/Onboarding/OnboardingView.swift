@@ -246,7 +246,7 @@ private struct PermissionsStep: View {
     private var cameraDetail: String {
         permissions.camera == .denied
             ? "Enable camera access in System Settings, or record screen-only."
-            : "Optional camera overlay; otherwise recordings are screen-only."
+            : "Optional camera and presenter overlays; otherwise recordings are screen-only."
     }
 
     private func handleScreenRecordingTap() {
