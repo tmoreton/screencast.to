@@ -12,6 +12,10 @@ export interface Env {
   R2_PUB_HOST: string;
   APP_APPLE_ID: string;
   SERVICE_TOKEN_SECRET: string;
+  PURCHASE_EMAIL?: SendEmail;
+  PURCHASE_EMAIL_ENABLED?: string;
+  PURCHASE_EMAIL_FROM?: string;
+  PURCHASE_EMAIL_REPLY_TO?: string;
   SELF_HOSTED_UPLOAD_TOKEN?: string;
   MAX_UPLOAD_BYTES?: string;
   RELEASES: R2Bucket;

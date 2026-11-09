@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <title>Connect sharing — Screencast.to</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/screencast-mark.svg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="confirmation-page sharing-page">
+  <a class="skip-link" href="#content">Skip to purchase connection</a>
+  <header class="site-header"><div class="nav-shell"><a class="brand" href="/"><img src="/assets/screencast-mark.svg" alt="" width="34" height="34"><span>SCREENCAST.TO</span></a><a class="text-link" href="/support.html">Get help</a></div></header>
+  <main id="content" class="confirmation-card">
+    <p class="section-kicker">YOUR PURCHASE. YOUR MAC.</p>
+    <div id="sharing-test" class="test-badge" hidden>Test purchase</div>
+    <h1>CONNECT SHARING.</h1>
+    <p id="sharing-status" class="confirmation-status" role="status" aria-live="polite">Checking your website purchase…</p>
+    <button id="sharing-connect" class="button" type="button" hidden>Connect sharing</button>
+    <a id="sharing-open" class="button" hidden>Open Screencast</a>
+    <form id="sharing-recovery" class="sharing-recovery" hidden>
+      <label for="sharing-email">Email used at checkout</label>
+      <input id="sharing-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+      <p class="footnote">We use this address to verify your purchase and send a secure link. No account or password is needed.</p>
+      <button id="sharing-send" class="button" type="submit">Email a purchase link</button>
+    </form>
+    <div id="sharing-download" hidden><a class="button" href="/confirmation.html">Open your Mac download ↓</a></div>
+    <button id="sharing-retry" class="retry" type="button" hidden>Check purchase again</button>
+    <p><a id="sharing-start-again" class="text-link" href="/connect-sharing.html" hidden>Request a new purchase link</a></p>
+    <p class="footnote">Connecting makes optional cloud sharing available in the website edition. Recordings stay on your Mac until you explicitly choose Upload. Shared links are temporary and unlisted.</p>
+    <noscript><p class="footnote">Turn on JavaScript to connect sharing or recover your purchase. For help, email support@screencast.to.</p></noscript>
+  </main>
+  <footer><a href="/policies/#sharing">Sharing privacy</a><a href="/support.html">Support</a></footer>
+  <script type="module" src="/connect-sharing.js"></script>
+</body>
+</html>

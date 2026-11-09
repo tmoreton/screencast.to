@@ -18,9 +18,10 @@
 
 ![Screencast.to website and recorder preview](.github/assets/website.png)
 
-> **Release status:** the website, Cloudflare service, and both Mac distribution
-> targets are implemented. Direct checkout remains disabled until the first
-> Developer ID-signed, notarized DMG and Sparkle feed are published.
+> **Distribution:** the website edition uses Stripe checkout, private signed
+> downloads, and Sparkle updates. Website purchasers can connect optional cloud
+> sharing to their Mac. The Mac App Store edition uses Apple's purchase and
+> update flow.
 
 ## What it does
 
@@ -47,8 +48,10 @@ removal runs on your Mac. Switch formats while recording with **⌘⇧C**.
 | Mac app | Swift and SwiftUI, with ScreenCaptureKit and AVFoundation |
 | Product site | Static HTML, CSS, and JavaScript in `checkout/` |
 | Hosted service | One Cloudflare Worker in `worker/` |
-| Temporary sharing | StoreKit entitlement verification plus lifecycle-managed R2 storage |
+| Temporary sharing | Verified StoreKit or website purchases, 15-minute upload authorization, and lifecycle-managed R2 storage |
 | Direct sales | Stripe Checkout with purchaser-only downloads from private R2 storage |
+| Website purchase connection | Browser verification or email recovery, a one-use app callback, and an opaque grant stored in the Mac Keychain |
+| Purchase recovery email | Cloudflare Email Service through a native Worker binding and verified sending domain |
 | Standalone updates | Sparkle 2 with an EdDSA-signed, token-gated private feed |
 | App Store updates | Apple-managed; the App Store target contains no Sparkle framework |
 
@@ -113,7 +116,8 @@ Screencast.to has two independent release channels:
 - The **Mac App Store build** is sandboxed, uses Apple for purchases and
   updates, and may use the first-party temporary-sharing service.
 - The **website build** is Developer ID-signed and notarized, is sold through
-  Stripe as a one-time purchase, and receives signed Sparkle updates.
+  Stripe as a one-time purchase, and receives signed Sparkle updates. Purchasers
+  can connect temporary sharing through the app's browser-based purchase flow.
 
 Pushing a valid `vMAJOR.MINOR.PATCH` tag starts the private standalone release
 workflow. It builds and notarizes the DMG, generates the signed appcast, and
@@ -124,6 +128,31 @@ Local release commands and required credentials are documented in
 [`scripts/.env.example`](scripts/.env.example),
 [`checkout/README.md`](checkout/README.md), and
 [`worker/README.md`](worker/README.md).
+
+## Temporary sharing
+
+In the official website edition, choose **Connect sharing** in Screencast.
+The browser verifies the purchase cookie from Stripe checkout. If that cookie
+is missing, enter the checkout email to receive a short-lived, single-use
+purchase link. You can also [recover a website purchase](https://screencast.to/connect-sharing.html)
+to regain download access after changing browsers or clearing cookies.
+Recovery email uses Cloudflare Email Service and becomes available only after
+outbound sending is verified and explicitly enabled; see the
+[Worker setup](worker/README.md#website-purchase-recovery-email).
+
+After verification, choose **Connect sharing**, then **Open Screencast** to
+finish connecting the requesting Mac. A one-use code is bound to that app's
+verification challenge and state. The Mac stores the resulting opaque sharing
+grant in Keychain and keeps 15-minute upload tokens in memory. Each token
+refresh rechecks the Stripe purchase and rejects refunded or disputed payments.
+**Disconnect this Mac** removes the saved grant and cached authorization.
+
+The App Store edition continues to verify its Apple-signed StoreKit purchase
+proof to obtain the same short-lived upload authorization. Neither flow needs
+a Screencast account or embeds a first-party upload credential in the app.
+Connecting never uploads a recording: uploads happen only when you explicitly
+choose **Upload**. Links are unlisted, accessible to anyone with the URL, and
+recordings are normally deleted within 24–48 hours by storage lifecycle rules.
 
 ## Privacy and security
 

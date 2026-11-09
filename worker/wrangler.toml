@@ -23,7 +23,7 @@ run_worker_first = true
 binding = "RELEASES"
 bucket_name = "screencast-releases"
 
-# The canonical service accepts only StoreKit-derived short-lived tokens.
+# The canonical service accepts short-lived tokens from verified StoreKit or website purchases.
 # A private fork may deliberately change this to "self-hosted" and configure
 # SELF_HOSTED_UPLOAD_TOKEN after replacing the Worker name and routes.
 [vars]
@@ -33,6 +33,13 @@ CHECKOUT_ENABLED = "true"
 STRIPE_PRICE_ID = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 STRIPE_ALLOWED_PRICE_IDS = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 RELEASE_MANIFEST_PATH = "releases/current.json"
+PURCHASE_EMAIL_ENABLED = "false"
+
+# Requires an onboarded Cloudflare Email Sending domain and Workers Paid.
+# Keep recovery disabled until setup is verified. Restrict sending to this address.
+[[send_email]]
+name = "PURCHASE_EMAIL"
+allowed_sender_addresses = ["purchases@screencast.to"]
 
 # Per-IP rate limit on /sign (10 requests / 60s).
 # `namespace_id` is an arbitrary unique integer per limiter in your account.
@@ -52,6 +59,8 @@ simple = { limit = 10, period = 60 }
 #   SERVICE_TOKEN_SECRET  — random secret used only to sign 15-minute tokens
 #   SELF_HOSTED_UPLOAD_TOKEN — private forks only; canonical deploy refuses it
 #   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB
-#   STRIPE_SECRET_KEY     — restricted live key; Checkout/Customers write, Prices/Products read
+#   STRIPE_SECRET_KEY     — Checkout/Customers write+read/search, PaymentIntents read, Prices/Products read
+#   PURCHASE_EMAIL_FROM   — purchases@screencast.to after Cloudflare sending-domain verification
+#   PURCHASE_EMAIL_REPLY_TO — optional support reply address
 #   SPARKLE_UPDATE_TOKEN  — bearer token embedded only in official standalone builds
 #   RELEASE_PUBLISH_TOKEN — GitHub Actions release-upload bearer token

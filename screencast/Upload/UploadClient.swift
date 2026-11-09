@@ -167,6 +167,10 @@ final class UploadClient {
             if code == 401, UploadConfig.sharingMode == .appStore {
                 Self.cachedServiceToken = nil
             }
+            if code == 401, UploadConfig.sharingMode == .website {
+                WebsiteSharingManager.shared.requirePurchaseVerification()
+                throw WebsiteSharingError.verificationRequired
+            }
             throw UploadError.signFailed(code)
         }
         return try JSONDecoder().decode(SignResponse.self, from: data)
@@ -181,6 +185,8 @@ final class UploadClient {
                 throw UploadError.uploadNotConfigured
             }
             return token
+        case .website:
+            return try await WebsiteSharingManager.shared.serviceToken()
         case .appStore:
             if let cachedServiceToken = Self.cachedServiceToken,
                cachedServiceToken.expiresAt.timeIntervalSinceNow > 30 {

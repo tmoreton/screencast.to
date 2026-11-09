@@ -5,6 +5,7 @@ import AppKit
 struct MenuBarView: View {
     @Bindable var state: AppState
     @ObservedObject var updateManager: UpdateManager
+    @State private var showingSharingUnavailable = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -36,10 +37,19 @@ struct MenuBarView: View {
             }
 
             Divider()
+            if UploadConfig.sharingMode == .website, UploadConfig.isUploadConfigured {
+                websiteSharingRow
+                Divider()
+            }
             footer
         }
         .frame(width: 320)
         .background(.background)
+        .alert("Cloud sharing unavailable", isPresented: $showingSharingUnavailable) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Cloud sharing isn't enabled in this version. Your recording is saved on your Mac. Use the folder button to find and share the file.")
+        }
         .onAppear { state.refreshOptionalInputAvailability() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             state.refreshOptionalInputAvailability()
@@ -252,11 +262,9 @@ struct MenuBarView: View {
                 enabled: state.options.format.usesCamera && state.canSelectCamera
             )
             cameraAvailabilityHelp
-            systemAudioToggle
-            microphonePicker
+            audioMenu
             microphoneAvailabilityHelp
         }
-        .toggleStyle(.switch)
         .controlSize(.small)
         .disabled(state.isBusy)
         .padding(.horizontal, 12)
@@ -329,29 +337,50 @@ struct MenuBarView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var microphonePicker: some View {
+    private var audioMenu: some View {
         HStack(spacing: 6) {
-            Image(systemName: state.options.microphone.isOn ? "mic" : "mic.slash")
+            Image(systemName: state.options.microphone.isOn || state.options.systemAudio ? "waveform" : "speaker.slash")
                 .foregroundStyle(.secondary)
                 .frame(width: 14)
-            Text("Microphone")
+            Text("Audio")
                 .font(.system(size: 12))
             Spacer()
-            Picker("", selection: $state.options.microphone) {
-                Text("None").tag(MicrophoneSelection.off)
-                Text("System default")
-                    .tag(MicrophoneSelection.systemDefault)
-                    .disabled(!state.canSelectMicrophone)
-                if !state.devices.microphones.isEmpty { Divider() }
-                ForEach(state.devices.microphones, id: \.uniqueID) { device in
-                    Text(device.localizedName)
-                        .tag(MicrophoneSelection.device(device.uniqueID))
+            Menu {
+                Toggle("System audio", isOn: $state.options.systemAudio)
+                    .help("Record audio playing on your Mac, separately from the microphone.")
+                Divider()
+                Picker("Microphone", selection: $state.options.microphone) {
+                    Text("None").tag(MicrophoneSelection.off)
+                    Text("System default")
+                        .tag(MicrophoneSelection.systemDefault)
                         .disabled(!state.canSelectMicrophone)
+                    if !state.devices.microphones.isEmpty { Divider() }
+                    ForEach(state.devices.microphones, id: \.uniqueID) { device in
+                        Text(device.localizedName)
+                            .tag(MicrophoneSelection.device(device.uniqueID))
+                            .disabled(!state.canSelectMicrophone)
+                    }
                 }
+                .pickerStyle(.inline)
+            } label: {
+                Text(audioSummary)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
+            .menuStyle(.borderlessButton)
             .frame(maxWidth: 180, alignment: .trailing)
+            .accessibilityLabel("Audio sources")
+            .accessibilityValue(audioSummary)
+            .help("Choose microphone and system audio for the recording.")
+        }
+    }
+
+    private var audioSummary: String {
+        switch (state.options.microphone.isOn, state.options.systemAudio) {
+        case (true, true): return "Microphone + System"
+        case (true, false): return "Microphone only"
+        case (false, true): return "System audio"
+        case (false, false): return "Off"
         }
     }
 
@@ -407,17 +436,6 @@ struct MenuBarView: View {
         }
         .font(.system(size: 10))
         .padding(.leading, 20)
-    }
-
-    private var systemAudioToggle: some View {
-        HStack(spacing: 6) {
-            Image(systemName: state.options.systemAudio ? "speaker.wave.2" : "speaker.slash")
-                .foregroundStyle(.secondary)
-                .frame(width: 14)
-            Toggle("System audio", isOn: $state.options.systemAudio)
-                .font(.system(size: 12))
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private func devicePicker(
@@ -595,19 +613,25 @@ struct MenuBarView: View {
                 Button { state.uploadRecording(url) } label: {
                     Image(systemName: "icloud.and.arrow.up")
                 }
-                .help("Upload & copy a temporary link")
+                .help(UploadConfig.sharingMode == .website && !state.websiteSharing.isConnected
+                      ? "Connect your purchase, then upload & copy a temporary link"
+                      : "Upload & copy a temporary link")
                 .buttonStyle(.borderless)
             } else {
-                Image(systemName: "icloud.slash")
-                    .foregroundStyle(.secondary)
-                    .help("Hosted sharing is disabled in this build")
+                Button { showingSharingUnavailable = true } label: {
+                    Image(systemName: "icloud.slash")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Cloud sharing unavailable")
+                .help("Cloud sharing isn't enabled in this version. Click for details.")
             }
         case .uploading(let progress):
             ProgressView(value: progress)
                 .progressViewStyle(.circular)
                 .controlSize(.small)
                 .frame(width: 16, height: 16)
-                .help("Uploading \(Int(progress * 100))%")
+                .help(state.websiteSharing.isConnecting ? "Connecting website sharing…" : "Uploading \(Int(progress * 100))%")
         case .done(let link, let at):
             HStack(spacing: 2) {
                 Button { state.copyLink(link) } label: {
@@ -642,6 +666,44 @@ struct MenuBarView: View {
     }
 
     // MARK: - Footer
+
+    private var websiteSharingRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "icloud")
+                .foregroundStyle(.secondary)
+            Text("Cloud sharing")
+            Spacer()
+            if state.websiteSharing.isConnecting {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Connecting…")
+                    .foregroundStyle(.secondary)
+            } else if state.websiteSharing.isConnected {
+                Menu("Connected") {
+                    Button("Disconnect this Mac") { state.disconnectWebsiteSharing() }
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("Forget the sharing connection stored in this Mac's Keychain.")
+            } else {
+                Button("Connect purchase") { state.connectWebsiteSharing() }
+                    .buttonStyle(.borderless)
+                    .help("Connect or purchase cloud sharing on Screencast.to in your browser.")
+            }
+        }
+        .font(.system(size: 11))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .disabled(state.isBusy || state.websiteSharing.isConnecting)
+        .alert("Cloud sharing", isPresented: Binding(
+            get: { state.sharingConnectionError != nil },
+            set: { if !$0 { state.sharingConnectionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { state.sharingConnectionError = nil }
+        } message: {
+            Text(state.sharingConnectionError ?? "")
+        }
+    }
 
     private var footer: some View {
         HStack(spacing: 12) {

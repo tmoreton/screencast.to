@@ -383,7 +383,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
@@ -417,7 +417,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
@@ -451,7 +451,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = screencast;
 				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";
@@ -489,7 +489,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.0;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = to.screencast.app;
 				PRODUCT_NAME = screencast;
 				SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = "";

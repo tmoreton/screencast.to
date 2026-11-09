@@ -348,3 +348,6 @@ export async function handleCommerce(request: Request, env: Env,
 }
 
 export const commerceInternals = { validManifest, tokenMatches, priceIds };
+
+// Shared server-side purchase validation; never expose Stripe credentials to clients.
+export const websitePurchase = { stripeMode, stripeClient, baseUrl, priceIds, requestedSession, loadSession };

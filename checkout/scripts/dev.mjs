@@ -9,6 +9,7 @@ const port = Number(process.env.PORT || 4173);
 const host = '127.0.0.1';
 const publicPages = new Set([
   'index.html', 'confirmation.html', 'confirmation.js', 'checkout.js',
+  'connect-sharing.html', 'connect-sharing.js',
   'styles.css', 'support.html', 'robots.txt', 'sitemap.xml',
   'bundle/index.html',
 ]);
@@ -56,7 +57,8 @@ export const server = createServer(async (request, response) => {
     response.writeHead(200, {
       'Content-Type': types[extname(filename)] || 'application/octet-stream',
       'Content-Length': size,
-      'Cache-Control': pathname === 'confirmation.html' ? 'private, no-store' : 'no-cache',
+      'Cache-Control': ['confirmation.html', 'connect-sharing.html'].includes(pathname)
+        ? 'private, no-store' : 'no-cache',
     });
     if (request.method === 'HEAD') return response.end();
     createReadStream(filename).pipe(response);
