@@ -8,6 +8,7 @@ import { handleEntitlement } from "./api/entitlement";
 import { handleViewer } from "./api/viewer";
 import { handleDownload } from "./api/download";
 import { handleCommerce } from "./commerce";
+import { handleWebsiteSharing } from "./api/website-sharing";
 import thirdPartyLicenses from "../THIRD_PARTY_LICENSES.txt";
 import websiteImage from "../../.github/assets/website.png";
 import appIcon from "../../screencast/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png";
@@ -78,6 +79,8 @@ export default {
     }
 
     if (!isShareHost) {
+      const sharing = await handleWebsiteSharing(request, env);
+      if (sharing) return sharing;
       const commerce = await handleCommerce(request, env);
       if (commerce) return commerce;
 
@@ -102,7 +105,7 @@ export default {
         headers.set("Referrer-Policy", "no-referrer");
         headers.set("X-Content-Type-Options", "nosniff");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        if (url.pathname === "/confirmation.html") {
+        if (["/confirmation.html", "/connect-sharing.html"].includes(url.pathname)) {
           headers.set("Cache-Control", "private, no-store, max-age=0");
           headers.set("X-Robots-Tag", "noindex, nofollow");
         }

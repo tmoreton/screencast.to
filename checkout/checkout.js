@@ -69,6 +69,7 @@ export function mountCheckout(document, window, request = window.fetch.bind(wind
       const response = await request('/api/config', {
         cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(12000),
       });
+      if (!response.ok) throw new Error('Checkout availability could not be verified.');
       const payload = await response.json();
       current = checkoutPresentation(payload);
       updateDisplayedPrices(document, current.price);
@@ -91,8 +92,11 @@ export function mountCheckout(document, window, request = window.fetch.bind(wind
     button.textContent = 'Opening secure checkout…';
   });
   retry.addEventListener('click', loadAvailability);
-  loadAvailability();
-  return { reload: loadAvailability };
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) return loadAvailability();
+  });
+  const ready = loadAvailability();
+  return { ready, reload: loadAvailability };
 }
 
 if (typeof document !== 'undefined') mountCheckout(document, window);

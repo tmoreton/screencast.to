@@ -217,6 +217,12 @@ footer { border-top: 2px solid var(--ink); background: var(--ink); color: var(--
 .support-card { padding: 26px; border: 2px solid var(--ink); background: var(--white); box-shadow: 5px 5px 0 var(--ink); }
 .support-card h2 { margin: 0 0 10px; font-size: 24px; }
 
+.sharing-recovery { display: grid; gap: 14px; margin-block: 26px; }
+.sharing-recovery label { font-weight: 850; }
+.sharing-recovery input { min-width: 0; width: 100%; min-height: 52px; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; }
+.sharing-recovery .footnote { margin: 0; }
+.sharing-recovery .button { justify-self: start; }
+
 @media (max-width: 900px) {
   .nav-links > a:not(.button) { display: none; }
   .hero-lower, .math-grid, .privacy, .bundle-grid, .buy-section { grid-template-columns: 1fr; }

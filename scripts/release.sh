@@ -170,8 +170,8 @@ write_release_xcconfig() {
             printf 'SCREENCAST_WORKER_BASE_URL = %s\n' "$(xcconfig_value "$SELF_HOSTED_WORKER_BASE_URL")"
             printf 'SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN = %s\n' "$(xcconfig_value "$SELF_HOSTED_UPLOAD_TOKEN")"
         else
-            printf 'SCREENCAST_SHARING_MODE = disabled\n'
-            printf 'SCREENCAST_WORKER_BASE_URL =\n'
+            printf 'SCREENCAST_SHARING_MODE = website\n'
+            printf 'SCREENCAST_WORKER_BASE_URL = %s\n' "$(xcconfig_value 'https://share.screencast.to')"
             printf 'SCREENCAST_SELF_HOSTED_UPLOAD_TOKEN =\n'
         fi
         if [[ -n "${APPLE_TEAM_ID:-}" ]]; then

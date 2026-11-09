@@ -83,6 +83,8 @@ final class AppState {
     /// Per-recording upload state, keyed by local file path. Saved links are
     /// presented as fresh for one day; lifecycle deletion may take another day.
     var uploads: [String: UploadState] = [:]
+    let websiteSharing = WebsiteSharingManager.shared
+    var sharingConnectionError: String?
     private static let uploadsKey = "screencast.uploads.v1"
     /// The app forgets a shared link after one day. The R2 lifecycle starts
     /// deletion around then, but physical deletion may take another day.
@@ -860,6 +862,7 @@ final class AppState {
     /// Non-blocking: runs on its own URLSession so it never interferes with
     /// recording. The link is copied to the clipboard on success.
     func uploadRecording(_ url: URL) {
+        guard !isBusy else { return }
         let path = url.path
         if case .uploading = uploads[path] { return }  // already in flight
         guard UploadConfig.isUploadConfigured else {
@@ -867,9 +870,16 @@ final class AppState {
             return
         }
         uploads[path] = .uploading(0)
+        if UploadConfig.sharingMode == .website, !websiteSharing.isConnected {
+            dismissMenuPopover()
+        }
         Task { [weak self] in
             let client = UploadClient()
             do {
+                if UploadConfig.sharingMode == .website,
+                   !WebsiteSharingManager.shared.isConnected {
+                    try await WebsiteSharingManager.shared.connect()
+                }
                 let publicURL = try await client.upload(fileURL: url) { progress in
                     self?.uploads[path] = .uploading(progress)
                 }
@@ -879,8 +889,38 @@ final class AppState {
                 self.persistUploads()
                 self.copyLink(publicURL)
             } catch {
-                self?.uploads[path] = .failed(error.localizedDescription)
+                if let sharingError = error as? WebsiteSharingError, case .cancelled = sharingError {
+                    self?.uploads[path] = .idle
+                } else {
+                    self?.uploads[path] = .failed(error.localizedDescription)
+                    if UploadConfig.sharingMode == .website {
+                        self?.sharingConnectionError = error.localizedDescription
+                    }
+                }
             }
+        }
+    }
+
+    func connectWebsiteSharing() {
+        guard !isBusy, !websiteSharing.isConnecting else { return }
+        sharingConnectionError = nil
+        dismissMenuPopover()
+        Task { [weak self] in
+            do {
+                try await WebsiteSharingManager.shared.connect()
+            } catch {
+                if let sharingError = error as? WebsiteSharingError, case .cancelled = sharingError { return }
+                self?.sharingConnectionError = error.localizedDescription
+            }
+        }
+    }
+
+    func disconnectWebsiteSharing() {
+        guard !isBusy, !websiteSharing.isConnecting else { return }
+        do {
+            try websiteSharing.disconnect()
+        } catch {
+            sharingConnectionError = error.localizedDescription
         }
     }
 

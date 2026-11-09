@@ -21,6 +21,9 @@ jobs:
       - name: Check Presenter compositing and framing
         if: matrix.scheme == 'screencast' && matrix.configuration == 'Debug'
         run: scripts/check-presenter.sh
+      - name: Check website purchase authorization
+        if: matrix.scheme == 'screencast' && matrix.configuration == 'Debug'
+        run: scripts/check-website-sharing.sh
       - name: Build unsigned app
         run: |
           xcodebuild \
