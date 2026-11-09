@@ -6,6 +6,7 @@ struct MenuBarView: View {
     @Bindable var state: AppState
     @ObservedObject var updateManager: UpdateManager
     @State private var showingSharingUnavailable = false
+    @State private var showingAllRecordings = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -50,7 +51,10 @@ struct MenuBarView: View {
         } message: {
             Text("Cloud sharing isn't enabled in this version. Your recording is saved on your Mac. Use the folder button to find and share the file.")
         }
-        .onAppear { state.refreshOptionalInputAvailability() }
+        .onAppear {
+            state.refreshOptionalInputAvailability()
+            state.refreshRecordings()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             state.refreshOptionalInputAvailability()
         }
@@ -552,12 +556,23 @@ struct MenuBarView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
-            ForEach(state.recordings.prefix(3), id: \.self) { url in
-                recordingRow(url: url)
+            if showingAllRecordings {
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(state.recordings, id: \.self) { url in
+                            recordingRow(url: url)
+                        }
+                    }
+                }
+                .frame(height: min(CGFloat(state.recordings.count) * 36, 216))
+            } else {
+                ForEach(state.recordings.prefix(3), id: \.self) { url in
+                    recordingRow(url: url)
+                }
             }
             if state.recordings.count > 3 {
-                Button { state.openRecordingsFolder() } label: {
-                    Text("Show most recent folder…")
+                Button { showingAllRecordings.toggle() } label: {
+                    Text(showingAllRecordings ? "Show fewer recordings" : "Show all \(state.recordings.count) recordings")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.accentColor)
                 }
@@ -707,14 +722,13 @@ struct MenuBarView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            if !state.recordings.isEmpty {
-                Button { state.openRecordingsFolder() } label: {
-                    Label("Recent Folder", systemImage: "folder")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+            Button { state.openRecordingsFolder() } label: {
+                Label("Recordings", systemImage: "folder")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
+            .help("Show Recordings in Finder · Movies/Screencast")
             Spacer()
             Button("Privacy") { state.openPrivacyPolicy() }
                 .buttonStyle(.plain)

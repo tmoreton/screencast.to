@@ -3,8 +3,14 @@ import SwiftUI
 @main
 struct ScreencastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var state = AppState()
+    @State private var state: AppState
     @StateObject private var updateManager = UpdateManager()
+
+    init() {
+        let state = AppState()
+        _state = State(initialValue: state)
+        delegate.recordingState = state
+    }
 
     var body: some Scene {
         MenuBarExtra {

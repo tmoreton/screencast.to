@@ -24,6 +24,9 @@ jobs:
       - name: Check website purchase authorization
         if: matrix.scheme == 'screencast' && matrix.configuration == 'Debug'
         run: scripts/check-website-sharing.sh
+      - name: Check automatic recording storage
+        if: matrix.scheme == 'screencast' && matrix.configuration == 'Debug'
+        run: scripts/check-recording-library.sh
       - name: Build unsigned app
         run: |
           xcodebuild \

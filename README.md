@@ -28,7 +28,7 @@
 - Records a full display or a selected region from the macOS menu bar.
 - Mixes optional camera, microphone, and system audio.
 - Supports pause/resume, live zoom, camera layouts, and a local teleprompter.
-- Saves a normal movie to a user-selected location through the standard macOS Save dialog.
+- Automatically saves movies in **Movies/Screencast**, with a menu button to open the folder in Finder.
 - Uploads only after an explicit sharing action; core recording is local.
 - Uses no Screencast account, advertising SDK, or behavioral analytics.
 
@@ -90,6 +90,12 @@ Check presenter transparency, framing, and format cycling without a camera:
 
 ```sh
 scripts/check-presenter.sh
+```
+
+Check automatic saving, filename collisions, and recording discovery:
+
+```sh
+scripts/check-recording-library.sh
 ```
 
 Check the website and Worker:

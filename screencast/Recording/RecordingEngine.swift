@@ -75,8 +75,7 @@ final class RecordingEngine: NSObject {
         }
     }
 
-    /// Private working directory used only while a recording is being written
-    /// and before the user chooses its final location in the Save dialog.
+    /// Private working directory used while recording, before automatic saving.
     nonisolated static func temporaryRecordingsDirectory() throws -> URL {
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent("Screencast", isDirectory: true)
@@ -86,19 +85,8 @@ final class RecordingEngine: NSObject {
         return dir
     }
 
-    /// Remove abandoned working files from an interrupted earlier launch.
-    nonisolated static func removeAbandonedTemporaryRecordings() {
-        guard let dir = try? temporaryRecordingsDirectory() else { return }
-        let fm = FileManager.default
-        guard let urls = try? fm.contentsOfDirectory(
-            at: dir,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) else { return }
-        for url in urls where url.pathExtension.lowercased() == "mov" {
-            try? fm.removeItem(at: url)
-        }
-    }
+    // Do not delete working movies at launch: a finished recording can remain
+    // here if both saving and durable recovery failed. macOS manages temp files.
 }
 
 // MARK: - RecordingSession
