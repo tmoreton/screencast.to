@@ -90,4 +90,11 @@ expect_status sign 401 "$sign_status"
 expect_status entitlement 401 "$entitlement_status"
 expect_status oversized-entitlement 413 "$oversized_status"
 
+for private_page in confirmation.html confirmation connect-sharing.html connect-sharing; do
+  curl -sS -L -D "$smoke_tmp_dir/private-page-headers.txt" -o /dev/null \
+    "$smoke_base_url/$private_page"
+  grep -Eqi '^cache-control: private, no-store' "$smoke_tmp_dir/private-page-headers.txt"
+  grep -Eqi '^x-robots-tag: noindex, nofollow' "$smoke_tmp_dir/private-page-headers.txt"
+done
+
 echo "Worker runtime smoke passed (commerce redirects, assets/notices, private viewer, auth failures, oversized body)."

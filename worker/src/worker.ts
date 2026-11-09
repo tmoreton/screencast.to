@@ -94,7 +94,7 @@ export default {
       if (isRead && url.pathname === "/support") {
         return new Response(null, { status: 308, headers: { Location: "/support.html" } });
       }
-      if (isRead && url.pathname === "/confirmation.html" && url.searchParams.has("session_id")) {
+      if (isRead && ["/confirmation.html", "/confirmation"].includes(url.pathname) && url.searchParams.has("session_id")) {
         url.pathname = "/api/complete";
         return handleCommerce(new Request(url, request), env) as Promise<Response>;
       }
@@ -105,7 +105,8 @@ export default {
         headers.set("Referrer-Policy", "no-referrer");
         headers.set("X-Content-Type-Options", "nosniff");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        if (["/confirmation.html", "/connect-sharing.html"].includes(url.pathname)) {
+        // Static Assets redirects .html to its clean URL; protect both forms.
+        if (["/confirmation.html", "/confirmation", "/connect-sharing.html", "/connect-sharing"].includes(url.pathname)) {
           headers.set("Cache-Control", "private, no-store, max-age=0");
           headers.set("X-Robots-Tag", "noindex, nofollow");
         }
