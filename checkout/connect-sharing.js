@@ -1,3 +1,5 @@
+import { clearPendingSharing, rememberPendingSharing } from './sharing-pending.js';
+
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 const STATE = /^[A-Za-z0-9_-]{32,128}$/;
 const OPAQUE = /^[A-Za-z0-9_-]{32,2048}$/;
@@ -57,6 +59,7 @@ export function mountSharing(document, window, request = window.fetch.bind(windo
   let busy = false;
   let generation = 0;
   const connecting = Boolean(context?.codeChallenge && context?.state);
+  if (connecting) rememberPendingSharing(window, context);
   const restart = new URLSearchParams();
   if (connecting) {
     restart.set('code_challenge', context.codeChallenge);
@@ -83,7 +86,7 @@ export function mountSharing(document, window, request = window.fetch.bind(windo
       status.textContent = 'Your website purchase is verified. Connect sharing to this Mac. Recordings upload only when you choose Upload.';
     } else if (paid) {
       nodes['sharing-download'].hidden = false;
-      status.textContent = 'Your website purchase is verified. To connect sharing, return to Screencast and choose Connect sharing.';
+      status.textContent = 'Your website purchase is verified. If a connection window is still open, close or cancel it, then choose Connect purchase in Screencast to start again.';
     } else if (recoveryAvailable) {
       recovery.hidden = false;
       status.textContent = 'Enter the email used at checkout to verify your website purchase. We will send a secure link if an eligible purchase is found.';
@@ -219,6 +222,7 @@ export function mountSharing(document, window, request = window.fetch.bind(windo
   }
 
   connect.addEventListener('click', authorize);
+  open.addEventListener('click', () => { clearPendingSharing(window); });
   recovery.addEventListener('submit', sendRecovery);
   retry.addEventListener('click', checkPurchase);
   window.addEventListener('pagehide', () => { generation += 1; busy = false; });

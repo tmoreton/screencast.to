@@ -9,7 +9,7 @@ await mkdir(output, { recursive: true });
 
 export const publicFiles = [
   'index.html', 'confirmation.html', 'confirmation.js', 'checkout.js',
-  'connect-sharing.html', 'connect-sharing.js',
+  'connect-sharing.html', 'connect-sharing.js', 'sharing-pending.js',
   'styles.css', 'assets', 'bundle', 'policies', 'support.html', 'robots.txt',
   'sitemap.xml',
 ];

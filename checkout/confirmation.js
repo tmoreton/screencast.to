@@ -1,3 +1,5 @@
+import { pendingSharingURL } from './sharing-pending.js';
+
 export function isValidSessionId(value) {
   return /^cs_(?:test|live)_[A-Za-z0-9]{10,}$/.test(value || '');
 }
@@ -28,6 +30,8 @@ export function mountConfirmation(document, window, request = window.fetch.bind(
   const download = document.getElementById('download');
   const retry = document.getElementById('retry');
   const testBadge = document.getElementById('test-badge');
+  const continueSharing = document.getElementById('continue-sharing');
+  const sharingNextSteps = document.getElementById('sharing-next-steps');
   const sessionId = new URLSearchParams(window.location.search).get('session_id');
   const valid = sessionId === null || isValidSessionId(sessionId);
   const sessionQuery = sessionId === null ? '' : `?session_id=${encodeURIComponent(sessionId)}`;
@@ -44,6 +48,10 @@ export function mountConfirmation(document, window, request = window.fetch.bind(
     retry.hidden = true;
     help.hidden = true;
     download.removeAttribute('href');
+    if (continueSharing) {
+      continueSharing.hidden = true;
+      continueSharing.removeAttribute('href');
+    }
     if (!valid) {
       status.textContent = 'No valid checkout session was found. Return here from a completed checkout.';
       help.hidden = false;
@@ -63,6 +71,16 @@ export function mountConfirmation(document, window, request = window.fetch.bind(
       if (result.state === 'ready') {
         download.href = `/api/download${sessionQuery}`;
         ready.hidden = false;
+        const connectionURL = pendingSharingURL(window);
+        if (continueSharing && connectionURL) {
+          continueSharing.href = connectionURL;
+          continueSharing.hidden = false;
+        }
+        if (sharingNextSteps) {
+          sharingNextSteps.textContent = connectionURL
+            ? 'Your purchase is verified. Continue connecting to finish the original sharing request. Recordings upload only when you choose Upload.'
+            : 'For optional cloud sharing, close or cancel any connection window that is still open, then choose Connect purchase in Screencast to start again. Connecting never uploads a recording.';
+        }
       } else if (result.state === 'pending' && ++attempts < 6) {
         timer = window.setTimeout(checkPurchase, Math.min(2000 * attempts, 8000));
       } else {
