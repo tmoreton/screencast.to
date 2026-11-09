@@ -1,6 +1,6 @@
 Screencast.to Worker production dependency and bundled runtime license texts
 Generated from worker/package-lock.json, installed package license files, and
-the Wrangler dry-run bundle/source map. Lock state audited: 2026-09-11. This
+the Wrangler dry-run bundle/source map. Lock state audited: 2026-11-09. This
 file is imported as a text module so it accompanies the deployed Worker.
 
 ================================================================================
@@ -127,7 +127,7 @@ these Data Files or Software without prior written authorization of the
 copyright holder.
 
 ================================================================================
-Package: unenv@2.0.0-rc.24 (runtime shim injected by Wrangler 4.131.0)
+Package: unenv@2.0.0-rc.24 (runtime shim injected by Wrangler 4.159.0)
 Declared license: MIT
 --------------------------------------------------------------------------------
 MIT License
