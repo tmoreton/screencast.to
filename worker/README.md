@@ -193,7 +193,8 @@ unset to disable complimentary orders. Limit redemptions and apply the private
 coupon server-side only to the intended product and buyer. Public
 checkout does not accept coupon input. The completed order must have no
 PaymentIntent, no amount due, and exactly that coupon discounting the entire
-positive subtotal. Paid orders still require a settled, unrefunded charge for
+positive subtotal. Stripe can report a completed $0 order as `paid`. Charged
+orders still require a settled, unrefunded charge for
 sharing. Removing the configured coupon prevents renewal for complimentary
 orders after any already issued upload token expires.
 

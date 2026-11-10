@@ -125,6 +125,8 @@ test("a refund revokes an already connected purchase at next token renewal", asy
 });
 test("an approved complimentary order recovers by email and connects without a PaymentIntent", async () => {
   const f = complimentaryFixture();
+  // A completed live $0 Stripe Checkout reports paid, with no PaymentIntent.
+  f.session.payment_status = "paid";
   let intentReads = 0;
   f.stripe.paymentIntents.retrieve = async () => { intentReads += 1; throw new Error("A no-cost order has no PaymentIntent"); };
   const initial = await f.call("status", undefined, { Cookie: "" });
@@ -160,6 +162,7 @@ test("unapproved or incomplete zero-cost sessions cannot connect or receive reco
   const cases: [string, (f: ReturnType<typeof complimentaryFixture>) => void][] = [
     ["disabled configuration", f => { delete f.env.STRIPE_COMPLIMENTARY_COUPON_ID; }],
     ["different coupon", f => { f.session.discounts[0].coupon = "UnapprovedCoupon"; }],
+    ["paid $0 without an approved coupon", f => { f.session.payment_status = "paid"; f.session.discounts = []; }],
     ["stacked discounts", f => { f.session.discounts.push({ coupon: complimentaryCoupon }); }],
     ["nonzero total", f => { f.session.amount_total = 1; }],
     ["free price", f => { f.session.amount_subtotal = 0; f.session.total_details.amount_discount = 0; }],

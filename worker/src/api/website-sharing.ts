@@ -71,7 +71,7 @@ async function open(value: string, secret: string, mode: string, now: number): P
 async function paidSession(stripe: Stripe, env: Env, id: string | null, mode: "test" | "live") {
   const session = await purchase.loadSession(stripe, id, purchase.priceIds(env), mode);
   if (isComplimentarySession(session, env)) return session;
-  if (session?.status !== "complete" || session.payment_status !== "paid") return null;
+  if (session?.status !== "complete" || session.payment_status !== "paid" || session.amount_total === 0) return null;
   const intentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
   if (!intentId) return null;
   const intent = await stripe.paymentIntents.retrieve(intentId, { expand: ["latest_charge"] });

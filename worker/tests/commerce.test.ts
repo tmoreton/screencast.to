@@ -190,15 +190,18 @@ test("only the approved full-discount order can unlock status and the private do
     headers: { Cookie: `__Host-screencast-purchase=${id}` },
   }), env, { stripeFactory: () => stripe as unknown as import("stripe").default });
 
-  for (const configured of [undefined, "OtherCoupon", coupon]) {
-    env.STRIPE_COMPLIMENTARY_COUPON_ID = configured;
-    const eligible = configured === coupon;
-    const status = (await call("status"))!;
-    assert.equal(status.status, eligible ? 200 : 403);
-    assert.deepEqual(await status.json(), { paid: eligible, pending: false, mode: "test" });
-    const download = (await call("download"))!;
-    assert.equal(download.status, eligible ? 200 : 403);
-    if (eligible) assert.deepEqual(new Uint8Array(await download.arrayBuffer()), dmg);
+  for (const paymentStatus of ["paid", "no_payment_required"]) {
+    session.payment_status = paymentStatus;
+    for (const configured of [undefined, "OtherCoupon", coupon]) {
+      env.STRIPE_COMPLIMENTARY_COUPON_ID = configured;
+      const eligible = configured === coupon;
+      const status = (await call("status"))!;
+      assert.equal(status.status, eligible ? 200 : 403);
+      assert.deepEqual(await status.json(), { paid: eligible, pending: false, mode: "test" });
+      const download = (await call("download"))!;
+      assert.equal(download.status, eligible ? 200 : 403);
+      if (eligible) assert.deepEqual(new Uint8Array(await download.arrayBuffer()), dmg);
+    }
   }
 });
 
