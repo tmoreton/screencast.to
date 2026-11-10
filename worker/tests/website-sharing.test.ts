@@ -8,6 +8,7 @@ const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 const challenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 const state = "s".repeat(43);
 const sessionID = "cs_test_1234567890123456";
+const complimentaryCoupon = "ScreencastComplimentaryTest";
 function fixture() {
   const objects = new Map<string, { value: string; etag: string; customMetadata?: Record<string, string> }>();
   let revision = 0;
@@ -62,6 +63,15 @@ function fixture() {
   return { env, objects, session, charge, intent, stripe, sent, request, dependencies, call, authorize, advance(seconds: number) { now += seconds; } };
 }
 
+function complimentaryFixture() {
+  const f = fixture();
+  f.env.STRIPE_COMPLIMENTARY_COUPON_ID = complimentaryCoupon;
+  Object.assign(f.session, { payment_status: "no_payment_required", payment_intent: null,
+    amount_total: 0, amount_subtotal: 2900, total_details: { amount_discount: 2900 },
+    discounts: [{ coupon: complimentaryCoupon, promotion_code: null }] });
+  return f;
+}
+
 test("paid website purchase connects through PKCE, issues valid15minute token and renewable opaque grant", async () => {
   const f = fixture();
   const status = await f.call("status"); assert.deepEqual(await status.json(), { paid: true, mode: "test", recoveryAvailable: true });
@@ -112,6 +122,66 @@ test("a refund revokes an already connected purchase at next token renewal", asy
   const auth = await (await f.call("exchange", { code, codeVerifier: verifier, state })).json() as any;
   f.charge.amount_refunded = 100;
   assert.equal((await f.call("token", { sharingGrant: auth.sharingGrant })).status, 401);
+});
+test("an approved complimentary order recovers by email and connects without a PaymentIntent", async () => {
+  const f = complimentaryFixture();
+  let intentReads = 0;
+  f.stripe.paymentIntents.retrieve = async () => { intentReads += 1; throw new Error("A no-cost order has no PaymentIntent"); };
+  const initial = await f.call("status", undefined, { Cookie: "" });
+  assert.deepEqual(await initial.json(), { paid: false, mode: "test", recoveryAvailable: true });
+  const recovered = await f.call("restore", { email: "buyer@example.com", codeChallenge: challenge, state }, { Cookie: "" });
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(await recovered.json(), { sent: true });
+  assert.equal(f.sent.length, 1);
+  assert.equal(f.sent[0].to, "buyer@example.com");
+  const link = new URL(f.sent[0].url);
+  assert.equal(link.searchParams.get("state"), state);
+  assert.equal(link.searchParams.get("code_challenge"), challenge);
+  const token = link.searchParams.get("restore");
+  const restored = await f.call("restore/complete", { token }, { Cookie: "" });
+  assert.equal(restored.status, 200);
+  const cookie = restored.headers.get("Set-Cookie")?.split(";")[0];
+  assert.equal(cookie, `__Host-screencast-purchase=${sessionID}`);
+  const authorized = await f.call("authorize", { codeChallenge: challenge, state }, { Cookie: cookie! });
+  assert.equal(authorized.status, 200);
+  const callback = new URL((await authorized.json() as any).callbackURL);
+  assert.equal(callback.searchParams.get("state"), state);
+  const code = callback.searchParams.get("code");
+  const exchanged = await f.call("exchange", { code, codeVerifier: verifier, state }, { Cookie: "" });
+  assert.equal(exchanged.status, 200);
+  const credentials = await exchanged.json() as any;
+  assert.equal(await verifyServiceToken(credentials.serviceToken, f.env.SERVICE_TOKEN_SECRET), true);
+  assert.equal((await f.call("token", { sharingGrant: credentials.sharingGrant })).status, 200);
+  delete f.env.STRIPE_COMPLIMENTARY_COUPON_ID;
+  assert.equal((await f.call("token", { sharingGrant: credentials.sharingGrant })).status, 401);
+  assert.equal(intentReads, 0);
+});
+test("unapproved or incomplete zero-cost sessions cannot connect or receive recovery email", async () => {
+  const cases: [string, (f: ReturnType<typeof complimentaryFixture>) => void][] = [
+    ["disabled configuration", f => { delete f.env.STRIPE_COMPLIMENTARY_COUPON_ID; }],
+    ["different coupon", f => { f.session.discounts[0].coupon = "UnapprovedCoupon"; }],
+    ["stacked discounts", f => { f.session.discounts.push({ coupon: complimentaryCoupon }); }],
+    ["nonzero total", f => { f.session.amount_total = 1; }],
+    ["free price", f => { f.session.amount_subtotal = 0; f.session.total_details.amount_discount = 0; }],
+    ["partial discount", f => { f.session.total_details.amount_discount = 2899; }],
+    ["present PaymentIntent", f => { f.session.payment_intent = "pi_pending"; }],
+    ["open session", f => { f.session.status = "open"; }],
+    ["wrong product", f => { f.session.metadata.product = "another-app"; }],
+    ["wrong mode", f => { f.session.mode = "setup"; }],
+    ["wrong price", f => { f.session.line_items.data[0].price.id = "price_other"; }],
+    ["wrong quantity", f => { f.session.line_items.data[0].quantity = 2; }],
+    ["wrong Stripe environment", f => { f.session.livemode = true; }],
+  ];
+  for (const [name, mutate] of cases) {
+    const f = complimentaryFixture();
+    mutate(f);
+    assert.equal((await f.call("authorize", { codeChallenge: challenge, state })).status, 401, name);
+    const restored = await f.call("restore", { email: "buyer@example.com" });
+    assert.equal(restored.status, 200, name);
+    assert.deepEqual(await restored.json(), { sent: true }, name);
+    assert.equal(f.sent.length, 0, name);
+    assert.equal(f.objects.size, 0, name);
+  }
 });
 test("recovery is neutral for unmatched email and sends only to the verified order address", async () => {
   const f = fixture();

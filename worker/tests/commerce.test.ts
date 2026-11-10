@@ -109,6 +109,7 @@ test("release publication rejects bad authorization, unrelated paths, and incomp
 test("checkout carries the Screencast brand and returns to the private delivery flow", async () => {
   const { env, objects } = fakeEnv();
   env.CHECKOUT_ENABLED = "true";
+  env.STRIPE_COMPLIMENTARY_COUPON_ID = "PrivateComplimentaryCoupon";
   const manifest = {
     product: "screencast-mac", version: "3.0.0", pathname: "releases/screencast-3.0.0.dmg",
     appcastPath: "releases/appcast-3.0.0.xml", size: 3, sha256,
@@ -138,7 +139,8 @@ test("checkout carries the Screencast brand and returns to the private delivery 
     },
   };
   const response = await handleCommerce(new Request("https://screencast.to/api/checkout", {
-    method: "POST", headers: { Origin: "https://screencast.to", "Sec-Fetch-Site": "same-origin" },
+    method: "POST", headers: { Origin: "https://screencast.to", "Sec-Fetch-Site": "same-origin", "Content-Type": "application/json" },
+    body: JSON.stringify({ coupon: env.STRIPE_COMPLIMENTARY_COUPON_ID, allow_promotion_codes: true }),
   }), env, { stripeFactory: () => stripe as unknown as import("stripe").default });
 
   assert.equal(response?.status, 303);
@@ -146,6 +148,8 @@ test("checkout carries the Screencast brand and returns to the private delivery 
   assert.equal(checkoutParams?.mode, "payment");
   assert.deepEqual(checkoutParams?.managed_payments, { enabled: false });
   assert.equal(checkoutParams?.customer_creation, "always");
+  assert.equal(checkoutParams?.discounts, undefined);
+  assert.equal(checkoutParams?.allow_promotion_codes, undefined);
   assert.equal(checkoutParams?.submit_type, "pay");
   assert.deepEqual(checkoutParams?.line_items, [{ price: "price_current", quantity: 1 }]);
   assert.deepEqual(checkoutParams?.metadata, { product: "screencast-mac" });
@@ -165,6 +169,37 @@ test("checkout carries the Screencast brand and returns to the private delivery 
   assert.equal(checkoutParams?.success_url,
     "https://screencast.to/api/complete?session_id={CHECKOUT_SESSION_ID}");
   assert.equal(checkoutParams?.cancel_url, "https://screencast.to/?checkout=cancelled");
+});
+
+test("only the approved full-discount order can unlock status and the private download", async () => {
+  const { env, objects } = fakeEnv();
+  const coupon = "PrivateComplimentaryCoupon", id = "cs_test_1234567890123456";
+  const dmg = new Uint8Array([1, 2, 3]);
+  const manifest = {
+    product: "screencast-mac", version: "3.0.0", pathname: "releases/screencast-3.0.0.dmg",
+    appcastPath: "releases/appcast-3.0.0.xml", size: dmg.byteLength, sha256,
+  };
+  objects.set("releases/current.json", { bytes: new TextEncoder().encode(JSON.stringify(manifest)) });
+  objects.set(manifest.pathname, { bytes: dmg });
+  const session = { id, mode: "payment", livemode: false, status: "complete", payment_status: "no_payment_required",
+    payment_intent: null, amount_total: 0, amount_subtotal: 2900, total_details: { amount_discount: 2900 },
+    discounts: [{ coupon: { id: coupon }, promotion_code: null }], metadata: { product: "screencast-mac" },
+    line_items: { has_more: false, data: [{ quantity: 1, price: { id: "price_current" } }] } };
+  const stripe = { checkout: { sessions: { async retrieve() { return session; } } } };
+  const call = (path: string) => handleCommerce(new Request(`https://screencast.to/api/${path}`, {
+    headers: { Cookie: `__Host-screencast-purchase=${id}` },
+  }), env, { stripeFactory: () => stripe as unknown as import("stripe").default });
+
+  for (const configured of [undefined, "OtherCoupon", coupon]) {
+    env.STRIPE_COMPLIMENTARY_COUPON_ID = configured;
+    const eligible = configured === coupon;
+    const status = (await call("status"))!;
+    assert.equal(status.status, eligible ? 200 : 403);
+    assert.deepEqual(await status.json(), { paid: eligible, pending: false, mode: "test" });
+    const download = (await call("download"))!;
+    assert.equal(download.status, eligible ? 200 : 403);
+    if (eligible) assert.deepEqual(new Uint8Array(await download.arrayBuffer()), dmg);
+  }
 });
 
 test("Sparkle serves only the current named update through its clean release URL", async () => {

@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import type { Env } from "../env";
-import { websitePurchase as purchase } from "../commerce";
+import { isComplimentarySession, websitePurchase as purchase } from "../commerce";
 import { issueServiceToken } from "../auth/service-token";
 import { isPurchaseEmailConfigured, sendPurchaseRestoreEmail } from "../email";
 import { readJSONBody } from "./request-body";
@@ -70,6 +70,7 @@ async function open(value: string, secret: string, mode: string, now: number): P
 // Checkout's paid flag alone remains true after refunds. Inspect its actual charge too.
 async function paidSession(stripe: Stripe, env: Env, id: string | null, mode: "test" | "live") {
   const session = await purchase.loadSession(stripe, id, purchase.priceIds(env), mode);
+  if (isComplimentarySession(session, env)) return session;
   if (session?.status !== "complete" || session.payment_status !== "paid") return null;
   const intentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
   if (!intentId) return null;

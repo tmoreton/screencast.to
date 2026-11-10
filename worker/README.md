@@ -186,6 +186,17 @@ needed to reject refunded or disputed purchases rather than relying on the
 Checkout session's historical paid flag alone. Existing checkout creation and
 price/product verification permissions remain necessary.
 
+An operator can separately issue a complimentary Checkout order using a 100%
+discount on the normal Screencast price. The optional Worker secret
+`STRIPE_COMPLIMENTARY_COUPON_ID` recognizes one exact Stripe coupon; leave it
+unset to disable complimentary orders. Limit redemptions and apply the private
+coupon server-side only to the intended product and buyer. Public
+checkout does not accept coupon input. The completed order must have no
+PaymentIntent, no amount due, and exactly that coupon discounting the entire
+positive subtotal. Paid orders still require a settled, unrefunded charge for
+sharing. Removing the configured coupon prevents renewal for complimentary
+orders after any already issued upload token expires.
+
 Restore responses and email failures exclude addresses, provider responses, and
 private links from logs. The email transport validates the canonical recovery
 URL, escapes its HTML form, uses the structured native email builder, and
