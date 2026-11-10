@@ -128,6 +128,27 @@ async function loadSession(stripe: Stripe, id: string | null, allowed: Set<strin
   }
 }
 
+/** A zero-cost order is eligible only with the exact configured coupon.
+ * Call after loadSession has verified the product, price, quantity, and mode.
+ */
+export function isComplimentarySession(session: Stripe.Checkout.Session | null, env: Env): boolean {
+  const configured = env.STRIPE_COMPLIMENTARY_COUPON_ID;
+  if (!configured || !/^[A-Za-z0-9_-]{1,128}$/.test(configured) ||
+      session?.status !== "complete" || !["paid", "no_payment_required"].includes(session.payment_status) ||
+      session.payment_intent !== null || session.amount_total !== 0) return false;
+  const subtotal = session.amount_subtotal;
+  if (typeof subtotal !== "number" || !Number.isSafeInteger(subtotal) || subtotal <= 0 ||
+      session.total_details?.amount_discount !== subtotal ||
+      !Array.isArray(session.discounts) || session.discounts.length !== 1) return false;
+  const coupon = session.discounts[0]?.coupon;
+  return (typeof coupon === "string" ? coupon : coupon?.id) === configured;
+}
+
+function canDownloadPurchase(session: Stripe.Checkout.Session | null, env: Env): boolean {
+  return session?.status === "complete" &&
+    ((session.payment_status === "paid" && session.amount_total !== 0) || isComplimentarySession(session, env));
+}
+
 function tokenMatches(request: Request, expected: string | undefined): boolean {
   if (!expected || expected.length < 32) return false;
   const authorization = request.headers.get("Authorization") || "";
@@ -307,7 +328,9 @@ export async function handleCommerce(request: Request, env: Env,
     try {
       const allowed = priceIds(env);
       const session = await loadSession(stripeFactory(env), requestedSession(request, mode), allowed, mode);
-      if (session?.status === "complete" && session.payment_status === "paid") return json({ paid: true, pending: false, mode });
+      if (canDownloadPurchase(session, env)) {
+        return json({ paid: true, pending: false, mode });
+      }
       if (session && (session.status === "open" || (session.status === "complete" && session.payment_status === "unpaid"))) {
         return json({ paid: false, pending: true, mode }, 202);
       }
@@ -320,7 +343,9 @@ export async function handleCommerce(request: Request, env: Env,
       const [session, release] = await Promise.all([
         loadSession(stripeFactory(env), requestedSession(request, mode), priceIds(env), mode), currentRelease(env),
       ]);
-      if (!session || session.status !== "complete" || session.payment_status !== "paid") return privateResponse("Purchase could not be verified.", { status: 403 });
+      if (!canDownloadPurchase(session, env)) {
+        return privateResponse("Purchase could not be verified.", { status: 403 });
+      }
       if (!release) return privateResponse("The download is not ready.", { status: 503 });
       const object = await env.RELEASES.get(release.pathname);
       return object ? objectResponse(object, "application/x-apple-diskimage", release.pathname.slice("releases/".length)) :

@@ -23,6 +23,7 @@ export interface Env {
   CHECKOUT_ENABLED: string;
   STRIPE_PRICE_ID: string;
   STRIPE_ALLOWED_PRICE_IDS?: string;
+  STRIPE_COMPLIMENTARY_COUPON_ID?: string;
   RELEASE_MANIFEST_PATH?: string;
   STRIPE_SECRET_KEY: string;
   SPARKLE_UPDATE_TOKEN: string;
