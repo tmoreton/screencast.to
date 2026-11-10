@@ -33,10 +33,10 @@ CHECKOUT_ENABLED = "true"
 STRIPE_PRICE_ID = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 STRIPE_ALLOWED_PRICE_IDS = "price_1UHSH3AaaKitYsL1EPP6Z1EU"
 RELEASE_MANIFEST_PATH = "releases/current.json"
-PURCHASE_EMAIL_ENABLED = "false"
+PURCHASE_EMAIL_ENABLED = "true"
 
 # Requires an onboarded Cloudflare Email Sending domain and Workers Paid.
-# Keep recovery disabled until setup is verified. Restrict sending to this address.
+# Canonical production sending is verified. Restrict sending to this address.
 [[send_email]]
 name = "PURCHASE_EMAIL"
 allowed_sender_addresses = ["purchases@screencast.to"]
@@ -59,7 +59,7 @@ simple = { limit = 10, period = 60 }
 #   SERVICE_TOKEN_SECRET  — random secret used only to sign 15-minute tokens
 #   SELF_HOSTED_UPLOAD_TOKEN — private forks only; canonical deploy refuses it
 #   MAX_UPLOAD_BYTES      — optional declared upload-size limit; defaults to 1 GiB
-#   STRIPE_SECRET_KEY     — Checkout/Customers write+read/search, PaymentIntents read, Prices/Products read
+#   STRIPE_SECRET_KEY     — Checkout/Customers write+read/search, PaymentIntents/Charges read, Prices/Products read
 #   PURCHASE_EMAIL_FROM   — purchases@screencast.to after Cloudflare sending-domain verification
 #   PURCHASE_EMAIL_REPLY_TO — optional support reply address
 #   SPARKLE_UPDATE_TOKEN  — bearer token embedded only in official standalone builds
